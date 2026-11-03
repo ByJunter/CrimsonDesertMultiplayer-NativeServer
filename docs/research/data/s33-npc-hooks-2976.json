@@ -1,0 +1,86 @@
+{
+  "build": "1.0.0.2976",
+  "PE_timestamp": "0x6AB28F00",
+  "exe_sha256": "57da440d72f4db974f25fef047cf84c4dadd999a88cb2a3c5af4c9bd67fde1e7",
+  "puntos": [
+    {
+      "rva": "0x2a78ca0",
+      "seccion": ".rsrc",
+      "firma": "48 89 5C 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 50 FF FF FF 48 81 EC B0 01 00 00 4D 8B E9 4D 8B E0 48 8B F2",
+      "ocurrencias_PE": 1,
+      "pdata": [
+        [
+          "0x2a78ca0",
+          "0x2a790b6"
+        ]
+      ],
+      "parche_bytes": 5,
+      "instrucciones": [
+        {
+          "rva": "0x2a78ca0",
+          "bytes": "48 89 5c 24 10",
+          "asm": "mov qword ptr [rsp + 0x10], rbx"
+        }
+      ],
+      "limite_completo": true,
+      "posibles_saltos_al_interior": [
+        "0x2a78c35"
+      ],
+      "analisis_candidatos": {
+        "0x2a78c35": "Byte 74 dentro del desplazamiento del E9 que empieza en 0x2A78C34; coincidencia binaria, no salto corto decodificado."
+      }
+    },
+    {
+      "rva": "0x281cee0",
+      "seccion": ".rsrc",
+      "firma": "48 89 5C 24 08 4C 89 4C 24 20 4C 89 44 24 18 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 80 E6",
+      "ocurrencias_PE": 1,
+      "pdata": [
+        [
+          "0x281cee0",
+          "0x281d962"
+        ]
+      ],
+      "parche_bytes": 5,
+      "instrucciones": [
+        {
+          "rva": "0x281cee0",
+          "bytes": "48 89 5c 24 08",
+          "asm": "mov qword ptr [rsp + 8], rbx"
+        }
+      ],
+      "limite_completo": true,
+      "posibles_saltos_al_interior": []
+    },
+    {
+      "rva": "0x2a79060",
+      "seccion": ".rsrc",
+      "firma": "80 BD F0 00 00 00 00 75 19 C6 44 24 20 00 4D 8B",
+      "ocurrencias_PE": 1,
+      "pdata": [
+        [
+          "0x2a78ca0",
+          "0x2a790b6"
+        ]
+      ],
+      "parche_bytes": 7,
+      "instrucciones": [
+        {
+          "rva": "0x2a79060",
+          "bytes": "80 bd f0 00 00 00 00",
+          "asm": "cmp byte ptr [rbp + 0xf0], 0"
+        }
+      ],
+      "limite_completo": true,
+      "posibles_saltos_al_interior": [
+        "0x38f256f"
+      ],
+      "analisis_candidatos": {
+        "0x38f256f": "Patrón 0F8C fuera de cualquier función del directorio de excepciones, en región de bytes ofuscados; destino aparente 0x2A79064 no es frontera de instrucción. El punto H1b ya existía: no se añade otro parche superpuesto. No se atribuye a una ruta ejecutable verificada."
+      }
+    }
+  ],
+  "contrato_constructor": "0x2818AE0,0x2819E00 (4 sitios),0x281D970,0x281DBD0,0x2820D80: false omite descriptor; salida inicial null",
+  "nota": "Lectura del archivo PE; no ejecución ni carga del juego.",
+  "metodo": "Directorio PE de excepciones, desensamblado de fronteras, AOB única; barrido conservador de bytes rel32/rel8 registra también coincidencias no ejecutables."
+}

@@ -1,0 +1,70 @@
+; Crimson Desert Multiplayer - cooperativo (version de prueba) - INVITADO
+[general]
+; Tu nombre (lo ve el otro jugador)
+player_name=Jugador
+startup_delay_ms=0
+
+[net]
+enabled=1
+; steam = por Steam, sin abrir puertos (recomendado)
+; udp   = por IP (VPN tipo Radmin/Tailscale, o puerto abierto)
+transport=steam
+; host = anfitrion (espera a su amigo); guest = invitado (se conecta al anfitrion)
+role=guest
+; Solo UDP: IP del anfitrion (el invitado) / puerto en el que escucha el anfitrion
+peer_host=127.0.0.1
+peer_port=37015
+send_rate_hz=20
+
+[steam]
+; Invitado: SteamID64 del anfitrion (17 cifras). Vacio = el unico amigo que este
+; jugando a Crimson Desert ahora mismo.
+; Anfitrion: vacio = acepta a cualquier amigo que este jugando.
+peer_steamid=
+
+[overlay]
+; Marcador con el nombre y la vida del otro jugador sobre su cabeza
+enabled=1
+self_marker=0
+
+[sniffer]
+; Necesario para el cooperativo (lee y envia los mensajes internos del juego)
+enabled=1
+; 1 = ademas los graba en ficheros cdmp_packets_* (50-100 MB por sesion). Activado para la prueba:
+; enviadnos esos ficheros junto con cdmp.log
+record=1
+
+[coop]
+; 1 = el otro jugador aparece como un personaje en tu mundo
+enabled=1
+; Retardo de reproduccion en ms (mas = escaladas mas suaves, pero mas retraso)
+delay_ms=300
+; Desplazamiento lateral del otro jugador en metros (0 = posicion exacta)
+offset_m=0
+; El otro jugador se cambia el equipo como en su partida
+equip=1
+; Experimental: su caballo (monta y cabalga; al bajarse, su personaje se recarga en 1-2 s)
+horse=1
+; Dano "espejo" antiguo (golpes del otro a enemigos de su mundo -> enemigo parecido del tuyo).
+; Apagado: ahora los enemigos se comparten (ver abajo)
+damage=0
+; El otro jugador en el minimapa y el mapa (M): flecha con borde
+minimap_icon=0x124
+; Marcador en el mapa cuando su personaje no esta cargado (por ejemplo, muy lejos)
+map_pin=1
+; ENEMIGOS COMPARTIDOS (experimental). El anfitrion manda: ves copias de SUS enemigos.
+; El invitado NO pulsa Ctrl+F7. Tus propios enemigos no atacan a la copia del anfitrion
+enemies_target_copy=0
+; Tus golpes a las copias de los enemigos del anfitrion le llegan
+guest_hits=1
+guest_hit_stagger=1
+; Tu personaje reacciona (tambaleo, derribo) a los golpes que los enemigos del otro dan a tu copia en su
+; mundo, y puede morir por ellos (muerte normal, reapareces como siempre)
+player_hit_react=1
+player_hit_lethal=1
+; (Solo cuenta en el anfitrion: cuantos enemigos a la vez atacan a la copia del otro)
+copy_attack_slots=0
+
+[dev]
+; Solo el anfitrion envia sus enemigos
+enemy_relay=0

@@ -1,0 +1,622 @@
+{
+ "build": "1.0.0.2976",
+ "source_capture": "captures/cdmp_packets_20261003-112627.bin",
+ "report": "docs/research/opcion-d-login.md",
+ "format": "paquete = u16 opcode | i8 slot | u16 payload_len | payload. 'hex' = payload sin cabecera; 'canal' = byte de canal de la trama (Troc+0x14), OnRecvPacket descarta si no coincide; rewrite.offset es relativo al payload. hex_list = varias Req del mismo tipo en ese orden.",
+ "variables": {
+  "ACCOUNT": "u64 != 0 elegido por nosotros (el anfitrion usa 0)",
+  "USER_KEY": "u32 0x9010xxxx que asigna el servidor (MainUserDataStartAck @0)",
+  "CHARACTER_NO": "u64 de CharacterLobbyDataAck @5 (0x7FFFFFFFFFFFFFFF en las capturas)",
+  "SAVE_SLOT": "u32 ranura de guardado (la del anfitrion en E3)",
+  "PLAYER_KEY": "u32 0xA010xxxx del personaje (MainPlayerDataStartAck @0)",
+  "CHILD_KEY": "u32 0xB010xxxx del hijo del usuario 2 (variante child, D-53r): learn_child, primer registro de un ActorLoadDataAck con dueno u32 @5 == USER_KEY, tipo u8 @0 = 6 y clave>>28 == 0xB",
+  "CHILD_HASH": "u32 hash de la accion de la capa 0 del bloque CC de ese registro (learn_child_hash, por gramatica); si no se aprende, 0x866C7489 (el de los registros del hatch y del perro en c1g/c4r/112627). --var CHILD_HASH=0x94D333D6 lo fija (gana a lo aprendido)",
+  "POS_X": "u32 (f32) posicion del usuario 2: MoveFieldAck @25 (la ultima, la del campo real); por defecto la del perro en 112627 #3449",
+  "POS_Y": "u32 (f32) MoveFieldAck @29",
+  "POS_Z": "u32 (f32) MoveFieldAck @33"
+ },
+ "wait_rule": "Antes de cada paso, esperar en la sesion 2 el 'expect' del paso anterior (timeout sugerido 10 s). Si expect es null, esperar delay_ms_after (o 200 ms). Los pasos optional se pueden omitir en la primera prueba.",
+ "reactive": [
+  {
+   "on": "ChangeMoveSessionIDAck",
+   "opcode": 3097,
+   "send": "EchoMoveSessionIDReq",
+   "send_opcode": 2624,
+   "slot": 0,
+   "canal": 0,
+   "template": "u32 clave actor (= Ack @0) | u32 id (= Ack @8) | u32 0",
+   "note": "solo si Ack @4 == USER_KEY. Visto en 112627 a los 61,9 s tras un AITeleportReq de un mercenario."
+  }
+ ],
+ "do_not_send": [
+  "1001 y ConnectToServerAck: los fabrica el propio cliente, el servidor no los ve",
+  "Req de NPC, gimmicks y spawns que simula el cliente del anfitrion: ChangeAIStateReq, StartAIFunctionReq, UpdateAIDestinationReq, MoveActorReq/StartActionReq de NPC (la primera StartActionReq del PERSONAJE si se manda: paso 4b), Gimmick*Req, UpdateGimmickReq, ActivateSpawningPoolReq, AutoSpawnRoadReq, TerrainRegionVoxelSpawnReq, SceneLevelOnDemandGimmickSpawnReq, SetQuestDialogReq de mercenarios",
+  "SaveAutoReq 3037 y SaveToFileCurrentPlayerReq 2910"
+ ],
+ "steps": [
+  {
+   "n": 1,
+   "stage": "E2",
+   "name": "ConnectCryptogramToServerReq",
+   "opcode": 2319,
+   "canal": 0,
+   "flags_16": 255,
+   "deferred": true,
+   "slot": -1,
+   "hex": "0404000000540045004d0050000000003082010a0282010100d0a9a375a47d2e5f4198dc499de1ffd19ca86b430c7bd4d51cba2f42f881c5baf1419b90cd3b85b1e40842eb61c8cb660acc9aed7bfee32ff3d64fd0831a9342d8e624f87a1ba41042433ade0f97e95fb417d2176b32dc0d7db94eae62c00d69dd2a80270f05f17a731f393581512dfc872141f86bc8c49437f611385cca2cc12d79940a4697e5cba23f7375a45d262b1f955a7ca7932c6e64f706c6d383d3bad9d4c8b06994dbb550e26f8a69e4b61fd777739ae032fb6cdce1bd64b8c851a78bf1310581a1557fe0cb9292ae595d21df9c14656328ec3765d8379c8abe42d7bc5b0d8ba7a74a3ae4dbd3d36516412d524c4a45cb270ff16c185727717078330203010001",
+   "rewrite": [],
+   "expect": {
+    "name": "ConnectCryptogramToServerAck",
+    "opcode": 2840
+   },
+   "optional": false,
+   "note": "u8 4 | wstring (u32 len=4, 'TEMP', u16 0) | u8 0 | DER de clave publica RSA-2048 (270 B). La clave cambia en cada arranque; se reutiliza tal cual (en NwVirtualAsyncSession la clave AES no se instala)."
+  },
+  {
+   "n": 2,
+   "stage": "E2",
+   "name": "LoginUserToFieldServerReq",
+   "opcode": 2490,
+   "canal": 2,
+   "flags_16": 255,
+   "deferred": true,
+   "slot": -1,
+   "hex": "01000000000000000000000000000000000000",
+   "rewrite": [
+    {
+     "offset": 0,
+     "size": 8,
+     "type": "u64",
+     "meaning": "cuenta. Anfitrion = 0; el usuario 2 debe usar != 0",
+     "source": "ACCOUNT",
+     "value": 1
+    }
+   ],
+   "expect": {
+    "name": "MainUserDataEndAck",
+    "opcode": 2716,
+    "also": [
+     "ServerTimeInfoAck",
+     "MainUserDataStartAck",
+     "CharacterLobbyDataAck"
+    ]
+   },
+   "capture_from_acks": [
+    {
+     "var": "USER_KEY",
+     "ack": "MainUserDataStartAck",
+     "offset": 0,
+     "size": 4
+    },
+    {
+     "var": "CHARACTER_NO",
+     "ack": "CharacterLobbyDataAck",
+     "offset": 5,
+     "size": 8
+    }
+   ],
+   "optional": false,
+   "note": "u64 cuenta | u32 (-> componente de usuario +0x84) | u8 | wstring (u32 len=0, u16 0). Canal 2 obligatorio. flags_16 = 0xFF: unico tipo (con ConnectCryptogram) aceptado sin usuario en la sesion."
+  },
+  {
+   "n": 3,
+   "stage": "E3",
+   "name": "LoginCharacterToFieldServerReq",
+   "opcode": 3093,
+   "canal": 0,
+   "flags_16": 4,
+   "deferred": true,
+   "slot": -1,
+   "hex": "04ffffffffffffff7f01000000d4ab54414242",
+   "rewrite": [
+    {
+     "offset": 1,
+     "size": 8,
+     "type": "u64",
+     "source": "CHARACTER_NO",
+     "meaning": "characterNo (CharacterLobbyDataAck @5; 0x7FFFFFFFFFFFFFFF en las capturas)"
+    },
+    {
+     "offset": 9,
+     "size": 4,
+     "type": "u32",
+     "source": "SAVE_SLOT",
+     "meaning": "ranura de guardado (validas 0-2, 3, 100-108, 200-207). 112627 = 1, 105149 = 0. En E3 la del anfitrion"
+    }
+   ],
+   "expect": {
+    "name": "MoveFieldAck",
+    "opcode": 2174,
+    "check": "u32 @5 == 3 (campo de aparcamiento, pos 0,1000,0)",
+    "also": [
+     "ClearCharacterLobbyDataForSinglePlayAck",
+     "MainPlayerDataStartAck",
+     "~720 Ack de estado",
+     "MainPlayerDataEndAck"
+    ]
+   },
+   "capture_from_acks": [
+    {
+     "var": "PLAYER_KEY",
+     "ack": "MainPlayerDataStartAck",
+     "offset": 0,
+     "size": 4
+    }
+   ],
+   "optional": false,
+   "note": "u8 4 (se lee y se descarta) | u64 characterNo | u32 ranura | u32 0x4154ABD4 (-> componente+0x124) | wstring sin prefijo = resto del payload (1 wchar 0x4242). Bytes 13..18 identicos en las dos capturas."
+  },
+  {
+   "n": 4,
+   "stage": "E3",
+   "name": "MoveFieldCompleteReq",
+   "opcode": 2549,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "00",
+   "rewrite": [],
+   "expect": {
+    "name": "MoveFieldCompleteAck",
+    "opcode": 2144,
+    "also": [
+     "ActorLoadDataAck x2 (personaje + 'Game Mechanic')",
+     "MoveFieldCompletePostAck",
+     "OpenPartyAck",
+     "PlayAllPreLoadSequencerAck"
+    ]
+   },
+   "optional": false,
+   "note": "u8 0. Handler virtualizado por Denuvo (0x29BF120). Desde aqui slot = 0 (personaje 0 del usuario de la sesion)."
+  },
+  {
+   "n": "4b",
+   "stage": "E3",
+   "name": "StartActionReq",
+   "opcode": 2223,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": false,
+   "slot": 0,
+   "hex": "010010a0000000003c7d10260000ffffffffffff00ffffffffffff00ffffffffffff00000000000000000000000000000000803f575700000000030001000000000000000000000000000000003c7d10260000ffffffffffff0019000000000000ffffffffffff0001898808bd00000000000000000000803f5757000000000300010000000000000000000000000000000000007a44000000000000000000000000000000000000803f000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f0000803f0000000000000000000000000000000000000000000000000000803f0000803f0000803f0000803f000000000000000000000000000000000000000000000000ffffffffffffffff0000000000000000000000000000000000000000000000000000803f0000803f0000803f0000803f000000000000000000000000000000000000000000000000005696000000000000000d336ee700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005696000000000000000000",
+   "rewrite": [
+    {
+     "offset": 0,
+     "size": 4,
+     "type": "u32",
+     "meaning": "clave de actor del personaje del usuario 2 (0xA010xxxx)",
+     "source": "PLAYER_KEY"
+    }
+   ],
+   "expect": null,
+   "delay_ms_after": 200,
+   "optional": false,
+   "note": "Primera accion del personaje durante la PRIMERA carga (escena de aparcamiento), como el cliente real: en 112627 sale 15 ms despues del primer MoveFieldCompleteReq (15.033 s). Sin ella el servidor deja a 0 el byte de restauracion y el cliente del anfitrion crea al personaje del usuario 2 sin accion (C1-C1f, opcion-d-accion-usuario2.md). Carga identica a la aceptada al anfitrion (112627); solo cambia la clave. No hay Ack para quien controla el actor (el relevo excluye al controlador)."
+  },
+  {
+   "n": 5,
+   "stage": "E3",
+   "name": "SceneLevelLoadCompleteSyncSceneObjectListReq",
+   "opcode": 2598,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex_list": [
+    "03000000ec635e2a",
+    "030000006dd0f604",
+    "030000009292fe28",
+    "03000000a7efbd81",
+    "03000000c9269a8b",
+    "03000000a8266c1f",
+    "03000000402d6a98",
+    "03000000f4036a05",
+    "03000000f4ba161b"
+   ],
+   "rewrite": [],
+   "expect": null,
+   "optional": true,
+   "note": "9 Req: u32 tipo de campo (3 = aparcamiento) | u32 hash de nivel de escena. Identicas en las dos capturas. Respuesta: SyncSceneObjectAck."
+  },
+  {
+   "n": 6,
+   "stage": "E3",
+   "name": "LoadingCompleteReq",
+   "opcode": 2445,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "01",
+   "rewrite": [],
+   "expect": {
+    "name": "LoadingCompleteAck",
+    "opcode": 2762
+   },
+   "optional": false,
+   "note": "u8 1. Handler virtualizado (0x29C61A0)."
+  },
+  {
+   "n": 7,
+   "stage": "E3",
+   "name": "LoginCharacterToGameReq",
+   "opcode": 2601,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "",
+   "rewrite": [],
+   "expect": null,
+   "delay_ms_after": 200,
+   "optional": false,
+   "note": "Vacio. Sin Ack propio. Handler virtualizado (0x298D2B0)."
+  },
+  {
+   "n": 8,
+   "stage": "E3",
+   "name": "GameLoadingStartReq",
+   "opcode": 2437,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "",
+   "rewrite": [],
+   "expect": {
+    "name": "MoveFieldAck",
+    "opcode": 2174,
+    "check": "u32 @5 == 1 (campo real); posicion f32x3 @25",
+    "also": [
+     "UnloadSyncSceneObjectAck",
+     "UnapplyBuffAck",
+     "SetMoveFieldAck"
+    ]
+   },
+   "optional": false,
+   "note": "Vacio. vf2 0x29C59D0 -> componente [actor+0x68]+0x1A0 -> 0x2BC9200 (lanza el MoveField a la posicion guardada)."
+  },
+  {
+   "n": 9,
+   "stage": "E3",
+   "name": "MoveFieldCompleteReq",
+   "opcode": 2549,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "00",
+   "rewrite": [],
+   "expect": {
+    "name": "MoveFieldCompleteAck",
+    "opcode": 2144,
+    "also": [
+     "ActorLoadDataAck (personaje, mercenarios, NPC)",
+     "ChangeGameLevelStateAck",
+     "MoveFieldCompletePostAck",
+     "JoinPartyAck x3"
+    ]
+   },
+   "optional": false,
+   "note": "u8 0. El cliente real manda justo antes SyncStageCandidatePostionReq (periodico, cada ~3 s; no imprescindible)."
+  },
+  {
+   "n": "9b",
+   "stage": "E3",
+   "variant": "child",
+   "name": "StartActionReq",
+   "opcode": 2223,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": false,
+   "slot": 0,
+   "hex": "040010b00000000050f1e7230000ffffffffffff0001000000000000ffffffffffff0000898808bd00000000000000000000803f57570000000003000101000000000000000000000000000000000000000000ffffffffffff00ffffffffffff00ffffffffffff0002000080bf00000000000000000000803f575700000000030000000000000000000000000000fe9b22c65da112449c835ac50000000061569e3d00000000d73b7f3f000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f0000803f0000000000000000000000000000000000000000000000000000803f0000803f0000803f0000803f000000000000000000000000000000000000000000000000ffffffffffffffff0000000000000000000000000000000000000000000000000000803f0000803f0000803f0000803f00000000000000000000000000000000000000000000000000f40101000000000000548cb06b010010a00000000000000000000000008b5b94bd00000000c0a5dd3d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f401010000000000000000",
+   "declare": [
+    {
+     "var": "CHILD_HASH",
+     "size": 4,
+     "value": "0x866C7489",
+     "meaning": "capa 0 de los registros del hatch (c1g #7431, c4r_d53 #7439) y del perro (112627 #1517)"
+    },
+    {
+     "var": "POS_X",
+     "size": 4,
+     "value": "0xC6229BFE",
+     "meaning": "-10407.0 (112627 #3449 +0x08E)"
+    },
+    {
+     "var": "POS_Y",
+     "size": 4,
+     "value": "0x4412A15D",
+     "meaning": "586.52"
+    },
+    {
+     "var": "POS_Z",
+     "size": 4,
+     "value": "0xC55A839C",
+     "meaning": "-3496.23"
+    }
+   ],
+   "capture_from_acks": [
+    {
+     "var": "POS_X",
+     "ack": "MoveFieldAck",
+     "offset": 25,
+     "size": 4
+    },
+    {
+     "var": "POS_Y",
+     "ack": "MoveFieldAck",
+     "offset": 29,
+     "size": 4
+    },
+    {
+     "var": "POS_Z",
+     "ack": "MoveFieldAck",
+     "offset": 33,
+     "size": 4
+    }
+   ],
+   "capture_child": {
+    "var": "CHILD_KEY",
+    "ack": "ActorLoadDataAck",
+    "owner": "USER_KEY",
+    "types": [
+     6
+    ],
+    "hash_var": "CHILD_HASH"
+   },
+   "wait_learned": {
+    "var": "CHILD_KEY",
+    "timeout_ms": 10000
+   },
+   "delay_ms_before": 350,
+   "rewrite": [
+    {
+     "offset": 0,
+     "size": 4,
+     "type": "u32",
+     "source": "CHILD_KEY",
+     "meaning": "clave del hijo (la unica clave de actor)"
+    },
+    {
+     "offset": 364,
+     "size": 4,
+     "type": "u32",
+     "source": "PLAYER_KEY",
+     "meaning": "+0x16C clave del personaje del dueno (A0100001 en la captura)"
+    },
+    {
+     "offset": 8,
+     "size": 4,
+     "type": "u32",
+     "source": "CHILD_HASH",
+     "meaning": "hash de la accion de A[0]"
+    },
+    {
+     "offset": 142,
+     "size": 4,
+     "type": "u32",
+     "source": "POS_X",
+     "meaning": "+0x08E posicion de B"
+    },
+    {
+     "offset": 146,
+     "size": 4,
+     "type": "u32",
+     "source": "POS_Y",
+     "meaning": "+0x092"
+    },
+    {
+     "offset": 150,
+     "size": 4,
+     "type": "u32",
+     "source": "POS_Z",
+     "meaning": "+0x096"
+    }
+   ],
+   "expect": null,
+   "optional": false,
+   "note": "Variante child (D-53r, make_troc_script.py --child-action): primera accion del hijo tipo 6 del usuario 2 tras la carga compartida, como el cliente real (112627 #3449, 0,372 s despues del registro del perro #1517; pendientes/companeros-publicacion.md seccion 4). Plantilla = esa Req byte a byte; se cambian la clave, el dueno, el hash y la posicion. Quat, reloj (+0x15F/+0x2CA = 66036 ms), +0x168 y +0x17C/+0x184 quedan los capturados: con el u8 final +0x2D4 = 0 el servidor no llama a ApplyMoveFromClient (0x2A78F24) y usa su propio reloj; la posicion solo se comprueba != (0,0,0) (0x2A78E58). Sin Ack para quien controla el actor. Si el servidor la acepta, child_hold libera el hijo al anfitrion con restore 1."
+  },
+  {
+   "n": 10,
+   "stage": "E3",
+   "name": "RegionInOutReq",
+   "opcode": 3067,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex_list": [
+    "010010a001000100",
+    "010010a004000100",
+    "010010a00d000100",
+    "010010a010270100",
+    "010010a01b270100"
+   ],
+   "rewrite": [
+    {
+     "offset": 0,
+     "size": 4,
+     "type": "u32",
+     "meaning": "clave de actor del personaje del usuario 2 (0xA010xxxx)",
+     "source": "PLAYER_KEY"
+    }
+   ],
+   "expect": null,
+   "optional": true,
+   "note": "u32 clave | u16 id de region | u8 1 = entra | u8 0. Regiones 1, 4, 13, 10000, 10011 en 112627; dependen de la posicion."
+  },
+  {
+   "n": 11,
+   "stage": "E3",
+   "name": "SceneLevelLoadCompleteSyncSceneObjectListReq",
+   "opcode": 2598,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex_list": [
+    "010000006dd0f604",
+    "01000000ec635e2a",
+    "01000000c9269a8b",
+    "01000000a8266c1f",
+    "01000000402d6a98",
+    "010000009292fe28",
+    "01000000a7efbd81",
+    "01000000f4ba161b",
+    "01000000f4036a05",
+    "010000000c980254",
+    "010000008057a8c9",
+    "01000000d4556f8f",
+    "01000000d40b060b",
+    "0100000067dc319e",
+    "010000001d571082",
+    "010000000eeea03a",
+    "01000000d8ea063b",
+    "0100000001d97d3d",
+    "010000002599f12b",
+    "01000000682b215e",
+    "01000000d7ce8996",
+    "01000000d8fd1f92",
+    "010000003089109c",
+    "010000003a67d41d",
+    "01000000a5d6a72e",
+    "0100000076ad0240",
+    "0100000079bc8129",
+    "010000007fea585d",
+    "010000009147969d",
+    "01000000cfe54abe",
+    "010000001fe852f3",
+    "01000000553e85bf",
+    "01000000c76fc8f7",
+    "01000000f2b3f64d",
+    "0100000045cdb9ce",
+    "01000000cdda76a4",
+    "01000000a0264097",
+    "01000000041fcac8",
+    "01000000d41da27e",
+    "010000000b46a44c",
+    "0100000050c75906",
+    "01000000b40822ed",
+    "01000000a661825d",
+    "010000007f39e892",
+    "01000000f4cbad73",
+    "010000000fa9e7c9",
+    "01000000de6518ee",
+    "010000008b1affb4",
+    "0100000097366656",
+    "01000000ac0c5696",
+    "01000000f784c466",
+    "01000000723766d5",
+    "01000000a9482ac3",
+    "01000000f22b8583",
+    "010000003dc16880",
+    "01000000696d0414",
+    "01000000b5ad609d",
+    "010000003a8fa705",
+    "010000001e546a78",
+    "01000000c1fef749",
+    "0100000073372778",
+    "010000002ef94e83",
+    "01000000dac9941e",
+    "010000009c584d96",
+    "0100000069b9b87b"
+   ],
+   "rewrite": [],
+   "expect": null,
+   "optional": true,
+   "note": "65 Req tipo 1. Dependen de la zona (40 de 65 coinciden con 105149). Mejor copiar en vivo las del cliente del anfitrion."
+  },
+  {
+   "n": 12,
+   "stage": "E3",
+   "name": "OnDemandEquipDockingGimmickSpawnReq",
+   "opcode": 2249,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "04010010a00000010002000f0014001700",
+   "rewrite": [
+    {
+     "offset": 1,
+     "size": 4,
+     "type": "u32",
+     "meaning": "clave de actor del personaje del usuario 2 (0xA010xxxx)",
+     "source": "PLAYER_KEY"
+    }
+   ],
+   "expect": null,
+   "optional": true,
+   "note": "u8 4 | u32 clave del personaje | resto constante. El servidor responde con SyncSceneObjectAck y ActorLoadDataAck de los 'Game Mechanic' del equipo (en F4: 6 actores 0xB0100066-6B)."
+  },
+  {
+   "n": 13,
+   "stage": "E3",
+   "name": "LoadingCompleteReq",
+   "opcode": 2445,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "01",
+   "rewrite": [],
+   "expect": {
+    "name": "LoadingCompleteAck",
+    "opcode": 2762
+   },
+   "optional": false
+  },
+  {
+   "n": 14,
+   "stage": "E3",
+   "name": "LoadMercenaryStatReq",
+   "opcode": 2094,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "",
+   "rewrite": [],
+   "expect": null,
+   "optional": true,
+   "note": "El cliente real lo manda justo despues de LoadingCompleteAck #2."
+  },
+  {
+   "n": 15,
+   "stage": "E3",
+   "name": "GameOptionDataReq",
+   "opcode": 2604,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "00",
+   "rewrite": [],
+   "expect": {
+    "name": "GameOptionDataAck",
+    "opcode": 2813
+   },
+   "optional": true,
+   "note": "El cliente real lo manda justo despues de LoadingCompleteAck #2."
+  },
+  {
+   "n": 16,
+   "stage": "E3",
+   "name": "RefreshUIFilterGroupDataReq",
+   "opcode": 2683,
+   "canal": 0,
+   "flags_16": 16,
+   "deferred": true,
+   "slot": 0,
+   "hex": "",
+   "rewrite": [],
+   "expect": null,
+   "optional": true,
+   "note": "El cliente real lo manda justo despues de LoadingCompleteAck #2."
+  }
+ ]
+}

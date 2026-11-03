@@ -1,0 +1,100 @@
+INFORME — SINCRONIZACIÓN DE HORA Y CLIMA, OPCIÓN D
+Crimson Desert PC 1.0.0.2976. Auditoría de solo lectura. 11/10/2026.
+
+0. DICTAMEN Y ALCANCE DE LA CERTEZA
+
+[V] El invitado S16 SÍ recibe una hora fresca al entrar al campo compartido. No recibe en 2144 una simple repetición de la hora con la que cargó el anfitrión. La misma comprobación da resultado en S15 y S17. El síntoma visual descrito por el usuario no se pone en duda; queda refutada esa explicación concreta del transporte.
+[V] Hay una incoherencia real: clock_gate cambia 1→0 el argumento de finalización en el servidor, pero el 2762 que llega al invitado conserva 1. El cliente puede reanclar su propio FieldTime por esa bandera. [E] Si conserva la base fresca de 2144, el desfase introducido sería 211.356 s de juego en S16, no necesariamente un retorno a la hora original de la partida.
+[V] Los viajes completos de S16 llevan 2445=0 y 2762=0, sin un nuevo 2144. No es correcto explicar su posible reinicio por un flag 1 inexistente. Se localizó la selección nativa del reloj visual, incluido un reloj temporal privado y la política de pausa; las capturas no contienen sus valores durante esos viajes.
+[V] El clima tiene un circuito cliente de recursos/transiciones y otro de flags lógicos del campo. 2560 es una Req saliente del cliente, no un Ack que ordene el cielo. El invitado no tiene bloqueada esa publicación y la ruta servidor auditada no compara el dueño antes de escribir los flags del campo.
+[E] Arreglo recomendado: autoridad H→G, finalizar la carga cliente con una política coherente y aplicar una muestra temporal fresca por la ruta nativa; mantenerla mediante cambios autoritativos y reconciliación medida. Para clima se necesita además replicar el estado suficiente de su simulación nativa, conservando sus transiciones. Bloquear la publicación inversa 2560 es una corrección de autoridad independiente.
+[H] No puede afirmarse todavía cuál escritor/override produjo exactamente las fotos y el reinicio visual de S16. Faltan TS/global/gestor temporal/consumidor visual en tiempo de ejecución. Tampoco está cerrada una API nativa completa de aplicación del clima. Este informe entrega causas de contrato comprobadas, descarta explicaciones equivocadas y da un experimento discriminante; NO presenta esos dos puntos pendientes como una causa raíz visual ya demostrada ni un parche final probado.
+
+1. MATERIAL, VERSIONES Y MÉTODO
+
+[V] W=carpeta que contiene este informe. Se leyó el encargo completo, conservado en ENCARGO.txt. Se congelaron 777 archivos de src/, tests/ y documentación de investigación del repositorio C:\Emulador CD-opcion-d en W/source-snapshot; todas las referencias a fuentes siguientes se refieren a esa copia. source-manifest.json conserva hashes iniciales. No se editó código original ni se hicieron commits.
+[V] Ejecutable instalado D:\SteamLibrary\steamapps\common\Crimson Desert\bin64\CrimsonDesert.exe y copia de análisis D:\RE\CrimsonDesert_2976\bin\CrimsonDesert.exe: SHA256 común 57da440d72f4db974f25fef047cf84c4dadd999a88cb2a3c5af4c9bd67fde1e7; base 0x140000000. Las funciones se decompilaron de nuevo usando una copia propia del proyecto Ghidra, readOnly/noAnalysis. Nombres cdmp_ previos se trataron como pistas, no como prueba por sí mismos.
+[V] Tres agentes separaron módulos/versiones, motor nativo y capturas; el coordinador contrastó clima/consumo visual y consolidó el dictamen. Los 18 binarios/logs de S15–17 se procesaron en streaming; el manifiesto del análisis de paquetes contiene 22 entradas, incluidas referencias auxiliares. No se ejecutó el juego ni se realizó una prueba de dos PC durante esta auditoría.
+[V] Builds del mod en los logs: S15=9180AD5D, S16=B5AFDE8D, S17=747AB2A9. modules/version-comparison/comparison.json verifica diferencias contra el snapshot y conserva fuentes de esas revisiones. clock_gate y guardado coinciden en las tres; S15 aún no tiene la corrección de recarga de observer_milestone que usa S16. mount_sync no explica S16: su integración es posterior.
+[V] Convenciones: [V] código/bytes/captura comprobados; [E] interpretación, diseño o criterio propuesto; [H] hipótesis o dato dinámico no disponible. rN es registro binario desde 1; off es offset decimal absoluto del .bin; t son segundos desde el inicio de ESA captura; L es línea de texto. H=anfitrión; G=invitado Shadow. Verificación de cierre y limpieza: CIERRE.txt e input-validation.json.
+
+2. EL RELOJ NATIVO: CUATRO ESTADOS QUE NO SE DEBEN CONFUNDIR
+
+[V] A. Reloj técnico: 0x1416B80 devuelve el tiempo monotónico nativo. 2188 ServerTimeInfoAck actualiza la relación entre el reloj cliente y servidor; el bias cliente reside en RVA 0x6D69438. Su payload 20 B contiene u32+0, u64+4, u64+0xC. No contiene día/hora del calendario del juego. Handler 0xBDF310 y lectura del getter 20E55A0 lo confirman.
+[V] B. FieldTime: estructura de 32 B en memoria y 31 B serializados, formato <5IBHQ. Memoria: u32 día+00, hora+04, minuto+08, segundo+0C, milisegundo+10; byte+14; relleno+15; u16 escala+16; u64 ancla+18. En red no existe el byte de relleno: escala+15 y ancla+17. En un 2144 el bloque empieza en payload+10 hex, así que escala/ancla quedan +25/+27 hex.
+[V] Globals separados: cliente 0x6A6D218 y servidor 0x6A6D238. El contexto TLS+0x1EC selecciona qué copia usa código compartido. TransformSync mantiene otra copia en TS+0x450, con ancla TS+0x468. El getter 0x20E55A0 aplica primero posibles reglas de hora fija de nivel, después política de pausa field+0x17C y después extrapolación desde base/ancla/escala, con bias sólo en cliente.
+[V] Las conversiones 0x20D3360/0x20D3460 manejan un día interno de 75,600,000 unidades y un tramo nocturno con distinta conversión; no se debe reemplazar toda la aritmética por HH:MM+delta*12 atravesando cualquier política/frontera. Para los intervalos diurnos concretos de S15–17 la igualdad lineal por 12 se verifica exactamente.
+[E] Un global que repite 13:37:28 durante minutos puede ser una base perfectamente válida de un reloj que avanza. El vigilante de clock_gate imprime esa base, no el valor extrapolado; no demuestra reloj detenido.
+[V] C. Aplicación cliente: 2144 llega a 0xB87B90→0x9CE7940→0xA38B00. Con actor local válido y modo de aplicación inmediato, el FieldAttacher debe ser válido para llamar al setter 0x21A1CC0→0xE52E900. El setter actualiza TS y, en realm cliente con campo válido, publica el global; la comparación de owner que existe en servidor no es necesaria en esa rama cliente. Si el actor existe pero el FieldAttacher falla, el receptor puede llegar a publicar el dato visual sin actualizar el estado persistente esperado. Ver A38B00.c y E52E900.c.
+[V] D. Selección y presentación: 0xA384A0 se ejecuta en la actualización cliente. Con gestor+28 activo y +2B desactivado lee el getter del campo. Si +29 está activo usa en cambio el FieldTime privado de gestor+30..+4F, con escala+46/ancla+48. Cuando cambia +29 respecto a +2A puede llamar de nuevo a A38B00 al abandonar el estado temporal. El valor seleccionado se entrega a world.vf+F8; el clima lo lee por world.vf+100. A39330 es otro setter visual, no únicamente un evento UI.
+[E] La igualdad entre H-servidor, H-cliente lógico, H-cielo y G-cielo debe comprobarse, no suponerse. Una cinemática/override local podría cambiar la presentación sin cambiar la autoridad del calendario. Copiar ciegamente el servidor no reproduce el cielo del anfitrión si éste está usando un override distinto; la política cooperativa tiene que contemplarlo.
+
+3. MENSAJES Y ALCANCE DE ENVÍO
+
+[V] 2144 MoveFieldCompleteAck: 51 B en las capturas, actor u32, posición 12 B, FieldTime 31 B y cola 4 B. Es respuesta de entrada/compleción de campo para el actor interesado; llega individualmente a G con su hora calculada. Las capturas H observan al cliente H, no todo el tráfico servidor→G.
+[V] 2445 LoadingCompleteReq (nombre exacto del CSV): 1 B de política. El productor cliente 7797F0 pasa loader+162 a B7E700→A4112F0(.xtls), que serializa ese byte. 2762 LoadingCompleteAck: 13 B, actor u32+0, flag+4, now u64+5. La ruta servidor 2BCAF00 usa ToTarget, ligado a la sesión del actor; no es una difusión del calendario mundial.
+[V] 2125 SetFieldTimeReq: 31 B FieldTime+flag+u32, 36 B. 2816 SetFieldTimeAck: actor u32+31 B FieldTime, 35 B. El consumidor servidor 2BC8970 exige dueño real del campo y emite 2816 mediante ToNear. No es exclusivamente ToTarget al dueño. [E] ToNear no garantiza cobertura de todos los observadores si están lejos o fuera del conjunto de interés; replicar cambios de calendario a observadores debe definir destinatarios explícitos.
+[V] 2188 ServerTimeInfoAck aparece aproximadamente cada 5 s en ambos PC. S16 H 127 mensajes/G 100; los 100 ticks de G son crecientes. No hay 2125/2816 en los seis binarios analizados. Una ausencia dentro de una ventana con pérdidas no prueba que nunca se generara; véase §4.
+[V] 2560 SyncWeatherStateReq: 24 B/seis floats, cliente→servidor. No se halló un WeatherAck dedicado por nombre en el CSV. Eso no demuestra que todos los otros payloads carezcan de información ambiental. Se siguió además la ejecución del productor y del consumidor para evitar depender sólo del nombre.
+[V] Candidatos inventariados: 2017 UpdateFieldNightAndDay, 1022 ServerTimeInfoRepeatTimer, 2731/2529/2669 TimeWrapCoolTime y 2961 CreateProjectileByWeatherReq. Los nombres de cooldown y proyectiles no acreditan transporte de hora o snapshot de clima. No se observó ni se inventó un Ack climático que explique el caso.
+
+4. CRONOLOGÍA COMPARADA Y CALIDAD DE LOS DATOS
+
+[V] S16: 782281 registros H y 470960 G. Se emparejaron 2632 movimientos HReq→GAck y 5730 GReq→HAck con actor+tick+pose idénticos. [E] Bajo reloj QPC estable y latencia no negativa, H.t−G.t∈[129.148942,129.175466] s; para las tablas se usa 129.162204±0.013262 s. La diferencia de reloj Windows es aproximadamente una hora; NO es una medida del desfase del mundo.
+[V] Los 5 registros perdidos iniciales H están fuera de las ventanas compartidas citadas; G no marca pérdidas. S17 G pierde 4597 registros en el tramo final 451.991544–462.429833 s. S15 G captura una recarga incompleta, no un viaje completado. Las tablas completas con offs/payloads/líneas están en packets/S16-timeline.csv y packets/INFORME.txt.
+
+[V] Entrada de H en S16:
+    H r1201 off4909926 t48.011165: 2144, día 6 13:37:28.728, escala 12, ancla 64543.
+    H r55330 t58.968444: 2445=1.
+    H r55336 off16963513 t58.981600: 2762=1, now 81905.
+[V] Entrada compartida de G en S16:
+    G r1195 t45.097843: 2174, dueño de la copia adaptado para G.
+    G r1212 t52.442893/r1303 t52.578865: 2005 del actor propio A0100303.
+    G r7990 off10167132 t53.000652: 2144, día 6 13:59:53.952, escala 12, ancla 194007.
+    G r8009 t53.000673: 3066; r8057 t53.000762: 2322.
+    G r13229 off11979707 t62.629020: 2445=1.
+    G r13262 off11990008 t62.721704: 2762=1, now 211620.
+    H app L6337: clock_gate tomó 13:59:53 para el viaje G; app L7211: LoadingComplete flag 1→0.
+[V] Igualdad determinante: 13:59:53.952−13:37:28.728=1345.224 s de juego=(194007−81905)*12/1000. El snapshot es fresco respecto al calendario de H. S15 y S17 cumplen la misma igualdad, con 3121.224 s y 1687.632 s respectivamente.
+[E] Si G conserva la base del 2144 hasta 2762 y el consumidor cambia sólo el ancla, se pierde (211620−194007)=17.613 s reales, equivalentes a 211.356 s de juego. No son sólo los 9.721 s entre los dos timestamps de captura: el snapshot fue muestreado antes de emitirse. Falta leer TS antes/después para convertir este efecto condicional en observación del cliente.
+
+[V] Viaje G1 S16, H permanece en otra fase propia:
+    G r107348 t174.872838: 2283; r108899 t176.837019: 2437.
+    G r108967 off45251083 t176.900162: 2643; r108968: 3066.
+    G r116418 t179.286469: 2873; r117043 t179.648787: 2322.
+    G r120947 off49917418 t182.850418: 2445=0.
+    G r121007 off49937397 t182.916779: 2762=0, now 331798.
+    H app L11860 confirma política 0→0. No nuevo 2144.
+[V] Viaje G2 S16:
+    G r341767 t386.274299: 2283; r342615 t388.378619: 2643; r342616: 3066.
+    G r343681 t389.552791: 2873; r344216 t389.930976: 2322.
+    G r347590 off146267534 t394.249139: 2445=0.
+    G r347633 off146283456 t394.305176: 2762=0, now 543155.
+    H app L21517 confirma 0→0. No nuevo 2144.
+[V] Los dos viajes H también terminan con flag 0: H r350501 t344.632674(now 364373) y r602189 t506.291366(now 526052). En el eje G completan 215.470470 y 377.129162. Son viajes distintos; no confundirlos con los de G al restar la hora de Windows.
+
+[V] Clima S16: H emite 9 Req 2560 y G 11, todas 24 B. Par cercano: H r502135 t476.062513 y G r287779 t346.995902, separación alineada 95.593±13.262 ms. Vectores H (0,0,15.351328,.450404,.150003,6.775413) y G (0,0,15.503155,.450452,.150139,6.783418). [E] No prueban lluvia H/sol G simultáneos: faltan región exacta y cámara; la posición G próxima es 2.441 s posterior y dista 15.189 unidades de H.
+[V] Cambios breves de 2560 G coinciden temporalmente con viajes H1/H2; no son viajes propios G. [H] Justifican medir influencias de la carga H sobre gestores visuales G, pero no establecen causalidad. Véase weather/INFORME.txt §4.
+
+5. QUÉ HACE EL MOD Y DÓNDE FALLA EL CONTRATO
+
+[V] clock_gate.cpp:134–191 intercepta viaje 2BC0A30 y completado 219D7F0. Para usuario 2 toma hora del campo mediante 20E55A0 y la copia en TS 450 durante el viaje; en completado fuerza el argumento efectivo 0. Mantiene el servidor protegido contra la publicación de una base invitada. El hook ya existente escribe TS directamente; NO se propone extender esa técnica al cliente.
+[V] 2BCAF00 conserva el flag original de entrada en una variable local. Llama 219D7F0 en 2BCB0CA con el argumento que puede alterar el hook; después entrega la variable original al serializador 299E3A0 en 2BCB228. El handler G B8BB00 entrega el flag recibido a 9CEAC50→219D7F0. Con flag no 0 esta función cambia TS 468 a now, copia TS 450 al global del realm y limpia field 17C. Con 0 omite esa rama, pero conserva otras tareas de completado.
+[E] Una simple conversión del Ack 1→0 podría evitar el reanclaje, pero también dejar sin cumplir la despausa de esa rama. Suprimir 2762 o hacer bypass del completado rompería más lógica. La corrección debe fijar las postcondiciones del cliente como conjunto y comprobarlas.
+[V] El loader 77AE70 puede poner field 17C=1 si loader 162!=0. El byte 2445 refleja loader 162 al completar; en los viajes S16 vale 0. [H] No queda probado que durante esos viajes se mantuviera una pausa incorrecta; no presentar «el campo queda pausado siempre» como causa. La selección del reloj temporal de A384A0 también necesita medición.
+[V] Reescrituras 2174/2643 cambian sólo owner u32+9 en la copia G, no FieldTime. En servidor el owner real sigue siendo H. Los handlers de ambos mensajes activan cargas sin deserializar FieldTime directo. No hay caché específica de 2144/2816 en los módulos auditados. Quitar todo alias tiene riesgo de reabrir fallos de resolución del dueño, no es un arreglo focalizado.
+[V] observer_milestone_reload de S16 restituye el hito 2322 de G tras su 2873 de recarga; no envía un reloj actual. La recarga del mismo campo no repite necesariamente la ruta 2174/2144 ni el hook de viaje 2BC0A30. observer_hold_acks no retiene 2144/2188/2816/2762.
+[V] session2.cpp:200–248 bloquea 2125 desde G; no bloquea 2560. La validación no cubre por sí sola todas las llamadas posibles a server_inject_ex. La protección de archivos de guardado no congela el estado lógico del mundo en memoria. [E] El criterio de autoridad exige validación común del remitente y confirmación pre/post de escritura, no sólo un filtro de nombres o un log de save_guard activo.
+
+6. CAUSA POR SÍNTOMA Y LO QUE FALTA PARA CERRARLA
+
+[V] Síntoma 1, entrada con hora aparente antigua: origen 2144 viejo descartado en las tres sesiones. Incoherencia 2445/2762 demostrada; existe aceptación condicional y selección temporal cliente. [E] El contrato nativo single-player separa el muestreo al entrar de la reanudación; opción D conserva ese contrato en G mientras H sigue avanzando. Ello basta para producir una pérdida de avance si se reancla la base sin compensarla. [H] El retorno exacto a la base inicial o la divergencia del cielo requiere identificar el primer estado/escritor que diverge; no aparece en las capturas.
+[V] Síntoma 1, clima diferente: nativamente se calcula en cliente y 2560 informa flags al servidor. Opción D no aporta un estado visual autoritativo completo a G. [E] Mantener igual FieldTime puede ser necesario pero no suficiente por recursos, transiciones, semilla y overrides. [H] No se identifica aún el parámetro preciso que produjo la foto lloviendo/sol.
+[V] Síntoma 2, reinicio tras viaje: flag 1 descartado en los cuatro viajes completos S16; tampoco hay nueva base FieldTime explícita en 2144. [E] La frontera de recarga y la selección de fuente del reloj son el lugar que debe corregirse si la medición confirma restauración vieja. Ausencia de snapshot nuevo es una carencia de reconciliación, no prueba por sí sola que el cliente reinicie. [H] Pendiente distinguir pausa, override, fallo de aceptación o reinicialización de recurso ambiental.
+[V] Síntoma 3, deriva/influencia: 2188 sí alinea el reloj técnico; la base del servidor no se movió por usuario 2 según resumen clock_gate S16. Existe vía 2560 que no está bloqueada. [H] No está medida la deriva del calendario/cielo G ni una modificación real de H provocada por G en clima; no afirmar que ya ocurrió ni que no puede ocurrir.
+
+7. ENTREGABLES Y SIGUIENTE DECISIÓN
+
+[E] PROPUESTA-ARREGLO.txt define autoridad, transacción de carga, réplica, alternativas, puntos y requisitos de activación. PLAN-PRUEBA.txt contiene una sesión mínima para capturar el primer escritor divergente, criterios de éxito/aborto y presupuesto de incertidumbre. RESUMEN-UNA-PAGINA.txt es la versión ejecutiva.
+[V] Anexos: native/INFORME.txt (mecanismo y direcciones); weather/INFORME.txt (productor/consumidor de clima y cadena visual); modules/INFORME.txt (fuentes/versiones/guardado); packets/INFORME.txt y CSV (cronologías reproducibles); modules/PUNTOS.txt y POINTS.json (bytes/instrucciones/candidatos), ghidra-results (exportaciones), CIERRE.txt (integridad y limpieza).
+[E] No debe pasar a implementación de clima una solución basada sólo en reenviar 2560, y no debe aprobarse un arreglo de hora sólo porque otra vez dibuja el sol correcto. El cierre exige que el estado fresco persista después de cargar, que el consumidor use ese estado y que ningún invitado publique sobre la autoridad del anfitrión.

@@ -1,0 +1,138 @@
+--- a/src/os.windows.cpp	2026-10-05 23:38:11.706646000 -0600
++++ b/src/os.windows.cpp	2026-10-10 02:48:48.239846800 -0600
+@@ -1,3 +1,23 @@
++// cdmp: a copy of safetyhook v0.7.0 src/os.windows.cpp (Boost Software License 1.0,
++// third_party/safetyhook-patch/LICENSE) with one change in the trap handler, built in place of
++// the original by the project's CMakeLists.txt (which checks the original's SHA-256 first).
++// Why (P8 review of 10-10, I4, docs/research/pendientes/p8-revision-noche.md): upstream keeps
++// every page it ever patched as a "trap page" for good and answers EVERY access violation whose
++// address falls on one with EXCEPTION_CONTINUE_EXECUTION. A read/write fault there (an integrity
++// check of the protector, a re-protection) would retry forever: a thread spinning in the
++// exception dispatcher, "no frames" without a crash. trap_threads only ever makes those pages
++// non-executable (PAGE_READWRITE) while it writes, so the only faults it causes are EXECUTE
++// faults. Now:
++//   - a read/write fault is never retried here (EXCEPTION_CONTINUE_SEARCH, decided without the
++//     lock; counted when the lock is free);
++//   - an execute fault inside the patched bytes is redirected as upstream (fix_ip), unless that
++//     would retry the same address on a page that is not executable while no patch is in progress;
++//   - an execute fault elsewhere on a trap page is retried only while a trap_threads is in
++//     progress or if the page is executable again (a fault raised during the patch, handled
++//     after it); otherwise it is passed on.
++//   - counters for the mod's diagnostics: cdmp_trap_stats().
++#include <atomic>
++#include <cstdint>
+ #include <map>
+ #include <memory>
+ #include <mutex>
+@@ -154,6 +174,22 @@
+     return info;
+ }
+ 
++// cdmp: patches in progress (trap_threads between its two VirtualProtect calls) and what the
++// handler did.
++static std::atomic<int> g_trapping{0};
++static std::atomic<uint64_t> g_trap_redirected{0}, g_trap_retried{0}, g_trap_passed_exec{0}, g_trap_passed_data{0};
++
++static bool executable_now(uint8_t* address) {
++    MEMORY_BASIC_INFORMATION mbi{};
++    if (VirtualQuery(address, &mbi, sizeof(mbi)) == 0) {
++        return false;
++    }
++    if (mbi.State != MEM_COMMIT || (mbi.Protect & (PAGE_GUARD | PAGE_NOACCESS)) != 0) {
++        return false;
++    }
++    return (mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY)) != 0;
++}
++
+ struct TrapInfo {
+     uint8_t* from_page_start;
+     uint8_t* from_page_end;
+@@ -234,24 +270,53 @@
+             return EXCEPTION_CONTINUE_SEARCH;
+         }
+ 
++        const auto* rec = exp->ExceptionRecord;
++        if (rec->NumberParameters < 2) {
++            return EXCEPTION_CONTINUE_SEARCH;
++        }
++        auto* faulting_address = reinterpret_cast<uint8_t*>(rec->ExceptionInformation[1]);
++
++        // cdmp: not an execute fault: never ours (see the top of the file).
++        if (rec->ExceptionInformation[0] != EXCEPTION_EXECUTE_FAULT) {
++            std::unique_lock lock{mutex, std::try_to_lock};
++            if (lock.owns_lock() && instance != nullptr && instance->find_trap_page(faulting_address) != nullptr) {
++                g_trap_passed_data.fetch_add(1, std::memory_order_relaxed);
++            }
++            return EXCEPTION_CONTINUE_SEARCH;
++        }
++
+         std::scoped_lock lock{mutex};
+-        auto* faulting_address = reinterpret_cast<uint8_t*>(exp->ExceptionRecord->ExceptionInformation[1]);
++        if (instance == nullptr) {
++            return EXCEPTION_CONTINUE_SEARCH;
++        }
++        const bool patching = g_trapping.load(std::memory_order_acquire) > 0;
+         auto* trap = instance->find_trap(faulting_address);
+ 
+         if (trap == nullptr) {
+             if (instance->find_trap_page(faulting_address) != nullptr) {
+-                return EXCEPTION_CONTINUE_EXECUTION;
++                if (patching || executable_now(faulting_address)) {
++                    g_trap_retried.fetch_add(1, std::memory_order_relaxed);
++                    return EXCEPTION_CONTINUE_EXECUTION;
++                }
++                g_trap_passed_exec.fetch_add(1, std::memory_order_relaxed);
++                return EXCEPTION_CONTINUE_SEARCH;
+             } else {
+                 return EXCEPTION_CONTINUE_SEARCH;
+             }
+         }
+ 
+         auto* ctx = exp->ContextRecord;
++        const auto ip_before = ctx->Rip;
+ 
+         for (size_t i = 0; i < trap->len; i++) {
+             fix_ip(ctx, trap->from + i, trap->to + i);
+         }
+ 
++        if (ctx->Rip == ip_before && !patching && !executable_now(faulting_address)) {
++            g_trap_passed_exec.fetch_add(1, std::memory_order_relaxed);
++            return EXCEPTION_CONTINUE_SEARCH;  // the same address again would fault again: not a patch of ours
++        }
++        g_trap_redirected.fetch_add(1, std::memory_order_relaxed);
+         return EXCEPTION_CONTINUE_EXECUTION;
+     }
+ };
+@@ -307,6 +372,12 @@
+     // Make sure we aren't working on a different address in the same memory page on a different thread.
+     std::scoped_lock vp_lock{virtual_protect_mutex};
+ 
++    // cdmp: a patch is in progress until both protections are back.
++    struct Trapping {
++        Trapping() { g_trapping.fetch_add(1, std::memory_order_acq_rel); }
++        ~Trapping() { g_trapping.fetch_sub(1, std::memory_order_acq_rel); }
++    } trapping;
++
+     DWORD from_protect;
+     DWORD to_protect;
+ 
+@@ -321,6 +392,19 @@
+     VirtualProtect(from, len, from_protect, &from_protect);
+ }
+ 
++// cdmp: the handler's counters for the mod's diagnostics: out[0] execute faults redirected into a
++// trampoline (or retried at a patched address), out[1] execute faults retried on a trap page,
++// out[2] execute faults passed on (page not executable, no patch in progress), out[3] read/write
++// faults on a trap page passed on (counted when the handler's lock was free), out[4] patches in
++// progress now.
++void cdmp_trap_stats(uint64_t* out5) noexcept {
++    out5[0] = g_trap_redirected.load(std::memory_order_relaxed);
++    out5[1] = g_trap_retried.load(std::memory_order_relaxed);
++    out5[2] = g_trap_passed_exec.load(std::memory_order_relaxed);
++    out5[3] = g_trap_passed_data.load(std::memory_order_relaxed);
++    out5[4] = static_cast<uint64_t>(g_trapping.load(std::memory_order_relaxed));
++}
++
+ void fix_ip(ThreadContext thread_ctx, uint8_t* old_ip, uint8_t* new_ip) {
+     auto* ctx = reinterpret_cast<CONTEXT*>(thread_ctx);
+ 

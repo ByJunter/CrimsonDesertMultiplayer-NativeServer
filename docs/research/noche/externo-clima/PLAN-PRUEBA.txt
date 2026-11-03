@@ -1,0 +1,71 @@
+PLAN DE MEDICIÓN Y ACEPTACIÓN — DOS PC
+Hora y clima de opción D. Propuesta para la siguiente sesión; no ejecutada.
+
+1. OBJETIVO Y PREPARACIÓN
+
+[E] Objetivo: localizar el PRIMER punto donde la hora recibida, aceptada, efectiva y mostrada divergen, y separar ese problema de la autoridad y simulación meteorológicas. Registrar una entrada de G, un viaje sólo de G y un viaje sólo de H. Duración aproximada: 6–8 minutos más las cargas, sin esperar obligatoriamente a que llueva.
+[E] Primera pasada: variante exclusivamente de sondas. Segunda pasada, en otra captura identificada: corrección que se quiera evaluar, de alcance único. No mezclar control de autoridad, reloj y clima en una modificación indivisible.
+[E] Registrar hashes de juego, DLL del mod, configuración y fuentes. Mantener clock_gate y protección de guardados. Tomar hashes de las partidas antes y después sin sobrescribirlas. Utilizar el mismo estado inicial cuando el equipo implementador tenga autorizado ejecutar la prueba; esta auditoría no ha lanzado el juego.
+[E] Asegurar espacio para captura binaria y un registro compacto de sondas. Contar pérdidas y coste de registro. No imprimir millones de líneas del getter ni realizar asignaciones/lecturas pesadas dentro de un lock del motor.
+
+2. SECUENCIA MÍNIMA
+
+[E] Fase A — referencia del anfitrión. H carga y permanece 90 s reales en una zona abierta. Sin G, comparar H-servidor, H-cliente y cielo. Anotar cualquier tiempo fijo/escena/override. Si ya difieren, ese estado es parte del diagnóstico y no debe atribuirse a G.
+[E] Fase B — entrada tardía. G conecta mientras H permanece quieto. Capturar todos los hitos de entrada, desde el campo privado si lo hay hasta 30 s después del 2762 compartido. No viajar ni cambiar la hora durante esta fase.
+[E] Fase C — continuidad. Situar ambos personajes juntos, idealmente a ≤2 unidades de juego, dentro del MISMO volumen climático confirmado y mirando al mismo exterior. Registrar 60 s estables. Una distancia pequeña por sí sola no acredita igualdad de volumen/altura/override: conservar esos identificadores.
+[E] Fase D — viaje del invitado. H permanece quieto. G realiza un viaje rápido dentro del mismo campo. Registrar desde 2 s antes de 2283 hasta 30 s después de 2762. Si el destino es otra región, volver a reunirlos antes de comparar directamente la meteorología. Conservar la comparación del reloj durante todo el trayecto.
+[E] Fase E — viaje del anfitrión. Repetir invirtiendo quién viaja, sin solapar ambos viajes. Esto contrasta los cambios breves de 2560 de G observados cerca de los viajes de H en S16.
+[E] Fase F opcional — cambios autoritativos. Si el juego permite una acción nativa de esperar/dormir, hacerla únicamente con H y registrar la ruta real y sus mensajes. Si cambia el clima, mantener el registro durante toda la transición. No inventar un comando para producir una Req ni exigir lluvia para dar por completa la medición del reloj.
+[E] Ampliaciones después del mínimo: entrada con carga de G más lenta; desconexión/reentrada; mensaje antiguo que llega tras una segunda carga; ambos lejos; tiempo fijo o escena temporal. No repetir todos los casos si la primera pasada ya localiza una escritura incorrecta concreta; corregirla y reproducir ese caso antes de ampliar.
+
+3. FORMATO COMÚN DE SONDAS
+
+[E] Cada evento incluye: identificador de captura y PC; QPC de inicio/fin; tick nativo; bias de 2188; TID y realm/TLS; conexión/época; mundo/campo/generación; viaje; actor y sesión reales; owner real y alias; causa/callsite; número de paquete si corresponde. Distinguir captura de bytes, despacho del handler, aceptación y primer frame posterior.
+[E] Mantener los bytes originales y la representación decodificada. FieldTime wire=31B; memoria=32B. Registrar día, hora, minuto, segundo, ms, byte de calendario, escala y ancla. No pasar ni comparar estructuras con padding no inicializado como si fueran payloads idénticos.
+[E] Muestras estables cada 0,5 s; registros por evento/escritura en las cargas y cambios de política. Una ventana opcional de 50 ms sólo si el coste está medido. Acotar las sondas por actor/campo y fase, conservando ring buffers por hilo que se drenan fuera del camino crítico.
+
+4. SONDAS DE RELOJ
+
+[E] CLOCK_RX/TX: 2144, 2188, 2445, 2762, 2816/2125 si existen; además 2174, 2283, 2437, 2643, 3066, 2873, 2322 como hitos. Conservar flag original de 2445, argumento efectivo de clock_gate, flag serializado y recibido en 2762 y now. No registrar sólo «gate activo».
+[E] CLOCK_APPLY: en A38B00, actor real resuelto por el gestor, validación de actor/FieldAttacher, campo esperado, modo de aplicación y argumentos observados. FieldTime recibido, TS+450/ancla antes/después, global antes/después y motivo de no aplicación. La existencia previa de un 2005 propio no sustituye esta lectura.
+[E] CLOCK_EFFECTIVE: resultado nativo de 20E55A0 y rama elegida: fijo de nivel, pausa field+17C o extrapolación. Muestrear tanto servidor H como clientes H/G. Evitar reentrada recursiva si la sonda intercepta ese mismo getter.
+[E] CLOCK_LOAD: estado de loader, +162 y fase; campo efectivo; pausa +17C; entrada/salida de 77AE70 y 219D7F0. Registrar argumentos originales/efectivos, resultado nativo y cambios reales. Ver si la carga misma, antes del Ack, restaura un estado antiguo.
+[E] CLOCK_VISUAL: gestor +28/+29/+2A/+2B, FieldTime privado +30..+4F, escala+46/ancla+48; valor que selecciona A384A0; valor entregado al world.vf+F8 y leído por el consumidor vf+100. Registrar el primer frame posterior a cada aplicación y unos frames siguientes para detectar sobrescritura.
+[E] CLOCK_CONFIRM (para el arreglo): versión/generación aplicada, getter efectivo al tick declarado y valor visual posterior. No devolver «aplicado» simplemente porque el paquete se encoló o se emitió un evento UI.
+
+5. SONDAS DE CLIMA Y AUTORIDAD
+
+[E] WEATHER_TX: en el contexto de 9ADF20, seis valores de 2560 por offset, flags locales anteriores/nuevos, condición que causó el envío, actor, recurso/volumen, cámara, posición y altura. Su frecuencia depende del cambio de clasificación; no usar ausencia de Req como prueba de clima constante.
+[E] WEATHER_AUTH: en la entrada común del servidor y/o 29C5DF0, sesión autenticada, actor/campo/dueño real, valores recibidos, decisión de autorización y field+178 antes/después. Separar intento enviado por G de escritura efectivamente aceptada. Tras el arreglo, todo intento G sobre el campo compartido debe ser rechazado con motivo.
+[E] WEATHER_VISUAL: en CDCA40 y consumidores relacionados, recurso identificado, objetivos y valores actuales, listas/fase de transición representadas como datos y estado/semilla relevante. Detectar un reinicio de componente al cargar o al viajar el otro PC. No copiar sus contenedores de punteros ni forzar sus miembros para obtener una imagen similar.
+[E] Las capturas de pantalla deben llevar una marca común de evento; ayudan a relacionar estado con efecto, pero no sustituyen las lecturas nativas ni acreditan la causa por sí solas.
+
+6. ÁRBOL DE DIAGNÓSTICO
+
+[E] Entrada: si 2144 es fresco pero no actualiza TS/global del campo correcto, cerrar aceptación/orden/FieldAttacher. Si lo actualiza y 2762 pierde avance por reanclaje, cerrar la transacción de fin de carga. Si getter sigue correcto pero el visual usa +30 privado o no se publica, cerrar selección/override/puerta visual. Si reloj y visual coinciden pero el clima no, seguir recursos/transiciones climáticas por separado.
+[E] Viaje flag 0: buscar la primera diferencia persistente antes y después de 2643 y de las fases del loader. No atribuirla al flag 1 de entrada. Si field+17C queda activo, identificar su escritor y la transición nativa que debía terminarlo. Si la fuente cambia al reloj temporal, seguir su origen y salida, no poner +29 a cero.
+[E] Influencia G→H: una modificación del global por G es un fallo de autoridad del reloj; una modificación de field+178 por G es un fallo de autoridad meteorológica. Un cambio del cielo H necesita además identificar su consumidor. No afirmar persistencia en disco sin evidencia de serialización/archivo.
+[E] Clima: si sólo difiere región o cámara, no declarar fallo de réplica mundial. Si región/fase son iguales pero objetivos/estado inicial difieren, identificar su productor. Si los objetivos son iguales pero difiere transición/semilla, replicar el estado suficiente mediante la operación nativa pertinente. Si todo eso coincide, seguir el consumidor final de precipitación/luz.
+
+7. COMPARACIÓN TEMPORAL Y TOLERANCIAS
+
+[V] S16 se alineó por actor+tick+pose idénticos, con cota de desplazamiento ±13,262 ms bajo las hipótesis del análisis. A escala 12 ese término equivale a ±0,159144 s de juego. No es una medida de RTT y no incluye por sí solo los errores de lectura y bias.
+[E] Evaluar ambos calendarios en UN tick servidor común con las conversiones/políticas nativas. No comparar dos cadenas HH:MM de muestras cercanas como si fueran simultáneas. Cada 0,5 s real representa 6 s de juego a escala 12; emparejar muestras sin compensación puede introducir un error aparente mayor que el objetivo.
+[E] Presupuesto de incertidumbre: alineación + duración de las lecturas H/G + incertidumbre del bias + cuantización, convertido a tiempo de juego mediante la escala local. No extrapolar linealmente a través de pausa, override, cambio autoritativo o frontera de carga; usar los eventos de ambos lados.
+[E] Objetivo inicial de hora, sólo si la incertidumbre total es ≤0,5 s de juego: error compensado ≤1 s de juego en el 95% de muestras estables y ≤2 s en las restantes, tras 2 s reales de asentamiento. Son criterios propuestos, no una precisión ya demostrada. Con incertidumbre superior, declarar la medición inconclusa y mejorarla, no dar un aprobado falso.
+[E] Deriva: en 60 s reales estables a escala 12 diurna, ambos deben avanzar 720 s de juego salvo una política nativa registrada. Cambio absoluto del error compensado ≤1 s de juego por esos 60 s, con presupuesto de incertidumbre compatible. Un error constante de 3,5 minutos puede pasar la pendiente y debe fallar la precisión absoluta.
+[E] Saltos: fuera de un cambio autoritativo explícito, detectar discontinuidades >2 s de juego tras la carga. Un salto >12 s de juego a escala 12, o proporcional a cuánto tardó la carga, es un fallo material que debe conservarse en la traza. Distinguir la pausa invisible de carga de un retroceso persistente una vez vuelve el mundo visible.
+[E] Clima: igualdad exacta de versión, región/recurso, objetivo y semilla cuando esos campos formen parte del contrato. Comparar parámetros normalizados inicialmente con tolerancia 1e−3 o cuantización nativa demostrada; no aplicar ese umbral a unidades desconocidas. La fase se evalúa al mismo tick. Respetar la duración real de las transiciones: no exigir que termine la lluvia en 2 s si el motor tarda más.
+[E] Autoridad: cero escrituras del reloj/clima compartido autorizadas por origen G; cero versiones de otro campo/generación aplicadas; cambios legítimos de H siguen funcionando y llegan a G; hashes de partidas sin cambios en esta prueba protegida. Evaluar aceptación real, no sólo que el filtro imprime un mensaje.
+
+8. ABORTO Y RESULTADOS INCONCLUSOS
+
+[E] Abortar la variante activa ante: escritura del mundo H por G; aplicación de estado de otra generación; llamada duplicada de finalización; pausa persistente inesperada; bucle de Req; NaN/campo inválido; puntero caducado; bytes distintos en un punto; carga bloqueada, crash o modificación de guardado. Conservar evidencia y volver a la variante de diagnóstico, sin compensar con escrituras internas.
+[E] Declarar ventana inconclusa si faltan registros de la transición causal, hay pérdidas en el tramo crítico o el coste de las sondas altera materialmente el flujo. No reemplazar un registro ausente por una suposición.
+[E] Criterio de cierre: poder señalar el primer escritor/selección incorrecto con campo, generación y tick; reproducirlo; demostrar que la intervención elimina ese fallo sin romper autoridad, carga o estado nativo. Repetir después entrada, un viaje de cada PC y reconexión con evidencia de aplicación y consumo visual.
+
+9. PUNTOS DE INSTRUMENTACIÓN PERMITIDOS
+
+[V] modules/PUNTOS.txt y POINTS.json contienen los prefijos y límites auditados. Los candidatos propuestos para esta sesión son 20E55A0,219D7F0,2BC0A30,A38B00,A384A0,77AE70,29C5DF0,9ADF20,CDCA40 y CE0490. Requieren validación de ABI/instancia y bytes en memoria antes de habilitar.
+[V] B8BB00/B87B90/CDC780 tienen incertidumbres de ramas interiores y no se incluyen como intervenciones habilitadas. B88990 es un thunk de 5 B, no una ventana comprobada de 14 B. Para recepción de paquetes usar el tap del propio mod; para consumo, los límites comunes alternativos auditados. No hay intervención propuesta dentro de .xtls.
+[E] No bloquear el dispatcher cliente esperando red, no retener 2762 para una barrera que depende de consumirlo y no apilar detours sobre un punto ya usado por clock_gate. Las correcciones se implementarán después; este documento especifica la medición y su aceptación.

@@ -1,0 +1,50 @@
+{
+  "familia_clave_reutilizada": {
+    "actores": [
+      {
+        "key": 1,
+        "birth": 20,
+        "parent": 0,
+        "epoch": 1,
+        "removed": false
+      },
+      {
+        "key": 2,
+        "birth": 11,
+        "parent": 1,
+        "epoch": 1,
+        "removed": false
+      }
+    ],
+    "seleccion": [
+      {
+        "key": 1,
+        "birth": 20,
+        "parent": 0,
+        "epoch": 1,
+        "removed": false
+      },
+      {
+        "key": 2,
+        "birth": 11,
+        "parent": 1,
+        "epoch": 1,
+        "removed": false
+      }
+    ],
+    "falta": "parent_birth o token de ra\u00edz"
+  },
+  "capacidad_no_reservada": {
+    "ocupados": 63,
+    "subarbol_nodos": 2,
+    "raiz_permitida": true,
+    "hijo_cabe": false
+  },
+  "troc_anidado": {
+    "marco_al_volver": {
+      "troc": 100,
+      "records": []
+    },
+    "falta": "pila de marcos o \u00e1mbito por lote con cierre seguro"
+  }
+}

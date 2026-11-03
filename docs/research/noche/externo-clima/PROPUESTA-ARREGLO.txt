@@ -1,0 +1,114 @@
+PROPUESTA DE ARREGLO — HORA Y CLIMA AUTORITATIVOS
+Diseño para el equipo implementador. No implementado ni probado en esta auditoría.
+
+1. INVARIANTES
+
+[E] El servidor del anfitrión conserva la autoridad del calendario y del mundo. El cliente del anfitrión será la fuente autorizada del estado meteorológico que sólo se genera en el render/simulador cliente. El servidor debe validar ese origen antes de publicarlo a los invitados. Nunca aceptar que un alias de owner del cliente otorgue autoridad real.
+[E] El invitado puede solicitar una muestra fresca; no puede imponer hora, clima, pausa o semilla sobre el anfitrión. Mantener clock_gate, el bloqueo de 2125 y la protección de guardados; añadir protección equivalente de 2560 en el límite común de autorización del servidor. La comprobación debe cubrir tráfico del túnel y futuras rutas de inyección interna.
+[E] Separar tres fases: observar, corregir autoridad, sincronizar representación. El modo de observación registra sin retener, reordenar o cambiar paquetes. Una sonda que ya cambia el flujo no sirve como control del comportamiento original.
+[E] Campo, generación de mundo, conexión, viaje y versión son parte del contrato. Toda aplicación confirma qué estado aceptó, en qué campo y cuándo. Una recepción registrada o una imagen aparentemente correcta no equivale a una aplicación persistente.
+
+2. CORRECCIÓN DE AUTORIDAD, DE ALCANCE ACOTADO
+
+[V] Los puntos existentes de decisión están en src/mod/session2/session2.cpp:200–248 (offer), server.cpp:880–921 (filtro por nombres), server.cpp:1334–1444 (inyección), clock_gate.cpp:134–191. Las líneas se refieren a source-snapshot. 2125 está bloqueado en offer; 2560 no está bloqueado allí ni por el filtro de nombres.
+[E] Introducir una política común de operaciones de entorno por sesión real. En una sesión cooperativa, denegar 2125 y 2560 de invitados cuando afectarían al campo/mundo compartido. Enviar al registro el motivo y la identidad validada; no alterar el payload para simular que se autorizó. Mantener las peticiones legítimas del anfitrión.
+[E] Validar actor→sesión→campo bajo las primitivas nativas del punto de entrada, sin usar nombres, ActorKey−1 o owner alias como identidad. Si no se puede determinar el remitente/campo, rechazar la operación de entorno compartido, no asumir que es H. Reiniciar el estado de autorización al cambiar de conexión/mundo.
+[E] La denegación de 2560 impide al invitado cambiar flags del servidor. NO sincroniza su cielo. Sus cálculos locales pueden seguir existiendo hasta que se integre la réplica visual, evitando realimentación hacia la autoridad.
+
+3. TRANSACCIÓN DE RELOJ DESPUÉS DE UNA CARGA
+
+[V] Defecto existente: 219D7F0 se invoca con 0 en el servidor por clock_gate, pero 2762 conserva el 1 original de la entrada. En cliente, 1 reancla y despausa; 0 omite ambas operaciones. Los viajes S16 ya usan 0. Una modificación indiscriminada 1→0 no es suficiente y puede dejar una entrada pausada.
+
+[E] Variante preferida para empezar: permitir una sola finalización nativa completa y después reconciliar, con una barrera de carga cliente comprobada. El servidor puede preparar una respuesta al recibir 2445, pero ese evento no prueba que el cliente haya consumido 2762 ni que haya terminado todas sus restauraciones.
+[E] Secuencia propuesta:
+    1. Al iniciar la carga/viaje, crear una generación local y registrar campo esperado.
+    2. Conservar el flujo nativo 2174/2144 o 2643, 3066, 2322, 2445, 2762 correspondiente.
+    3. En G, confirmar que terminó el ciclo nativo de esa generación y que actor,
+       FieldAttacher y campo están vivos; registrar pausa y selección temporal.
+    4. Solicitar o aceptar sólo la muestra vigente de H para esa generación.
+    5. En H-servidor, obtener el FieldTime EFECTIVO con 20E55A0 en su contexto,
+       junto a tick, política y versión. No copiar el global crudo ni el 2144 cacheado.
+    6. Aplicar en G mediante la operación nativa de tiempo, con su actor/campo correctos.
+       Preferir el despacho nativo de 2816 o su consumidor A38B00 con ABI verificada;
+       no inventar un opcode ni reutilizar todo 2144, que tiene efectos de entrada.
+    7. Comprobar TS, getter, fuente del reloj visual y primer frame posterior.
+       Confirmar aplicación al host; una versión que se sobrescribe no cuenta como éxito.
+
+[V] El receptor nativo 2816 termina en A38B00; su callsite A41D753 muestra R8B=1, puntero FieldTime en RDX y gestor cliente en RCX, con argumentos de pila preparados. El callsite está en .xtls y se usa sólo como evidencia del ABI; no se propone intervenir allí. La interfaz y todos los argumentos deben reconstruirse desde asm antes de invocarla, sin confiar ciegamente en el prototipo automático de Ghidra.
+[V] Ese llamador prepara también el quinto argumento byte=0 y el sexto u32=0; en la entrada del callee están en [RSP+0x28] y [RSP+0x30]. FieldTime ocupa 31 bytes serializados y 32 en memoria, con relleno en +0x15. [E] Deserializar explícitamente al formato de memoria antes de invocar el consumidor: pasar directamente los 31 bytes de red desplazaría escala/ancla y podría leer fuera del buffer. Comprobar aceptación con TS/getter/visual, no mediante el retorno del gestor o un evento UI aislado.
+[V] El handler 2816 también busca al actor indicado en el paquete y, si su comprobación de notificación lo requiere, llama a TS.vf150(0) antes de aplicar la hora al gestor local. Evidencia: ghidra-results/a41d560.c:75–86 y llamadas en RVA 0xA41D70E/0xA41D727/0xA41D753. [E] No fabricar el Ack copiando el id del anfitrión sin validar ese efecto sobre el actor seleccionado. La semántica completa de esa notificación debe revisarse; un 2816 sintético y la aplicación directa al gestor local no son intercambiables por defecto. Elegir una ruta con actor, campo y contexto comprobados.
+[E] No bloquear el dispatcher cliente esperando una respuesta de red ni retener 2762 para ocultar la corrección si la barrera exige haberlo consumido. No repetir 2762 ni volver a ejecutar LoadingComplete para refrescar el reloj: esa operación tiene otros efectos de carga. Resolver la espera con estado de generación y colas acotadas; un timeout suspende la aplicación y registra el motivo. Mantener la pantalla de carga sería una mejora posterior, condicionada a identificar una API nativa segura que no impida finalizar el ciclo.
+[E] El FieldTime enviado conserva un ancla en el dominio de ticks de H, que G ya relaciona mediante 2188. Compensar usando la política nativa; no sustituir por QPC, hora Windows o GetTickCount local. Conservar los datos brutos y el instante de lectura para auditar latencia y fronteras día/noche.
+[E] La variante posterior de mayor continuidad coordina una muestra fresca con el mismo now de 2762 antes de la única finalización cliente. Requiere una transacción real de orden/aplicación: la muestra y el now tienen que representar el mismo instante. Dos paquetes consecutivos en el túnel no prueban ese orden si el cliente los difiere en fases distintas. No empezar por esta variante sin cerrar la medición del ciclo.
+[E] Si flag 0 termina con una pausa que no corresponde, o el reloj temporal +29 sigue activo, no escribir esos bytes a cero ni repetir 219D7F0. Identificar y corregir la operación nativa que los dejó así. Si el override es legítimo (escena/estado narrativo), definir seguimiento del anfitrión o suspensión temporal de la sincronización y usar su API nativa; no combatir el override con un setter por frame.
+[E] La variante posterior a 2762 puede producir una corrección visual breve en la entrada antes de reconciliar. Medirla como riesgo conocido y no prometer continuidad perfecta hasta validar la variante transaccional.
+
+4. CONTINUIDAD, CAMBIOS NATIVOS Y RECONEXIÓN
+
+[V] 2816 se difunde por ToNear cuando un dueño cambia la hora; no hubo 2816 en las capturas S15–17. 2188 sólo transporta el reloj técnico. Ni uno ni otro garantiza por sí solo la recuperación de una recarga del observador.
+[E] Publicar inmediatamente cada cambio autoritativo de calendario a todos los observadores del mundo/campo aplicable. Evitar duplicar un 2816 ya recibido por la difusión nativa; la versión/evento autoritativo debe poder reconocerse. Para observadores lejanos, no depender sólo de ToNear.
+[E] Mantener una comprobación periódica moderada de deriva (frecuencia final por medición) y pedir una muestra al reconectar/cambiar de campo. Una comprobación no implica reanclar en cada recepción: el estado continuo se extrapola y sólo se corrige cuando lo exige el contrato o el error medido.
+[E] Si G carga mientras H cambia la hora, conservar el estado vigente más reciente de esa generación; no reproducir una cola de resets antiguos al salir de la pantalla de carga. Descartar paquetes de otra época, versiones regresivas o campos destruidos. Acotar colas y tiempos; ante inconsistencia, suspender la aplicación y registrar el motivo.
+[E] Esquema conceptual para el canal propio del mod: versión de formato; época de sesión/mundo; campo y generación de carga; secuencia; tick de captura; FieldTime compacto; política de pausa/override identificada; sección climática versionada. Son campos de diseño, no mensajes nativos descubiertos. Un acuse debe incluir la versión realmente aplicada y la lectura efectiva posterior.
+
+5. CLIMA: QUÉ IMPLEMENTAR Y QUÉ AÚN NO ESTÁ LISTO
+
+[V] 9ADF20 toma seis magnitudes del recurso visual, actualiza flags locales y emite 2560 sólo si cambia su clasificación. 29C5DF0→20E6FE0 reduce esos valores a flags del servidor. WeatherSimulator CDCA40 tiene recursos, canales actuales/objetivo y transiciones; CDC780 reinicia y usa un generador; CDD080 usa hora visual y estado aleatorio en parte de los efectos.
+[E] No reenviar 2560 al cliente como si fuera un Ack, no copiar field+178 para ordenar el cielo y no tratar sus seis floats como el snapshot completo. Tampoco copiar estructuras con punteros entre PC ni escribir a mano los canales internos para simular igualdad.
+[E] Durante la medición, relacionar los cambios reales de lluvia/nubes con los objetivos y transiciones de CDCA40 y sus recursos. Registrar identidad de recurso/volumen, posición/altura, fase temporal, override, versión y estado necesario del generador. Distinguir los parámetros que determinan el fenómeno compartido de los que son puramente locales de cámara.
+[E] Elegir después una operación nativa que aplique/restaure esos objetivos y transiciones en el invitado. El flujo propuesto es productor visual autorizado H→servidor→G, con una instantánea completa para incorporación tardía y cambios incrementales versionados. La evaluación espacial debe conservar recursos regionales; no asumir que un único flag de campo representa el clima en todas las regiones.
+[H] En esta auditoría no se ha demostrado una API única de aplicación de todo el clima ni el conjunto mínimo suficiente para reconstruirlo. Esta parte queda condicionada a la medición descrita, y no se presenta como lista para implementar sin más investigación. ClientChangeWeatherBuffProcessor 931DC0 es otra ruta de override encontrada; no está validada como solución general y no se recomienda imponer buffs de lluvia.
+[E] Primera aceptación visual: ambos PC juntos en el mismo volumen climático, con la misma fase/objetivo. Después ampliar a separación espacial, entrada tardía, viaje y reconexión. Si el producto desea copiar deliberadamente el aspecto local de H incluso en regiones diferentes, esa política debe ser explícita; no puede deducirse del comportamiento nativo.
+
+6. PUNTOS CON BYTES VERIFICADOS
+
+[V] PE SHA256 57da440d72f4db974f25fef047cf84c4dadd999a88cb2a3c5af4c9bd67fde1e7, base 0x140000000. Todos los candidatos siguientes están en .rsrc, dentro de [0x1000,0x51EB000). modules/PUNTOS.txt y POINTS.json conservan cada instrucción, límites .pdata, offset de archivo, relocaciones y búsqueda de ramas al interior. Son candidatos estáticos de instrumentación, no parches preparados.
+
+[V] 20E55A0, 16 B, getter de tiempo efectivo:
+    48 89 5C 24 10 57 48 83 EC 60 48 8B 01 48 8B FA
+[V] 219D7F0, 15 B, finalización común de carga:
+    48 89 5C 24 10 48 89 74 24 18 48 89 7C 24 20
+[V] 2BC0A30, 15 B, viaje y gate existente:
+    48 89 5C 24 10 48 89 74 24 18 48 89 7C 24 20
+[V] A38B00, 15 B, aplicación nativa de hora cliente:
+    48 89 5C 24 10 44 88 4C 24 20 55 56 57 41 54
+[V] A384A0, 15 B, selección y publicación visual:
+    48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18
+[V] 77AE70, 14 B, fase de carga que puede pausar el campo:
+    48 89 5C 24 10 55 56 57 41 54 41 55 41 56
+[V] 29C5DF0, 14 B, recepción servidor de 2560:
+    48 89 5C 24 08 55 56 57 41 54 41 55 41 56
+[V] 9ADF20, 15 B, productor cliente de flags/2560:
+    48 89 5C 24 10 48 89 74 24 18 48 89 7C 24 20
+[V] CDCA40, 15 B, actualización del simulador visual:
+    48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18
+[V] CE0490, 19 B, consumidor visual de hora:
+    48 8B C4 48 89 58 08 48 89 70 10 57 48 81 EC C0 01 00 00
+
+[V] Las ventanas anteriores terminan en instrucciones completas, sin referencias relativas/RIP en el prefijo y sin ramas directas interiores encontradas por el barrido y la revisión de límites. [E] Eso no prueba ausencia de entradas indirectas o modificaciones en memoria. Antes de habilitar una intervención: verificar bytes en memoria, ventana exacta de la biblioteca de hooks, referencias/ABI y ejecución segura entre hilos. Si no se puede excluir una entrada interior, elegir otro límite ya verificado; no instalar el hook.
+[V] EXCLUIDOS del plan de intervención actual: B8BB00 y B87B90 tienen patrones de posibles ramas interiores desde zonas sin límite .pdata comprobable; no se acreditó si son código real o coincidencias. CDC780 tiene la misma incertidumbre y un CALL relativo en el prefijo. B88990 es un thunk de 5 B a A41D560(.xtls), no una entrada apta para copiar 14 B. Los cuerpos protegidos sólo se leyeron. No enganchados, no NOPs, no saltos a la sección protegida.
+[E] Usar las rutas de paquete del propio mod para CLOCK_RX y los candidatos 219D7F0/A38B00 para el consumo, sin necesitar los handlers excluidos. Para el reinicio meteorológico, observar desde CDCA40 y sus cambios de estado mientras no se resuelva un punto seguro específico de reset. Evitar apilar otro detour encima de clock_gate: ampliar el punto de instrumentación existente con una única cadena definida.
+
+7. HILOS, VIDA DE OBJETOS Y COSTE
+
+[E] Lectura autoritativa: hilo/contexto servidor que posee el campo, TLS+1EC coherente y referencias adjuntadas/bloqueadas. Capturar un valor plano e inmutable. No llamar al getter de servidor desde una tarea de Steam con TLS cliente.
+[E] Transporte: sólo datos serializables, no direcciones de actor/field ni referencias de recursos. Las colas llevan identidad y generación y son acotadas. La entrada de red no escribe los globals del motor.
+[E] Aplicación: despacho cliente que ya procesa la operación nativa, con actor/campo vigentes. Tras una carga se vuelve a resolver la identidad; no conservar punteros de la fase anterior. Un hook muy frecuente no debe asignar memoria/formatear texto bajo un lock ni invocar recursivamente su propio getter.
+[E] Captura de clima: contexto de actualización del recurso/simulador. Copiar la representación de estado estable, no sus contenedores internos. Medir coste de las sondas; una pausa causada por registro puede alterar el fenómeno que se pretende estudiar.
+[E] Riesgos concretos: selección del realm equivocado; reanclaje que borra latencia; estado recibido antes del último escritor de carga; override legítimo que gana al reloj nuevo; bucle G→H por efectos de aplicación; campo destruido; alias interpretado como autoridad; diferencias de región; incompatibilidad de build o coexistencia de hooks. Cada riesgo tiene un observable y un motivo de rechazo, no una escritura forzada como recuperación.
+
+8. ALTERNATIVAS
+
+[E] Sólo reenviar 2188: coste mínimo; ya llega a G y no contiene calendario. Insuficiente.
+[E] Sólo convertir 2445/2762 a 0: coste bajo; puede impedir despausa y no cubre viajes flag 0 ni clima. No aprobar como solución completa.
+[E] Sólo reenviar 2816 nativo: coste bajo/medio; útil para cambios explícitos y observadores fuera de ToNear. No cubre sesiones sin 2816 ni la incorporación tardía por sí solo.
+[E] Corregir 2144 de entrada: coste bajo, pero los datos ya son frescos; actuar ahí sin demostrar rechazo posterior no ataca la causa. No fabricar otro 2144 de recarga por sus efectos adicionales.
+[E] Snapshot fresco después de la carga + aplicación confirmada + difusión de cambios: coste medio; opción recomendada para reloj, con posible ajuste visual breve inicial.
+[E] Snapshot transaccional ligado al now de 2762: coste medio/alto; mejor continuidad, más riesgo de orden y ciclo de carga; segunda fase después de probar las postcondiciones.
+[E] Canal propio de estado ambiental con aplicación nativa: coste alto para clima, pero permite incorporación tardía, generaciones y acuse real. El contrato de clima completo aún requiere medición; no prometerlo a partir de los seis floats 2560.
+[E] Desactivar clock_gate, transferir owner real a G, permitir 2125/2560 inversos o forzar globals/pausa por frame: descartado, porque rompe autoridad o sólo oculta el síntoma.
+
+9. ORDEN DE ENTREGA AL EQUIPO IMPLEMENTADOR
+
+[E] Primero una variante exclusivamente de sondas y la sesión de PLAN-PRUEBA.txt. Segundo, el control de autoridad 2560 y su prueba pre/post sin modificar el reloj. Tercero, reloj con muestras frescas y confirmación de aplicación, validando entrada/viajes/reconexión. Cuarto, clima cuando el consumidor nativo y el estado mínimo estén cerrados. No mezclar las cuatro fases en una prueba que impida atribuir un resultado.
+[E] Pruebas automáticas útiles al implementar: rechazo de épocas/versiones antiguas, identidad no autorizada, orden de barreras, desconexión durante carga y presupuesto de colas; además una reproducción de formatos/FieldTime con muestras reales. No basta un test que imite el código del hook. La aceptación final de reloj/cielo necesita dos clientes reales y los observables nativos.

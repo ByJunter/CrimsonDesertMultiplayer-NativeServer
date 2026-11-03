@@ -1,0 +1,22 @@
+build/
+out/
+.vs/
+*.user
+
+# Local only: save backups, the cloned reference repo (no license), downloads
+backups/
+reference/
+third_party/**/*.zip
+
+*.log
+
+# Sniffer captures (large, local only)
+captures/
+dist/
+
+# Ultimate ASI Loader binary: download it (third_party/ultimate-asi-loader/README.md)
+third_party/ultimate-asi-loader/v9.7.4/dinput8.dll
+
+# Python caches
+__pycache__/
+*.pyc

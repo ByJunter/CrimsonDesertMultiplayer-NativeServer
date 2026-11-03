@@ -1,0 +1,22 @@
+HORA Y CLIMA EN OPCIÓN D — RESUMEN EJECUTIVO
+Crimson Desert PC 1.0.0.2976 · 11 de octubre de 2026
+
+[V] El invitado sí recibe una hora actualizada al entrar. En S16 recibe día 6, 13:59:53.952, mientras la base inicial del anfitrión era 13:37:28.728. La diferencia coincide exactamente con el avance del reloj del servidor. S15 y S17 confirman el mismo patrón. El supuesto de que 2144 repite la hora guardada inicial queda descartado.
+
+[V] Hay un fallo concreto de contrato: clock_gate cambia 1→0 la política de fin de carga en el servidor, pero el 2762 enviado al invitado conserva 1. El cliente puede reanclar su calendario sin recuperar lo transcurrido durante la carga. [E] Con la base fresca recibida en S16, perdería 3 min 31,356 s de juego. Esto no demuestra por sí solo el retorno visual a la hora inicial.
+
+[V] Los cuatro viajes completos de S16 usan 2445/2762=0 y no reciben otro 2144. Por tanto, cambiar únicamente el flag 1 no explica ni resuelve esos viajes. Además, flag 0 omite la despausa que hace la rama 1: sustituirlo indiscriminadamente puede introducir otro problema.
+
+[V] El reloj mostrado tiene su propio selector: normalmente usa la hora efectiva del campo, pero puede elegir un calendario temporal privado del cliente. También existen hora fija de nivel y pausa. [H] Las capturas no leen esos estados; falta identificar qué escritor o selección produjo exactamente el gran desfase y el reinicio visual observados.
+
+[V] El clima funciona por separado: un simulador cliente maneja recursos, objetivos, transiciones y parte de estado aleatorio. 2560 comunica seis valores del cliente al servidor cuando cambia una clasificación; no es un Ack que sincronice el cielo. Su consumidor escribe flags del campo sin comprobar el dueño en la ruta auditada, y el mod no bloquea 2560 del invitado.
+
+[E] Arreglo recomendado: conservar las protecciones actuales, cerrar la autoridad G→H para clima y coordinar cada carga con una muestra fresca del reloj de H, aplicada por la ruta nativa y confirmada después. Mantener cambios autoritativos y reconciliación medida, con campo, generación y versión; no forzar globals, pausa u overrides.
+
+[E] El clima necesita su propio estado autoritativo y una operación nativa de aplicación. Copiar la hora, seis floats o un bitmask no garantiza el mismo cielo. [H] La API completa y el estado mínimo suficiente aún no están demostrados; no se presentan como una implementación ya resuelta.
+
+[E] Próxima sesión: H espera 90 s, entra G, ambos permanecen juntos 60 s, viaja sólo G y después sólo H. Registrar hora recibida/aceptada/efectiva/visual, política de carga, reloj temporal y recurso/transición meteorológica. Así se localiza el primer punto divergente sin confundirlo con una diferencia de región o de reloj Windows.
+
+[V] Entregados INFORME.txt, PROPUESTA-ARREGLO.txt, PLAN-PRUEBA.txt y anexos reproducibles. Se analizaron las tres sesiones, versiones de los módulos y 41 funciones decompiladas con bytes coincidentes con el PE. Diez entradas quedaron como candidatas estáticas de instrumentación; cuatro se excluyeron o retuvieron por incertidumbre. No son parches listos.
+
+[V] No se ejecutó el juego, no se hicieron commits ni cambios en sus archivos o partidas. Se eliminó la copia propia del proyecto Ghidra y se comprobó que no quedaba java.exe/javaw.exe. El cierre documenta cinco archivos del repositorio que cambiaron durante el trabajo paralelo; se analizó la copia inicial congelada, cuyos 777 archivos conservan sus hashes.

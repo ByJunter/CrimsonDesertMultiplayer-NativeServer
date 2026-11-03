@@ -1,0 +1,240 @@
+--- a/src/allocator.cpp
++++ b/src/allocator.cpp
+@@ -1,6 +1,31 @@
++// cdmp: a copy of safetyhook v0.7.0 src/allocator.cpp (Boost Software License 1.0,
++// third_party/safetyhook-patch/LICENSE) with one change in Allocator::allocate_nearby_memory, built in place of
++// the original by the project's CMakeLists.txt (which checks the original's SHA-256 first; the diff is
++// allocator.cpp.patch next to this file).
++// Why (P8 session 26, docs/research/s25/montura-regresion.md sections 5 and 7.1): on the host the first inline hook in the
++// game's exe (MountSync's 0x2228260) twice found no trampoline memory within +-2 GB and got the 14-byte fallback,
++// so the module refused it and the host never published its mounts. Upstream's search near the target:
++//   - forward: asked VirtualAlloc only for the START of each free run; VirtualAlloc rounds a reservation's address
++//     down to the allocation granularity, so a run that does not start on a 64 KB boundary (the one right after an
++//     image whose size is not a multiple of 64 KB, always: the game's ends at 0x1573AB000) overlapped the
++//     reservation below and was skipped whole;
++//   - backward: after a refused attempt on a FREE region it went on from that region's AllocationBase, which is 0
++//     for free memory, so the search stopped at the first refusal (a race, or a free gap smaller than the size).
++// Now both directions try the allocation-granularity boundaries INSIDE each free run, the nearest first:
++//   - forward: at most 16 refused VirtualAlloc calls per free run, then the next run;
++//   - backward: granule by granule down to the end of the window, with no other bound (2 GB / 64 KB = 32768
++//     granules; the review of bf255bb measured a worst case of 32,770 steps in 6.3 ms).
++// Neither stops before the +-2 GB window ends. Review of bf255bb (3): a block is taken only when ALL of it is within
++// reach of every desired address (its start and its end; upstream checked the start only, so a block starting just
++// inside the window could end 64 KB past it and the trampoline's jumps would wrap by 4 GB); the same for a free-list
++// reuse. Nothing else changes: the same window, the same order (below the target first), the same blocks and free
++// lists. When a search finds nothing, what it examined is kept for the mod's log (cdmp_near_last_failure,
++// src/mod/game/hook_prepare.h).
+ #include <algorithm>
+ #include <functional>
+ #include <limits>
++#include <cstdint>
++#include <mutex>
+ 
+ #include "safetyhook/os.hpp"
+ #include "safetyhook/utility.hpp"
+@@ -103,8 +128,9 @@
+ 
+             const auto address = node->start;
+ 
+-            // Close enough?
+-            if (!in_range(address, desired_addresses, max_distance)) {
++            // Close enough? cdmp (review of bf255bb (3)): the whole slot, not only its start.
++            if (!in_range(address, desired_addresses, max_distance) ||
++                !in_range(address + aligned_size, desired_addresses, max_distance)) {
+                 continue;
+             }
+ 
+@@ -183,6 +209,37 @@
+     }
+ }
+ 
++// cdmp: the last near search that found nothing (for the mod's log; cdmp_near_last_failure below). Written under its
++// own lock only when a search fails; a search is always called under its Allocator's lock.
++namespace {
++constexpr size_t kCdmpNearSteps = 48;
++struct CdmpNearTrace {
++    uint64_t desired = 0, lo = 0, hi = 0, size = 0;
++    uint32_t steps = 0;
++    uint64_t step[kCdmpNearSteps][5] = {};
++    void add(uint8_t dir, uint8_t what, uint8_t* at, const VmBasicInfo& mbi, uint8_t* tried) noexcept {
++        if (steps < kCdmpNearSteps) {
++            uint64_t* s = step[steps];
++            s[0] = reinterpret_cast<uint64_t>(at);
++            s[1] = mbi.is_free ? 0 : reinterpret_cast<uint64_t>(mbi.address);
++            s[2] = mbi.size;
++            s[3] = reinterpret_cast<uint64_t>(tried);
++            s[4] = (static_cast<uint64_t>(dir) << 8) | what;
++        }
++        ++steps;
++    }
++};
++std::mutex g_cdmp_near_mutex;
++uint64_t g_cdmp_near_failures = 0;
++CdmpNearTrace g_cdmp_near_last;
++// Outcomes of one step.
++constexpr uint8_t kCdmpNotFree = 0;    // reserved / committed: the search jumped past it
++constexpr uint8_t kCdmpRefused = 1;    // free: VirtualAlloc refused the address in `tried`
++constexpr uint8_t kCdmpNoRoom = 2;     // free: no 64 KB-aligned room of the size inside it (and in range)
++// Failed VirtualAlloc calls tried inside one free run before the search moves on (upstream: one, then it stopped).
++constexpr int kCdmpTriesPerRun = 16;
++} // namespace
++
+ std::expected<uint8_t*, Allocator::Error> Allocator::allocate_nearby_memory(
+     const std::vector<uint8_t*>& desired_addresses, size_t size, size_t max_distance) {
+     if (desired_addresses.empty()) {
+@@ -194,7 +251,8 @@
+     }
+ 
+     auto attempt_allocation = [&](uint8_t* p) -> uint8_t* {
+-        if (!in_range(p, desired_addresses, max_distance)) {
++        // cdmp (review of bf255bb (3)): the whole block within reach, its end as well as its start.
++        if (!in_range(p, desired_addresses, max_distance) || !in_range(p + size, desired_addresses, max_distance)) {
+             return nullptr;
+         }
+ 
+@@ -222,10 +280,18 @@
+     search_end = std::min(search_end, si.max_address);
+     desired_address = align_up(desired_address, si.allocation_granularity);
+     VmBasicInfo mbi{};
+-
+-    // Search backwards from the desired_address.
+-    for (auto p = desired_address; p > search_start && in_range(p, desired_addresses, max_distance);
+-         p = align_down(mbi.address - 1, si.allocation_granularity)) {
++    const size_t granularity = si.allocation_granularity;
++    CdmpNearTrace trace;
++    trace.desired = reinterpret_cast<uint64_t>(desired_addresses[0]);
++    trace.lo = reinterpret_cast<uint64_t>(search_start);
++    trace.hi = reinterpret_cast<uint64_t>(search_end);
++    trace.size = size;
++
++    // Search backwards from the desired_address. p is always on an allocation-granularity boundary.
++    // cdmp: upstream went on from the region's AllocationBase also after a failed attempt on a FREE region, whose
++    // AllocationBase is 0: the search stopped there. Now a free granule that is too small for `size`, or that
++    // VirtualAlloc refuses, is followed by the granule below it.
++    for (auto p = desired_address; p > search_start && in_range(p, desired_addresses, max_distance);) {
+         auto result = vm_query(p);
+ 
+         if (!result) {
+@@ -235,16 +301,38 @@
+         mbi = result.value();
+ 
+         if (!mbi.is_free) {
++            trace.add(0, kCdmpNotFree, p, mbi, nullptr);
++            auto next = align_down(mbi.address - 1, granularity);
++            if (mbi.address == nullptr || next >= p) {
++                break;
++            }
++            p = next;
+             continue;
+         }
+ 
+-        if (auto allocation_address = attempt_allocation(p); allocation_address != nullptr) {
+-            return allocation_address;
++        // mbi.size counts from p upward (the free run above p).
++        if (mbi.size >= size) {
++            if (auto allocation_address = attempt_allocation(p); allocation_address != nullptr) {
++                return allocation_address;
++            }
++            trace.add(0, kCdmpRefused, p, mbi, p);
++        } else {
++            trace.add(0, kCdmpNoRoom, p, mbi, nullptr);
+         }
++
++        if (reinterpret_cast<uintptr_t>(p) < granularity) {
++            break;
++        }
++        p -= granularity;
+     }
+ 
+     // Search forwards from the desired_address.
+-    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance); p += mbi.size) {
++    // cdmp: upstream asked VirtualAlloc only for the START of each free run, which it rounds down to the
++    // allocation granularity: a run that does not start on a 64 KB boundary (the one right after an image whose
++    // size is not a multiple of 64 KB, always) overlapped the reservation below and was skipped whole. Now the
++    // first granule boundary inside the run (and the next ones, while VirtualAlloc refuses, a bounded number of
++    // times) is tried.
++    for (auto p = desired_address; p < search_end && in_range(p, desired_addresses, max_distance);) {
+         auto result = vm_query(p);
+ 
+         if (!result) {
+@@ -252,19 +340,76 @@
+         }
+ 
+         mbi = result.value();
++        auto run_end = p + mbi.size;  // RegionSize counts from p's page: the end of this run
+ 
+-        if (!mbi.is_free) {
+-            continue;
++        if (mbi.is_free) {
++            int tries = 0;
++            for (auto a = align_up(p, granularity);
++                 a >= p && a + size <= run_end && a < search_end && in_range(a, desired_addresses, max_distance) &&
++                 in_range(a + size, desired_addresses, max_distance);
++                 a += granularity) {
++                if (auto allocation_address = attempt_allocation(a); allocation_address != nullptr) {
++                    return allocation_address;
++                }
++                trace.add(1, kCdmpRefused, p, mbi, a);
++                if (++tries >= kCdmpTriesPerRun) {
++                    break;
++                }
++            }
++            if (tries == 0) {
++                trace.add(1, kCdmpNoRoom, p, mbi, nullptr);
++            }
++        } else {
++            trace.add(1, kCdmpNotFree, p, mbi, nullptr);
+         }
+ 
+-        if (auto allocation_address = attempt_allocation(p); allocation_address != nullptr) {
+-            return allocation_address;
++        if (run_end <= p) {
++            break;
+         }
++        p = run_end;
+     }
+ 
++    {
++        std::scoped_lock lock{g_cdmp_near_mutex};
++        ++g_cdmp_near_failures;
++        g_cdmp_near_last = trace;
++    }
+     return std::unexpected{Error::NO_MEMORY_IN_RANGE};
+ }
+ 
++// cdmp: the last near search that found nothing (src/mod/game/hook_prepare.h). out[0] failed searches so far,
++// out[1] the first desired address of the last one, out[2] / out[3] its window, out[4] the size it asked for, out[5]
++// the steps it took (only the first 48 kept), then 5 words per kept step: the address queried, the region's
++// AllocationBase (0 = free), RegionSize from that address, the address VirtualAlloc was asked for (0 = none),
++// (direction << 8) | outcome (direction 0 below the target, 1 above; outcome 0 not free, 1 VirtualAlloc refused,
++// 2 free but no 64 KB-aligned room of the size in range). Returns the words written (at most n).
++size_t cdmp_near_last_failure(uint64_t* out, size_t n) noexcept {
++    if (out == nullptr || n == 0) {
++        return 0;
++    }
++    std::scoped_lock lock{g_cdmp_near_mutex};
++    const CdmpNearTrace& t = g_cdmp_near_last;
++    size_t w = 0;
++    auto put = [&](uint64_t v) {
++        if (w < n) {
++            out[w++] = v;
++        }
++    };
++    put(g_cdmp_near_failures);
++    put(t.desired);
++    put(t.lo);
++    put(t.hi);
++    put(t.size);
++    put(t.steps);
++    const uint32_t kept = t.steps < kCdmpNearSteps ? t.steps : static_cast<uint32_t>(kCdmpNearSteps);
++    for (uint32_t i = 0; i < kept; ++i) {
++        for (int k = 0; k < 5; ++k) {
++            put(t.step[i][k]);
++        }
++    }
++    return w;
++}
++
+ bool Allocator::in_range(uint8_t* address, const std::vector<uint8_t*>& desired_addresses, size_t max_distance) {
+     return std::all_of(desired_addresses.begin(), desired_addresses.end(), [&](const auto& desired_address) {
+         const size_t delta = (address > desired_address) ? address - desired_address : desired_address - address;
