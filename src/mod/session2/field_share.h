@@ -21,6 +21,8 @@
 #include <cstdint>
 #include <string>
 
+#include "mod/game/build_profile.h"
+
 namespace cdmp::session2 {
 
 // The game functions the hooks call (injectable for the tests).
@@ -68,6 +70,41 @@ inline constexpr uint32_t kMgrEntries = 0x4C;
 inline constexpr uint32_t kMgrBuckets = 0x58;
 inline constexpr uint32_t kMgrHolders = 0x60;
 }  // namespace fld
+
+// Build-selected offsets shared by field sharing, lifecycle probes, and the
+// server diagnostics. Unknown/test executables intentionally use the legacy
+// layout so the existing memory-backed unit tests keep their 1.0.0.2976
+// fixtures; runtime hook installation still rejects unsupported builds.
+struct RuntimeFieldLayout {
+    uint32_t ts_field_mover;
+    uint32_t users;
+    uint32_t user_count;
+    uint32_t user_actors;
+    uint32_t key;
+    uint32_t level_entry;
+    uint32_t ts_sector;
+    uint32_t fm_moving;
+    uint32_t fm_busy;
+    bool ts_moving_verified;
+};
+
+inline constexpr RuntimeFieldLayout kFieldLayout2976{fld::kTsFieldMover, fld::kUsers, fld::kUserCount,
+                                                      fld::kUserActors, fld::kKey, fld::kLevelEntry,
+                                                      0x540, 0x58, fld::kFmBusy, true};
+// 3527 MoveField/AddActor paths prove the shifted FieldMover, ServerField
+// tail, and sector pointer. Its GetField/release pair uses FM+48/+4A for
+// move state/access count (old +58/+5A); MoveField still writes TS+3DC.
+// Exact instructions: tools/porting/data/field_mover_layout_3527.json.
+inline constexpr RuntimeFieldLayout kFieldLayout3527{0x508, 0x2A8, 0x2B0, 0x2B8, 0x2D0, 0x2D8,
+                                                      0x548, 0x48, 0x4A, true};
+
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run) keeps 3527's layout: AddActor (.tls$ 0xE52BF90) reads
+// +2A8/+2B0/+2B8/+2D8 and the FieldMover moves (0x2E61990 + 0xC70) use TS+0x508, FM+0x10/+0x40/+0x48/+0x4A with the
+// same instruction bytes as field_mover_layout_3527.json.
+inline const RuntimeFieldLayout& runtime_field_layout() {
+    const auto b = game::current_build();
+    return b == game::Build::v3527 || b == game::Build::v3576 ? kFieldLayout3527 : kFieldLayout2976;
+}
 
 // The level entry AcquireField would use for this FieldInfoKey (its own
 // lookup, read only); 0 if not found.

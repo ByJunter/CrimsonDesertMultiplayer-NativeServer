@@ -16,6 +16,10 @@
 
 namespace cdmp::net {
 
+// All callback and injection packets use logical opcode IDs (native_opcode.h).
+// The sniffer translates private copies at native boundaries; disk captures
+// retain the original native opcode bytes for their recorded executable build.
+
 // `dir` is the mod's folder; `stop` is the mod-wide stop event. With
 // record=false the hooks still feed co-op but nothing is written to disk.
 bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record = true);
@@ -39,9 +43,9 @@ uint64_t sniffer_first_packet_us() noexcept;
 using PacketTap = void (*)(const uint8_t* packet, size_t size, uint64_t t_us, bool server_to_client) noexcept;
 void sniffer_set_tap(PacketTap tap) noexcept;
 
-// P8 session 9, D1 (session2/ride_filter.h): a callback that may change an S->C packet IN PLACE inside the
+// P8 session 9, D1 (session2/ride_filter.h): a callback that may change a logical COPY of an S->C packet inside the
 // OnRecvPacket mid hook, after it was captured (the capture keeps what the server sent) and before the game
-// reads it. Called on the game's thread: it must not allocate, lock or log; any access to the packet must be
+// reads it. A valid rewrite is encoded back into the native buffer. Called on the game's thread: it must not allocate, lock or log; any access to the packet must be
 // SEH-guarded by the callback. One at a time (nullptr removes it). False: the sniffer's hooks are not in.
 using RecvRewrite = void (*)(uint8_t* packet, uint16_t size) noexcept;
 bool sniffer_set_recv_rewrite(RecvRewrite fn) noexcept;

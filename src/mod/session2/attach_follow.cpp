@@ -1,4 +1,5 @@
 #include "mod/session2/attach_follow.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -240,7 +241,7 @@ void on_child_move(Dir& d, const afl::Move& mv) {
 }
 
 void registry_feed(uint16_t opcode, std::span<const uint8_t> payload) {
-    const afl::RegEvent r = afl::registry_event(opcode, payload);
+    const afl::RegEvent r = afl::registry_event(opcode, payload, game::current_build());
     if (r.what == afl::Reg::Attach) {
         g_registry.attach(r.key, GetTickCount64());
         g_reg_attach.fetch_add(1, std::memory_order_relaxed);
@@ -311,11 +312,11 @@ void attach_follow_on_out(uint16_t opcode, std::span<const uint8_t> packet, Atta
     try {
         const std::span<const uint8_t> payload = packet.subspan(afl::kHeader);
         if (opcode == afl::kOpStartActionAck) {
-            const afl::Action a = afl::read_action(payload, true);
+            const afl::Action a = afl::read_action(payload, true, game::current_build());
             if (a.ok && afl::child_key(a.key)) on_action(g_out, a, false);
             return;
         }
-        const afl::Move mv = afl::read_move(payload, afl::kMoveAckSize);
+        const afl::Move mv = afl::read_move(payload, afl::kMoveAckSize, game::current_build());
         if (!mv.ok) return;
         if (afl::child_key(mv.key)) {
             on_child_move(g_out, mv);
@@ -334,7 +335,7 @@ void attach_follow_on_out(uint16_t opcode, std::span<const uint8_t> packet, Atta
                 g_out.held_skips.fetch_add(1, std::memory_order_relaxed);
                 continue;
             }
-            if (!afl::make_child_ack(packet, makes[i].child, makes[i].pose, child)) {
+            if (!afl::make_child_ack(packet, makes[i].child, makes[i].pose, child, game::current_build())) {
                 g_out.build_failed.fetch_add(1, std::memory_order_relaxed);
                 continue;
             }
@@ -359,11 +360,11 @@ void attach_follow_on_guest_req(uint16_t opcode, std::span<const uint8_t> payloa
         if (registry) registry_feed(opcode, payload);
         if (!follow) return;
         if (opcode == afl::kOpStartActionReq) {
-            const afl::Action a = afl::read_action(payload, false);
+            const afl::Action a = afl::read_action(payload, false, game::current_build());
             if (a.ok && afl::child_key(a.key)) on_action(g_in, a, true);
             return;
         }
-        const afl::Move mv = afl::read_move(payload, afl::kMoveReqSize);
+        const afl::Move mv = afl::read_move(payload, afl::kMoveReqSize, game::current_build());
         if (!mv.ok) return;
         if (afl::child_key(mv.key)) {
             on_child_move(g_in, mv);
@@ -375,7 +376,7 @@ void attach_follow_on_guest_req(uint16_t opcode, std::span<const uint8_t> payloa
         // Never sent (this direction stays measured): the Req is built only to know 1 could.
         std::vector<uint8_t> req;
         for (size_t i = 0; i < n; ++i) {
-            if (!afl::make_child_req(payload, makes[i].child, makes[i].pose, req)) {
+            if (!afl::make_child_req(payload, makes[i].child, makes[i].pose, req, game::current_build())) {
                 g_in.build_failed.fetch_add(1, std::memory_order_relaxed);
             }
         }

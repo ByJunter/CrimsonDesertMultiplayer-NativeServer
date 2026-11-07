@@ -46,7 +46,14 @@ public:
     // Forget the backlog and the broken state (a new conversation).
     void reset();
 
-    bool connected() const { return session_.state() == ClientSession::State::Connected; }
+    bool connected() const {
+        return session_.state() == ClientSession::State::Connected &&
+               (!identity_required_ || peer_identity_epoch_ == session_.epoch());
+    }
+    // Call before using a native game tunnel. Both peers must declare the same
+    // executable build and opcode-map fingerprint before controls or game packets
+    // reach the owner. Legacy/offline test links may leave this unconfigured.
+    void require_identity(uint32_t game_build, uint64_t mapping_fingerprint);
     // The connection the session is on now (ClientSession::epoch): a new value
     // means a new connection (C4: the host's guest epochs are bound to one).
     uint32_t session_epoch() const { return session_.epoch(); }
@@ -76,6 +83,9 @@ public:
     uint64_t wire_bytes_out() const { return sender_.wire_bytes_sent(); }
 
 private:
+    void sync_epoch();
+    bool send_identity(bool response);
+    bool announce_identity();
     ClientSession& session_;
     TunnelSender sender_;
     TunnelReceiver receiver_;
@@ -93,6 +103,13 @@ private:
     uint8_t peer_caps_ = 0;
     uint32_t peer_caps_epoch_ = 0;  // the connection the other end's caps came on
     uint64_t caps_in_ = 0;
+    bool identity_required_ = false;
+    uint32_t game_build_ = 0;
+    uint64_t mapping_fingerprint_ = 0;
+    uint32_t identity_announced_epoch_ = 0;
+    uint32_t peer_identity_epoch_ = 0;
+    uint32_t identity_failed_epoch_ = 0;
+    uint32_t identity_last_sent_ms_ = 0;
 };
 
 }  // namespace cdmp::troc

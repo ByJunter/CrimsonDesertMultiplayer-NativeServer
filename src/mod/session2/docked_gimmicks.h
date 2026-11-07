@@ -45,6 +45,10 @@ void docked_gimmicks_other_start(const std::string& raw, bool guest);
 // roles, the same packet points and thread as docked_gimmicks: the guest's 2779 for gimmicks the other user controls
 // (decided / withheld in 1); the host only logs (2779 by origin, duplicated 2250). Nothing for 0.
 void gimmick_event_dedup_start(const std::string& raw, bool guest);
+// [session2] guest_gimmick_interact = 0 | trace | 1 and guest_gimmick_interact_events = hex hashes
+// (gimmick_interact_logic.h), GUEST: the requests refused because the host controls the gimmick traced; with 1 the
+// listed events pass the control compare. Call after docked_gimmicks_start (needs it on). Nothing for 0.
+void docked_gimmicks_interact_start(const std::string& raw, const std::string& events, bool guest);
 
 // GUEST (guest.cpp). A new remote conversation (re-entry) or the connection's end: the own character, its user and
 // the local-only keys start again (the client's NetworkThread or the end of the connection).

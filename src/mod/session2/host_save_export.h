@@ -28,6 +28,8 @@ struct HostSaveConfig {
     std::string mode = "sandbox";  // the raw ini value
     std::wstring dir;              // empty: <folder of the game's exe>\cdmp_save_exports; relative: against that folder
     uint32_t keep = hsv::kDefaultKeep;
+    // What the manifest says; empty keeps the logic header's default (2976).
+    std::string game_build, pe_timestamp;
 };
 
 // Before save_hooks_install (session2.cpp). Logs the mode once; `real` is refused (error line) and sandbox used.

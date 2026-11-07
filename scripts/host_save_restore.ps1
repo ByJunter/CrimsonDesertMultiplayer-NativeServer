@@ -26,7 +26,7 @@ param(
     [Parameter(Mandatory = $true)][int[]]$Slot,
     [string]$Source = 'sandbox',
     [string]$Account = '',
-    [string]$ExportDir = $(if ($env:CDMP_GAME_DIR) { Join-Path $env:CDMP_GAME_DIR 'cdmp_save_exports' } else { 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64\cdmp_save_exports' }),
+    [string]$ExportDir = $(if ($env:CDMP_GAME_DIR) { Join-Path $env:CDMP_GAME_DIR 'cdmp_save_exports' } elseif (Test-Path (Join-Path $PSScriptRoot 'cdmp_save_exports')) { Join-Path $PSScriptRoot 'cdmp_save_exports' } else { 'D:\SteamLibrary\steamapps\common\Crimson Desert\bin64\cdmp_save_exports' }),
     [string]$BackupDir = $(Join-Path (Split-Path $PSScriptRoot -Parent) 'backups'),
     [switch]$Confirm,
     [switch]$AllowUnverified,
@@ -35,8 +35,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $kHeader = 'cdmp host save generation (P8 S35 phase E)'
-$kBuild = '1.0.0.2976'
-$kPe = '0x6AB28F00'
+$kBuilds = @{ '1.0.0.2976' = '0x6AB28F00'; '1.0.0.3527' = '0x6AEA07A6'; '1.0.0.3549' = '0x6AEB7D59' }
 $saveRoot = Join-Path $env:LOCALAPPDATA 'Pearl Abyss\CD\save'
 
 function Refuse([string]$why) {
@@ -116,8 +115,8 @@ foreach ($l in $lines[1..($lines.Count - 1)]) {
         default { if (-not $meta.ContainsKey($key)) { $meta[$key] = $v } }
     }
 }
-if ($meta['game_build'] -ne $kBuild -or $meta['pe_timestamp'] -ne $kPe) {
-    Refuse "the generation is for build $($meta['game_build']) / $($meta['pe_timestamp']); this script knows only $kBuild / $kPe."
+if (-not $kBuilds.ContainsKey([string]$meta['game_build']) -or $kBuilds[[string]$meta['game_build']] -ne $meta['pe_timestamp']) {
+    Refuse "the generation is for build $($meta['game_build']) / $($meta['pe_timestamp']); this script knows only 1.0.0.2976, 1.0.0.3527 and 1.0.0.3549."
 }
 if ($meta['generation'] -ne $genName) { Refuse "the manifest names generation '$($meta['generation'])', the folder is '$genName'." }
 

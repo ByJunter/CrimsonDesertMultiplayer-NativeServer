@@ -1,0 +1,137 @@
+
+=== 2CABDBB: 0x2CABDBB range={'begin': 46841024, 'end': 46841798, 'unwind': 110530196, 'offset': 251} section=.rsrc ===
+02CABDBB 488b0536265104           mov      rax, qword ptr [rip + 0x4512636]
+02CABDC2 4c8b7848                 mov      r15, qword ptr [rax + 0x48]
+02CABDC6 4c897d07                 mov      qword ptr [rbp + 7], r15
+02CABDCA 4532f6                   xor      r14b, r14b
+02CABDCD 4488750f                 mov      byte ptr [rbp + 0xf], r14b
+02CABDD1 498b1f                   mov      rbx, qword ptr [r15]
+02CABDD4 48895d77                 mov      qword ptr [rbp + 0x77], rbx
+02CABDD8 488b03                   mov      rax, qword ptr [rbx]
+02CABDDB 488bcb                   mov      rcx, rbx
+02CABDDE ff5008                   call     qword ptr [rax + 8]
+02CABDE1 90                       nop      
+02CABDE2 45387760                 cmp      byte ptr [r15 + 0x60], r14b
+02CABDE6 750c                     jne      0x2cabdf4
+02CABDE8 41c6476001               mov      byte ptr [r15 + 0x60], 1
+02CABDED 41b601                   mov      r14b, 1
+02CABDF0 4488750f                 mov      byte ptr [rbp + 0xf], r14b
+02CABDF4 488b03                   mov      rax, qword ptr [rbx]
+02CABDF7 488bcb                   mov      rcx, rbx
+02CABDFA ff5010                   call     qword ptr [rax + 0x10]
+02CABDFD 90                       nop      
+02CABDFE 4584f6                   test     r14b, r14b
+02CABE01 7505                     jne      0x2cabe08
+02CABE03 e991000000               jmp      0x2cabe99
+02CABE08 488b0de9255104           mov      rcx, qword ptr [rip + 0x45125e9]
+02CABE0F 488b4948                 mov      rcx, qword ptr [rcx + 0x48]
+02CABE13 e86862d0fe               call     0x19b2080
+02CABE18 90                       nop      
+02CABE19 498b1f                   mov      rbx, qword ptr [r15]
+02CABE1C 48895d77                 mov      qword ptr [rbp + 0x77], rbx
+02CABE20 488b03                   mov      rax, qword ptr [rbx]
+02CABE23 488bcb                   mov      rcx, rbx
+02CABE26 ff5008                   call     qword ptr [rax + 8]
+02CABE29 90                       nop      
+02CABE2A 41c6476000               mov      byte ptr [r15 + 0x60], 0
+02CABE2F 488b03                   mov      rax, qword ptr [rbx]
+02CABE32 488bcb                   mov      rcx, rbx
+02CABE35 ff5010                   call     qword ptr [rax + 0x10]
+02CABE38 897dff                   mov      dword ptr [rbp - 1], edi
+02CABE3B c6457700                 mov      byte ptr [rbp + 0x77], 0
+02CABE3F c6457f01                 mov      byte ptr [rbp + 0x7f], 1
+02CABE43 498b0424                 mov      rax, qword ptr [r12]
+02CABE47 498bcc                   mov      rcx, r12
+02CABE4A ff90e8000000             call     qword ptr [rax + 0xe8]
+02CABE50 488d1d090a2403           lea      rbx, [rip + 0x3240a09]
+02CABE57 48895d07                 mov      qword ptr [rbp + 7], rbx
+02CABE5B c6450f00                 mov      byte ptr [rbp + 0xf], 0
+02CABE5F 488d0dda092403           lea      rcx, [rip + 0x32409da]
+02CABE66 48894d07                 mov      qword ptr [rbp + 7], rcx
+02CABE6A 48894517                 mov      qword ptr [rbp + 0x17], rax
+02CABE6E 488d45ff                 lea      rax, [rbp - 1]
+02CABE72 4889442428               mov      qword ptr [rsp + 0x28], rax
+02CABE77 488d4577                 lea      rax, [rbp + 0x77]
+02CABE7B 4889442420               mov      qword ptr [rsp + 0x20], rax
+02CABE80 4c8d4d7f                 lea      r9, [rbp + 0x7f]
+02CABE84 4c8d45c7                 lea      r8, [rbp - 0x39]
+02CABE88 488d5507                 lea      rdx, [rbp + 7]
+02CABE8C 498bcc                   mov      rcx, r12
+02CABE8F e8ccdfffff               call     0x2ca9e60
+02CABE94 90                       nop      
+02CABE95 48895d07                 mov      qword ptr [rbp + 7], rbx
+02CABE99 893e                     mov      dword ptr [rsi], edi
+02CABE9B 488d053638e102           lea      rax, [rip + 0x2e13836]
+02CABEA2 488945cf                 mov      qword ptr [rbp - 0x31], rax
+02CABEA6 4c896dcf                 mov      qword ptr [rbp - 0x31], r13
+02CABEAA 488b5ddf                 mov      rbx, qword ptr [rbp - 0x21]
+02CABEAE 4885db                   test     rbx, rbx
+02CABEB1 7438                     je       0x2cabeeb
+02CABEB3 e8589c8afe               call     0x1555b10
+02CABEB8 41b8fe010000             mov      r8d, 0x1fe
+02CABEBE 65488b042558000000       mov      rax, qword ptr gs:[0x58]
+02CABEC7 488b10                   mov      rdx, qword ptr [rax]
+02CABECA 488bcb                   mov      rcx, rbx
+02CABECD 41803c1000               cmp      byte ptr [r8 + rdx], 0
+02CABED2 7412                     je       0x2cabee6
+02CABED4 e8d355e501               call     0x4b014ac
+02CABED9 48897ddf                 mov      qword ptr [rbp - 0x21], rdi
+02CABEDD 48897de7                 mov      qword ptr [rbp - 0x19], rdi
+02CABEE1 e9c2000000               jmp      0x2cabfa8
+02CABEE6 e8c154e501               call     0x4b013ac
+02CABEEB 48897ddf                 mov      qword ptr [rbp - 0x21], rdi
+02CABEEF 48897de7                 mov      qword ptr [rbp - 0x19], rdi
+02CABEF3 e9b0000000               jmp      0x2cabfa8
+02CABEF8 498b38                   mov      rdi, qword ptr [r8]
+02CABEFB 4885ff                   test     rdi, rdi
+02CABEFE 747f                     je       0x2cabf7f
+02CABF00 488b07                   mov      rax, qword ptr [rdi]
+02CABF03 488d551f                 lea      rdx, [rbp + 0x1f]
+02CABF07 488bcf                   mov      rcx, rdi
+02CABF0A ff90d0000000             call     qword ptr [rax + 0xd0]
+02CABF10 488b10                   mov      rdx, qword ptr [rax]
+02CABF13 48895577                 mov      qword ptr [rbp + 0x77], rdx
+02CABF17 488b07                   mov      rax, qword ptr [rdi]
+02CABF1A 488d5507                 lea      rdx, [rbp + 7]
+02CABF1E 488bcf                   mov      rcx, rdi
+02CABF21 ff90d8000000             call     qword ptr [rax + 0xd8]
+02CABF27 488b10                   mov      rdx, qword ptr [rax]
+02CABF2A 4889557f                 mov      qword ptr [rbp + 0x7f], rdx
+02CABF2E 488b07                   mov      rax, qword ptr [rdi]
+02CABF31 488bcf                   mov      rcx, rdi
+02CABF34 ff90c8000000             call     qword ptr [rax + 0xc8]
+02CABF3A 488945ff                 mov      qword ptr [rbp - 1], rax
+02CABF3E 488d430c                 lea      rax, [rbx + 0xc]
+02CABF42 488d4b22                 lea      rcx, [rbx + 0x22]
+02CABF46 488d5577                 lea      rdx, [rbp + 0x77]
+02CABF4A 4889942480000000         mov      qword ptr [rsp + 0x80], rdx
+02CABF52 488d557f                 lea      rdx, [rbp + 0x7f]
+02CABF56 4889542478               mov      qword ptr [rsp + 0x78], rdx
+02CABF5B 488d55ff                 lea      rdx, [rbp - 1]
+02CABF5F 4889542470               mov      qword ptr [rsp + 0x70], rdx
+02CABF64 4889442468               mov      qword ptr [rsp + 0x68], rax
+02CABF69 48894c2460               mov      qword ptr [rsp + 0x60], rcx
+02CABF6E 8b0554ff4704             mov      eax, dword ptr [rip + 0x447ff54]
+02CABF74 89442448                 mov      dword ptr [rsp + 0x48], eax
+02CABF78 e8a32797fe               call     0x161e720
+02CABF7D eb21                     jmp      0x2cabfa0
+02CABF7F 488d430c                 lea      rax, [rbx + 0xc]
+02CABF83 488d4b22                 lea      rcx, [rbx + 0x22]
+02CABF87 4889442468               mov      qword ptr [rsp + 0x68], rax
+02CABF8C 48894c2460               mov      qword ptr [rsp + 0x60], rcx
+02CABF91 8b0531ff4704             mov      eax, dword ptr [rip + 0x447ff31]
+02CABF97 89442448                 mov      dword ptr [rsp + 0x48], eax
+02CABF9B e8602997fe               call     0x161e900
+02CABFA0 8b0522ff4704             mov      eax, dword ptr [rip + 0x447ff22]
+02CABFA6 8906                     mov      dword ptr [rsi], eax
+02CABFA8 488bc6                   mov      rax, rsi
+02CABFAB 488b9c2430010000         mov      rbx, qword ptr [rsp + 0x130]
+02CABFB3 4881c4f0000000           add      rsp, 0xf0
+02CABFBA 415f                     pop      r15
+02CABFBC 415e                     pop      r14
+02CABFBE 415d                     pop      r13
+02CABFC0 415c                     pop      r12
+02CABFC2 5f                       pop      rdi
+02CABFC3 5e                       pop      rsi
+02CABFC4 5d                       pop      rbp
+02CABFC5 c3                       ret      

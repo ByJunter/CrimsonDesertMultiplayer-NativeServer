@@ -1,16 +1,16 @@
 #pragma once
-// P8 session 25, weather (docs/research/noche/clima-sincronizar.md §5, "Implementado"): the pure part of
-// weather_sync.h. Build 1.0.0.2976 (PE 0x6AB28F00). No game, no threads, no Windows: unit-tested in
-// tests/optd_weather_sync_tests.cpp.
+// P8 session 25, weather (docs/research/noche/clima-sincronizar.md §5, "Implementado"; build 3549:
+// docs/research/s25/clima-3549.md): the pure part of weather_sync.h. Builds 1.0.0.2976 (PE 0x6AB28F00) and 1.0.0.3549
+// (PE 0x6AEB7D59), one table each (GameAddrs: the exe; Layout: the vector and its wire form). No game, no threads, no
+// Windows: unit-tested in tests/optd_weather_sync_tests.cpp.
 //
 // The guest cannot simulate the host's weather (per-thread LCG, accumulators: §3). The game has a "Weather Viewer"
-// mode instead: byte X+0x31 of the scene weather system X = [[[exe+0x6C8CEC8]+0x60]+0xF68] makes its four
-// simulators and its mixer 0x3DC0340 stand still, and the update 0x3DC4730(X, dt) derives rain or snow from the
-// precipitation command A+0x12C (0x382A1A0, with the local temperature sample A+0x198). The host reads its final
-// values (the holder [X+0x60]: blocks A = [holder+0x18], B = [holder+0x20], C = [holder+0x28], and X+0x124/+0x128)
-// and the guest writes them into its own X in viewer mode, on the thread that updates X, right before 0x3DC4730.
+// mode instead: byte X+0x31 of the scene weather system X makes its four simulators and its mixer stand still, and
+// X's update derives rain or snow from the precipitation command A+0x12C with the local temperature sample. The host
+// reads its final values (the holder [X+0x60] and its blocks A / B / C, and X's cloud accumulators) and the guest
+// writes them into its own X in viewer mode, on the thread that updates X, right before X's update.
 //
-// Verified in Ghidra (2026-10-12, build 2976):
+// Build 1.0.0.2976, verified in Ghidra (2026-10-12):
 //   0x3DC4730  48 89 5C 24 10 | 55 | 56 | 57 | 48 83 EC 50 | C5 F8 29 74 24 40 (18 bytes, no RIP-relative one);
 //              its only caller 0x3B10737 = E8 F4 3F 2B 00 (after 0x3B10730 mov rcx,[rcx+0xF68]); dt in XMM1.
 //              if (X+0x31) 0x382A1A0([X+0x60]-0x28); 0x3DC0340(X); A+0x198 <- 0x3DC0FE0's sample;
@@ -26,10 +26,34 @@
 //   0x41DB60   GameGlobalEffectInfo_Weather -> blocks: floats with the FLT_MAX "not set" sentinel; B+0xEC, B+0xF0,
 //              C+0x1B4 and C+0x1D4 are RGBA colours (u8 x 4, 0xFF sentinel); B+0xE8 (_cloudSeed) is a float.
 //   0x9ADF20   the 2560 reads X as [[[exe+0x6D69198]+0x38]+0x38] (the second path the probe compares).
+//
+// Build 1.0.0.3549 (2026-11-05), read on the installed PE with capstone (clima-3549.md has the disassembly):
+//   0x40C2580  X's update: 48 8B C4 | 53 | 55 | 56 | 57 | 41 54 | 41 56 | 41 57 | 48 81 EC 90 00 00 00 (20 bytes, no
+//              RIP-relative one, no branch into them); its only caller 0x3DF5CB7 = E8 C4 C8 2C 00 right after
+//              0x3DF5CB0 mov rcx,[rcx+0xF70] (48 8B 89 70 0F 00 00); dt in XMM1. No other reference (E8/E9, lea, qword).
+//              if (X+0x31) 0x3B06D80([X+0x60]-0x28); 0x40BE1E0(X); A+0x1A0..+0x1B3 <- 0x40BEFE0's sample;
+//              w = clamp(A+0x1AC + A+0x138, 0, 60): X+0x13C += w * A+0x198 * dt * B+0xB8, X+0x140 += w * A+0x19C * dt *
+//              B+0xB8; X+0x14C (degrees) turns toward A+0x154 (rate-limited), X+0x144/+0x148 = cos/-sin of it;
+//              X+0x154/+0x158 += w * A+0x198/+0x19C * dt * 0.15; X+0x15C/+0x160 += ... * 0.25; over the ocean
+//              (0x37F9F10) A+0x154 is pulled toward A+0x158 through its setter 0x3AD2C80.
+//   0x40BE1E0  the mixer: returns when X+0x31 != 0; list X+0x80, n = X+0x88; copies into the holder with vf+0x160
+//              only when it collected something.
+//   0x3B06D80  temp A+0x1A0 > 0: A+0x170 = A+0x164 = A+0x12C, A+0x168 = min(10 * A+0x12C, 1), A+0x16C = 0 (rain);
+//              else A+0x170 = A+0x164 = A+0x168 = 0, A+0x16C = A+0x12C (snow).
+//   0xE64D70 / 0xE60DD0 / 0xE68870 / 0xE692D0  the weather / cloud / surface / time simulators return at once when
+//              [[[exe+0x70D9FC0]]->vf+0x60()+0xF70]+0x31 != 0; M's vtable 0x14611EAA0 (ctor 0x40C5120 stores M into
+//              exe+0x70D9FC0), its +0x60 = 0x7AA9B0 = 48 8B 41 60 C3.
+//   0x40C1720  the rain getter: viewer -> A+0x170 raw; otherwise attenuated by the camera height against B+0xBC.
+//   0x40B9150  X's constructor (factory 0x40C4510, 0x100228 bytes): vtable 0x14611E330, X+0x30 (u16) = 0, X+0x60 = 0,
+//              X+0x13C..+0x163 = 0.
+//   0x4BCAB0   GameGlobalEffectInfo_Weather -> blocks; the reflected setters (0x3ACD3E0.., names) give every field.
+//   0xAB3010   the 2689 (2976's 2560) reads X as [[[exe+0x71BDEF8]+0x48]+0x38].
+// Build 1.0.0.3527 has the same layout statically, but its PE was not read for this module: it stays off there.
 
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bitset>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -41,44 +65,14 @@
 
 namespace cdmp::session2::wsy {
 
-// ---------------------------------------------------------------- the game (exe+, build 2976)
-
-inline constexpr uintptr_t kModuleSlot = 0x6C8CEC8;  // [exe+] -> M; M.vf60 = 0x6DA0A0 returns [M+0x60]
-inline constexpr uint32_t kModuleScene = 0x60;       // S = [M+0x60]
-inline constexpr uint32_t kSceneWeather = 0xF68;     // X = [S+0xF68]
-inline constexpr uint32_t kVtGetterSlot = 0x60;      // [[M]+0x60] = the getter the simulators call
-inline constexpr uintptr_t kGetterVf60 = 0x6DA0A0;
-inline constexpr uint8_t kGetterVf60Bytes[5] = {0x48, 0x8B, 0x41, 0x60, 0xC3};  // mov rax,[rcx+0x60]; ret
-inline constexpr uintptr_t kClientSlot = 0x6D69198;  // 0x9ADF61: X_b = [[[exe+0x6D69198]+0x38]+0x38]
-inline constexpr uint32_t kClientHop1 = 0x38, kClientHop2 = 0x38;
-inline constexpr uintptr_t kVtWeatherSystem = 0x5D51268;  // [X] (VA 0x145D51268)
-
-inline constexpr uint32_t kXViewer = 0x31;   // u8: 1 = the Weather Viewer's external values
-inline constexpr uint32_t kXHolder = 0x60;
-inline constexpr uint32_t kXWcCount = 0x88;  // u32: WeatherComponents registered with the mixer
-inline constexpr uint32_t kXScroll = 0x124;  // 2 floats: the cloud scroll accumulators
-inline constexpr uint32_t kHolderA = 0x18, kHolderB = 0x20, kHolderC = 0x28;
-inline constexpr uint32_t kATempSample = 0x198;  // the ClimateTexture sample at the local camera (local, never sent)
-
-inline constexpr uintptr_t kUpdate = 0x3DC4730;
-inline constexpr uint8_t kUpdateHead[18] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x48,
-                                            0x83, 0xEC, 0x50, 0xC5, 0xF8, 0x29, 0x74, 0x24, 0x40};
-inline constexpr uint32_t kUpdateBoundaries[] = {5, 6, 7, 8, 12, 18};  // whole instructions of kUpdateHead
-inline constexpr uintptr_t kUpdateCall = 0x3B10737;
-inline constexpr uint8_t kUpdateCallBytes[5] = {0xE8, 0xF4, 0x3F, 0x2B, 0x00};  // call 0x3DC4730
-
-// The server tick as the game's client threads compute it (combat_follow.cpp, remote_motion.cpp): frame ms +
-// frame us / 1000 + the 2188 bias (ServerTimeInfoAck). On the guest it is the host's server tick.
-inline constexpr uintptr_t kClockBase = 0x6C8CD68, kClockFrac = 0x6C8CD70, kClockBias = 0x6D69438;
-
-// ---------------------------------------------------------------- the vector (v1)
+// ---------------------------------------------------------------- the vector's fields
 
 enum class Block : uint8_t { A, B, C, X };
 // Lerp: a float, interpolated. Hold: a float copied from the newest sample, never interpolated (an angle, the seed),
-// checked like any float. Raw: u8 x 4 colours (0x41DB60), copied bit for bit, never checked. Accum: a float that
-// grows with time (interpolated, extrapolated up to kMaxExtrapolateMs). Derived: a float 0x382A1A0 rewrites every
-// frame in viewer mode (sent and logged, never written; put back on release). Unknown: logged only (type unknown,
-// could be per-PC data: never written nor checked).
+// checked like any float. Raw: u8 x 4 colours, copied bit for bit, never checked. Accum: a float that grows with time
+// (interpolated, extrapolated up to kMaxExtrapolateMs). Derived: a float X's update rewrites every frame in viewer
+// mode (sent and logged, never written; put back on release). Unknown: logged only (could be per-PC data: never
+// written nor checked).
 enum class Kind : uint8_t { Lerp, Hold, Raw, Accum, Derived, Unknown };
 
 struct Field {
@@ -88,9 +82,19 @@ struct Field {
     const char* name;
 };
 
-// Names: GameGlobalEffectInfo_Weather in 0x1504FC0's read order mapped by 0x41DB60 (clima-sincronizar.md §1.1;
-// the name <-> index pairing is [E]); "?" where the report has no name.
-inline constexpr Field kFields[] = {
+// What the reader copies in one guarded read per block: [off, off + size).
+struct Range {
+    uint16_t off, size;
+};
+
+// The widest table (3549: 69 words) fits; every per-field array is this long, the bit sets too.
+inline constexpr size_t kMaxFields = 80;
+inline constexpr size_t kMaxRead = 0xC8;  // the widest block read (3549's B)
+using Bits = std::bitset<kMaxFields>;
+
+// Build 2976. Names: GameGlobalEffectInfo_Weather in 0x1504FC0's read order mapped by 0x41DB60 (clima-sincronizar.md
+// §1.1; the name <-> index pairing is [E]); "?" where the report has no name.
+inline constexpr Field kFields2976[] = {
     // A (17)
     {Block::A, 0x12C, Kind::Lerp, "precipitation"},
     {Block::A, 0x130, Kind::Lerp, "cloudiness"},
@@ -157,54 +161,196 @@ inline constexpr Field kFields[] = {
     {Block::X, 0x124, Kind::Accum, "cloudScrollX"},
     {Block::X, 0x128, Kind::Accum, "cloudScrollZ"},
 };
-inline constexpr size_t kFieldCount = sizeof(kFields) / sizeof(kFields[0]);
-static_assert(kFieldCount == 61);
 
-constexpr size_t index_of(Block b, uint16_t off) {
-    for (size_t i = 0; i < kFieldCount; ++i) {
-        if (kFields[i].block == b && kFields[i].off == off) return i;
-    }
-    return kFieldCount;
-}
-inline constexpr size_t kIdxPrecip = index_of(Block::A, 0x12C);
-inline constexpr size_t kIdxCloud = index_of(Block::A, 0x130);
-inline constexpr size_t kIdxHumid = index_of(Block::A, 0x134);
-inline constexpr size_t kIdxWind = index_of(Block::A, 0x138);
-inline constexpr size_t kIdxSnow = index_of(Block::A, 0x168);
-inline constexpr size_t kIdxRain = index_of(Block::A, 0x16C);
-inline constexpr size_t kIdxCloudBase = index_of(Block::B, 0xA8);
-inline constexpr size_t kIdxScrollX = index_of(Block::X, 0x124);
-inline constexpr size_t kIdxScrollZ = index_of(Block::X, 0x128);
-static_assert(kIdxPrecip == 0 && kIdxRain == 14 && kIdxSnow == 13 && kIdxScrollZ == kFieldCount - 1);
-
-// What the reader copies in one guarded read per block: [off, off + size).
-struct Range {
-    uint16_t off, size;
+// Build 3549. Every name is the game's own (the reflected property setters that lea the name string: 0x3ACD3E0
+// _precipitation [A_obj+0x154 = A+0x12C], ...; clima-3549.md §3); the data map 0x4BCAB0 writes the Lerp/Hold/Raw ones
+// of A/B/C from GameGlobalEffectInfo_Weather (FLT_MAX / 0xFF x 4 "not set"). Types from the setters (vucomiss =
+// float, byte compares = u8 x 4 colour).
+inline constexpr Field kFields3549[] = {
+    // A (18)
+    {Block::A, 0x12C, Kind::Lerp, "precipitation"},
+    {Block::A, 0x130, Kind::Lerp, "cloudiness"},
+    {Block::A, 0x134, Kind::Lerp, "humidity"},
+    {Block::A, 0x138, Kind::Lerp, "windSpeed"},
+    {Block::A, 0x13C, Kind::Lerp, "puddleRate"},
+    {Block::A, 0x144, Kind::Lerp, "snowPuddleRate"},
+    {Block::A, 0x148, Kind::Lerp, "snowAmount"},
+    {Block::A, 0x14C, Kind::Lerp, "snowRate"},
+    {Block::A, 0x150, Kind::Lerp, "iceRatio"},
+    {Block::A, 0x154, Kind::Hold, "windDegree"},
+    {Block::A, 0x158, Kind::Hold, "oceanWindDegree"},  // new in this layout (only reflection writes it; X's update
+                                                       // pulls windDegree toward it over the ocean)
+    {Block::A, 0x15C, Kind::Lerp, "altitudeWindRatio"},
+    {Block::A, 0x164, Kind::Derived, "rainDropletAmount"},  // 2976's A+0x160
+    {Block::A, 0x168, Kind::Derived, "rainDropletRate"},    // 2976's A+0x164
+    {Block::A, 0x16C, Kind::Derived, "snow"},
+    {Block::A, 0x170, Kind::Derived, "rain"},
+    {Block::A, 0x198, Kind::Lerp, "windDirX"},  // cos(windDegree), set by A's change handler 0x3AD5B00: raw writes
+    {Block::A, 0x19C, Kind::Lerp, "windDirZ"},  // to windDegree do not run it, so these are written too
+    // B (38): the colour +0x30 and +0x64..+0xF4
+    {Block::B, 0x30, Kind::Raw, "rayleighScatteringColor"},  // new in the data (data+0xC0)
+    {Block::B, 0x64, Kind::Lerp, "sunDirX"},
+    {Block::B, 0x68, Kind::Lerp, "sunDirY"},
+    {Block::B, 0x6C, Kind::Lerp, "moonSizeAngle"},
+    {Block::B, 0x70, Kind::Lerp, "moonDirX"},
+    {Block::B, 0x74, Kind::Lerp, "moonDirY"},
+    {Block::B, 0x78, Kind::Unknown, "earthAxisTilt"},  // floats, but not weather data (as 2976's B+0x78..+0x80):
+    {Block::B, 0x7C, Kind::Unknown, "latitude"},       // logged only
+    {Block::B, 0x80, Kind::Unknown, "rayleighScaledHeight"},
+    {Block::B, 0x84, Kind::Lerp, "mieScaledHeight"},
+    {Block::B, 0x88, Kind::Lerp, "mieAerosolDensity"},
+    {Block::B, 0x8C, Kind::Lerp, "mieAerosolDensityMultiRatio"},
+    {Block::B, 0x90, Kind::Lerp, "mieAerosolAbsorption"},
+    {Block::B, 0x94, Kind::Lerp, "ozoneRatio"},
+    {Block::B, 0x98, Kind::Lerp, "directionalLightLuminanceScale"},
+    {Block::B, 0x9C, Kind::Lerp, "heightFogDensity"},
+    {Block::B, 0xA0, Kind::Lerp, "heightFogBaseline"},
+    {Block::B, 0xA4, Kind::Lerp, "heightFogFalloff"},
+    {Block::B, 0xA8, Kind::Lerp, "heightFogNoiseRange"},
+    {Block::B, 0xAC, Kind::Lerp, "cloudBaseDensity"},
+    {Block::B, 0xB0, Kind::Lerp, "cloudBaseContrast"},
+    {Block::B, 0xB4, Kind::Lerp, "cloudAlpha"},
+    {Block::B, 0xB8, Kind::Lerp, "cloudScrollMultiplier"},
+    {Block::B, 0xBC, Kind::Lerp, "cloudAltitude"},
+    {Block::B, 0xC0, Kind::Lerp, "cloudThickness"},
+    {Block::B, 0xC4, Kind::Lerp, "cloudNear"},
+    {Block::B, 0xC8, Kind::Lerp, "cloudFadeRange"},
+    {Block::B, 0xCC, Kind::Lerp, "cloudDetailRatio"},
+    {Block::B, 0xD0, Kind::Lerp, "cloudDetailScale"},
+    {Block::B, 0xD4, Kind::Lerp, "cloudCirrusAltitude"},
+    {Block::B, 0xD8, Kind::Lerp, "cloudCirrusDensity"},
+    {Block::B, 0xDC, Kind::Lerp, "cloudCirrusWeightR"},
+    {Block::B, 0xE0, Kind::Lerp, "cloudCirrusWeightG"},
+    {Block::B, 0xE4, Kind::Lerp, "cloudCirrusWeightB"},
+    {Block::B, 0xE8, Kind::Lerp, "cloudFlow"},
+    {Block::B, 0xEC, Kind::Hold, "cloudSeed"},
+    {Block::B, 0xF0, Kind::Raw, "volumeFogScatterColor"},
+    {Block::B, 0xF4, Kind::Raw, "mieScatterColor"},
+    // C (6): 2976's C block minus 0x108
+    {Block::C, 0x70, Kind::Unknown, "seaBaseline"},
+    {Block::C, 0xA8, Kind::Lerp, "extinctionCoefficient"},
+    {Block::C, 0xAC, Kind::Raw, "scatteringAlbedo"},
+    {Block::C, 0xB0, Kind::Lerp, "underWaterMossRate"},
+    {Block::C, 0xCC, Kind::Raw, "underWaterTintColor"},
+    {Block::C, 0xD8, Kind::Lerp, "underWaterTintStrength"},
+    // X (7): the cloud scroll (2976's X+0x124/+0x128), the turning wind angle and the two new scroll pairs
+    {Block::X, 0x13C, Kind::Accum, "cloudScrollX"},
+    {Block::X, 0x140, Kind::Accum, "cloudScrollZ"},
+    {Block::X, 0x14C, Kind::Hold, "windAngleFollow"},  // degrees; X+0x144/+0x148 are recomputed from it each update
+    {Block::X, 0x154, Kind::Accum, "scroll2X"},
+    {Block::X, 0x158, Kind::Accum, "scroll2Z"},
+    {Block::X, 0x15C, Kind::Accum, "scroll3X"},
+    {Block::X, 0x160, Kind::Accum, "scroll3Z"},
 };
-inline constexpr Range kReadA{0x12C, 0x198 - 0x12C};  // +0x12C .. +0x197 (the vector's A fields)
-inline constexpr Range kReadB{0x64, 0xF4 - 0x64};     // +0x64 .. +0xF3
-inline constexpr Range kReadC{0x178, 0x1E4 - 0x178};  // +0x178 .. +0x1E3
-inline constexpr Range kReadX{0x124, 8};
-constexpr Range read_range(Block b) {
-    return b == Block::A ? kReadA : b == Block::B ? kReadB : b == Block::C ? kReadC : kReadX;
+
+constexpr size_t index_of(std::span<const Field> f, Block b, uint16_t off) {
+    for (size_t i = 0; i < f.size(); ++i) {
+        if (f[i].block == b && f[i].off == off) return i;
+    }
+    return f.size();
 }
-constexpr bool fields_inside_ranges() {
-    for (const Field& f : kFields) {
-        const Range r = read_range(f.block);
+
+// The A words X's update rewrites in viewer mode (and the command): what the selftest changes and puts back.
+struct AWords {
+    uint16_t precip, rain_out, rain_fx, snow, rain;
+};
+
+// The offsets the 5 s probe line prints (its text is the same for every build; the offsets come from here).
+struct ProbeOffsets {
+    uint16_t precip, cloud, humid, wind, rain, snow, out, fx, puddle, snow_amount, ice, wind_deg, dir_x, dir_z;  // A
+    uint16_t sun_x, sun_y, cloud_base, scroll_mul, cloud_alt, seed, fog[4], layers[4];                          // B
+    uint16_t c[3];                                                                                              // C
+    uint16_t scroll[2];                                                                                         // X
+};
+
+struct Layout {
+    const char* build;
+    uint8_t wire_version;
+    std::span<const Field> fields;
+    Range read_a, read_b, read_c, read_x;
+    AWords a;
+    uint16_t a_temp_sample;  // the ClimateTexture sample at the local camera, 5 floats (local, never sent)
+    ProbeOffsets probe;
+    size_t idx_precip, idx_cloud, idx_humid, idx_wind, idx_snow, idx_rain, idx_cloud_base, idx_scroll_x, idx_scroll_z;
+
+    constexpr size_t count() const { return fields.size(); }
+    constexpr const Field& operator[](size_t i) const { return fields[i]; }
+    constexpr Range read_range(Block b) const {
+        return b == Block::A ? read_a : b == Block::B ? read_b : b == Block::C ? read_c : read_x;
+    }
+    constexpr size_t index(Block b, uint16_t off) const { return index_of(fields, b, off); }
+};
+
+constexpr Layout make_layout(const char* build, uint8_t ver, std::span<const Field> f, Range a, Range b, Range c,
+                             Range x, AWords aw, uint16_t temp, ProbeOffsets p, uint16_t cloud_base,
+                             uint16_t scroll_x, uint16_t scroll_z) {
+    Layout L{build, ver, f, a, b, c, x, aw, temp, p, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    L.idx_precip = index_of(f, Block::A, aw.precip);
+    L.idx_cloud = index_of(f, Block::A, 0x130);
+    L.idx_humid = index_of(f, Block::A, 0x134);
+    L.idx_wind = index_of(f, Block::A, 0x138);
+    L.idx_snow = index_of(f, Block::A, aw.snow);
+    L.idx_rain = index_of(f, Block::A, aw.rain);
+    L.idx_cloud_base = index_of(f, Block::B, cloud_base);
+    L.idx_scroll_x = index_of(f, Block::X, scroll_x);
+    L.idx_scroll_z = index_of(f, Block::X, scroll_z);
+    return L;
+}
+
+inline constexpr Layout kLayout2976 = make_layout(
+    "1.0.0.2976", 1, kFields2976, Range{0x12C, 0x198 - 0x12C}, Range{0x64, 0xF4 - 0x64}, Range{0x178, 0x1E4 - 0x178},
+    Range{0x124, 8}, AWords{0x12C, 0x160, 0x164, 0x168, 0x16C}, 0x198,
+    ProbeOffsets{0x12C, 0x130, 0x134, 0x138, 0x16C, 0x168, 0x160, 0x164, 0x13C, 0x148, 0x150, 0x154, 0x190, 0x194,
+                 0x64, 0x68, 0xA8, 0xB4, 0xB8, 0xE8, {0x98, 0x9C, 0xA0, 0xA4}, {0xD4, 0xD8, 0xDC, 0xE0},
+                 {0x1B0, 0x1B8, 0x1E0}, {0x124, 0x128}},
+    0xA8, 0x124, 0x128);
+
+inline constexpr Layout kLayout3549 = make_layout(
+    "1.0.0.3549", 2, kFields3549, Range{0x12C, 0x1A0 - 0x12C}, Range{0x30, 0xF8 - 0x30}, Range{0x70, 0xDC - 0x70},
+    Range{0x13C, 0x164 - 0x13C}, AWords{0x12C, 0x164, 0x168, 0x16C, 0x170}, 0x1A0,
+    ProbeOffsets{0x12C, 0x130, 0x134, 0x138, 0x170, 0x16C, 0x164, 0x168, 0x13C, 0x148, 0x150, 0x154, 0x198, 0x19C,
+                 0x64, 0x68, 0xAC, 0xB8, 0xBC, 0xEC, {0x9C, 0xA0, 0xA4, 0xA8}, {0xD8, 0xDC, 0xE0, 0xE4},
+                 {0xA8, 0xB0, 0xD8}, {0x13C, 0x140}},
+    0xAC, 0x13C, 0x140);
+
+constexpr bool fields_inside_ranges(const Layout& L) {
+    for (const Field& f : L.fields) {
+        const Range r = L.read_range(f.block);
         if (f.off < r.off || f.off + 4u > static_cast<uint32_t>(r.off) + r.size || (f.off & 3) != 0) return false;
     }
-    return true;
+    return L.read_a.size <= kMaxRead && L.read_b.size <= kMaxRead && L.read_c.size <= kMaxRead &&
+           L.read_x.size <= kMaxRead;
 }
-static_assert(fields_inside_ranges());
+// No field twice, A then B then C then X (the wire order), A's derived outputs present.
+constexpr bool well_formed(const Layout& L) {
+    if (L.count() > kMaxFields || L.count() == 0) return false;
+    for (size_t i = 0; i < L.count(); ++i) {
+        if (L.index(L[i].block, L[i].off) != i) return false;
+        if (i && static_cast<uint8_t>(L[i].block) < static_cast<uint8_t>(L[i - 1].block)) return false;
+    }
+    const size_t n = L.count();
+    return L.idx_precip == 0 && L.idx_rain < n && L.idx_snow < n && L.idx_cloud < n && L.idx_humid < n &&
+           L.idx_wind < n && L.idx_cloud_base < n && L.idx_scroll_x < n && L.idx_scroll_z < n &&
+           L.index(Block::A, L.a.rain_out) < n && L.index(Block::A, L.a.rain_fx) < n &&
+           L[L.idx_rain].kind == Kind::Derived && L[L.idx_snow].kind == Kind::Derived &&
+           L[L.index(Block::A, L.a.rain_out)].kind == Kind::Derived &&
+           L[L.index(Block::A, L.a.rain_fx)].kind == Kind::Derived && L[L.idx_scroll_x].kind == Kind::Accum &&
+           L[L.idx_scroll_z].kind == Kind::Accum;
+}
+static_assert(kLayout2976.count() == 61 && kLayout3549.count() == 69);
+static_assert(fields_inside_ranges(kLayout2976) && fields_inside_ranges(kLayout3549));
+static_assert(well_formed(kLayout2976) && well_formed(kLayout3549));
+static_assert(kLayout2976.idx_rain == 14 && kLayout2976.idx_snow == 13 && kLayout2976.idx_scroll_z == 60);
 
 // The vector's words from the four block copies (each starting at its Range's off). A missing block (nullptr)
-// leaves its words at 0.
-inline void extract(const uint8_t* a, const uint8_t* b, const uint8_t* c, const uint8_t* x, uint32_t (&w)[kFieldCount]) {
-    for (size_t i = 0; i < kFieldCount; ++i) {
-        const Field& f = kFields[i];
+// leaves its words at 0; the words past the layout's count are 0.
+inline void extract(const Layout& L, const uint8_t* a, const uint8_t* b, const uint8_t* c, const uint8_t* x,
+                    uint32_t (&w)[kMaxFields]) {
+    for (size_t i = 0; i < kMaxFields; ++i) w[i] = 0;
+    for (size_t i = 0; i < L.count(); ++i) {
+        const Field& f = L[i];
         const uint8_t* src = f.block == Block::A ? a : f.block == Block::B ? b : f.block == Block::C ? c : x;
-        w[i] = 0;
-        if (src) std::memcpy(&w[i], src + (f.off - read_range(f.block).off), 4);
+        if (src) std::memcpy(&w[i], src + (f.off - L.read_range(f.block).off), 4);
     }
 }
 
@@ -217,6 +363,87 @@ inline uint32_t as_word(float f) {
     uint32_t w = 0;
     std::memcpy(&w, &f, 4);
     return w;
+}
+
+// ---------------------------------------------------------------- the game (exe+, per build)
+
+inline constexpr uint8_t kGetterVf60Bytes[5] = {0x48, 0x8B, 0x41, 0x60, 0xC3};  // mov rax,[rcx+0x60]; ret
+
+inline constexpr uint8_t kUpdateHead2976[18] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x48,
+                                                0x83, 0xEC, 0x50, 0xC5, 0xF8, 0x29, 0x74, 0x24, 0x40};
+inline constexpr uint32_t kUpdateBoundaries2976[] = {5, 6, 7, 8, 12, 18};  // whole instructions of the head
+inline constexpr uint8_t kUpdateCall2976[5] = {0xE8, 0xF4, 0x3F, 0x2B, 0x00};  // 0x3B10737: call 0x3DC4730
+
+// mov rax,rsp | push rbx | push rbp | push rsi | push rdi | push r12 | push r14 | push r15 | sub rsp,0x90
+inline constexpr uint8_t kUpdateHead3549[20] = {0x48, 0x8B, 0xC4, 0x53, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+                                                0x56, 0x41, 0x57, 0x48, 0x81, 0xEC, 0x90, 0x00, 0x00, 0x00};
+inline constexpr uint32_t kUpdateBoundaries3549[] = {5, 6, 7, 9, 11, 13, 20};  // whole instructions, >= 5 bytes
+// 0x3DF5CB0: mov rcx,[rcx+0xF70] | call 0x40C2580 (0x3DF5CBC + 0x2CC8C4)
+inline constexpr uint8_t kUpdateCall3549[12] = {0x48, 0x8B, 0x89, 0x70, 0x0F, 0x00, 0x00,
+                                                0xE8, 0xC4, 0xC8, 0x2C, 0x00};
+
+struct GameAddrs {
+    const char* build;
+    uintptr_t module_slot;    // [exe+] -> M (the simulators' path)
+    uint32_t module_scene;    // S = [M+]  (M.vf at vt_getter_slot is `mov rax,[rcx+module_scene]; ret`)
+    uint32_t scene_weather;   // X = [S+]
+    uint32_t vt_getter_slot;  // [[M]+] = the getter the simulators call
+    uintptr_t getter;         // exe+ of that getter (kGetterVf60Bytes)
+    uintptr_t client_slot;    // the second path: X_b = [[[exe+client_slot]+hop1]+hop2]
+    uint32_t client_hop1, client_hop2;
+    uintptr_t vt_weather_system;  // [X] (exe+)
+    uint32_t x_viewer;            // u8: 1 = the Weather Viewer's external values
+    uint32_t x_holder;
+    uint32_t x_wc_count;  // u32: WeatherComponents registered with the mixer
+    uint32_t holder_a, holder_b, holder_c;
+    uintptr_t update;  // X's update (X in RCX, dt in XMM1), hooked at its entry
+    std::span<const uint8_t> update_head;
+    std::span<const uint32_t> update_boundaries;
+    uintptr_t update_call;  // where update_call_bytes are (they end with the only `call update`)
+    std::span<const uint8_t> update_call_bytes;
+    uintptr_t code_begin, code_end;  // the hook stays inside [code_begin, code_end) and in real code (flags)
+    // The server tick as the game's client threads compute it (combat_follow.cpp, remote_motion.cpp): frame ms +
+    // frame us / 1000 + the 2188 bias (ServerTimeInfoAck). On the guest it is the host's server tick.
+    uintptr_t clock_base, clock_frac, clock_bias;
+};
+
+inline constexpr GameAddrs kGame2976{
+    "1.0.0.2976", 0x6C8CEC8, 0x60, 0xF68, 0x60, 0x6DA0A0, 0x6D69198, 0x38, 0x38, 0x5D51268, 0x31, 0x60, 0x88,
+    0x18, 0x20, 0x28, 0x3DC4730, kUpdateHead2976, kUpdateBoundaries2976, 0x3B10737, kUpdateCall2976,
+    0x1000, 0x51EB000, 0x6C8CD68, 0x6C8CD70, 0x6D69438};
+
+// Build 3549, all read on the installed PE (clima-3549.md §2): M's slot from the four simulators' gates and M's ctor
+// 0x40C5120; the getter = [0x14611EAA0+0x60]; X_b from the 2689 sender 0xAB3010; X's vtable from its ctor 0x40B9150;
+// the clock from 0x15F9B40/0x15F9B4B and 0x1386C1C (the same as 3527's). The real code ends at 0x5595000.
+inline constexpr GameAddrs kGame3549{
+    "1.0.0.3549", 0x70D9FC0, 0x60, 0xF70, 0x60, 0x7AA9B0, 0x71BDEF8, 0x48, 0x38, 0x611E330, 0x31, 0x60, 0x88,
+    0x20, 0x28, 0x30, 0x40C2580, kUpdateHead3549, kUpdateBoundaries3549, 0x3DF5CB0, kUpdateCall3549,
+    0x1000, 0x5595000, 0x70D9E60, 0x70D9E70, 0x71BE198};
+
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). Compared with the 3549 dumps of clima-3549.md's session
+// (capstone, relative operands masked): X's update 0x40C2580 -> 0x40C34B0, the mixer 0x40BE1E0 -> 0x40BF110, X's ctor
+// 0x40B9150 -> 0x40BA080 and M's ctor 0x40C5120 -> 0x40C6050 moved by +0xF30 and are byte-identical apart from rel32/RIP
+// fields (same .pdata sizes 0x70C / 0x607 / 0x367 / 0x4CD), so every offset and kLayout3549 hold. The only caller
+// 0x3DF5CB0 -> 0x3DF6BE0 (+0xF30) keeps the 3549 bytes (caller and callee moved together); the only E8/E9 to the update
+// in the executable sections, and the only rel32 into its head is chaff between functions (0x31B5464, no .pdata).
+// M: its ctor stores it into 0x70DC0A0 (0x40C608C) and sets its vtable 0x6120A98, whose +0x60 is 0x7AB010
+// (kGetterVf60Bytes). X's vtable 0x61204A0 (no RTTI): the ctor's last store to [X] (0x40BA0DF); its slots 0/1 are the
+// 3549 slots 0x40B94C0 / 0x40C4080 + 0xF30. X_b: the 2689 sender 0xAB3010 -> 0xAB3420 reads [[[0x71C0108]+0x48]+0x38]
+// (0xAB345B). The clock: FrameClock_NowMs 0x15F9B20 -> 0x15FA340 reads base 0x70DBF68 and frac 0x70DBF78; the bias
+// read 0x1386C1C -> 0x13873CC is 0x71C03A8 (the 0x71Bxxxx block's +0x2210). The code section ends at 0x5597000.
+inline constexpr GameAddrs kGame3576{
+    "1.0.0.3576", 0x70DC0A0, 0x60, 0xF70, 0x60, 0x7AB010, 0x71C0108, 0x48, 0x38, 0x61204A0, 0x31, 0x60, 0x88,
+    0x20, 0x28, 0x30, 0x40C34B0, kUpdateHead3549, kUpdateBoundaries3549, 0x3DF6BE0, kUpdateCall3549,
+    0x1000, 0x5597000, 0x70DBF68, 0x70DBF78, 0x71C03A8};
+
+// The relocated prologue safetyhook may copy: whole verified instructions only (a prefix of the head whose length is
+// one of the boundaries).
+inline bool whole_head(const GameAddrs& g, std::span<const uint8_t> copied) {
+    const size_t n = copied.size();
+    return n <= g.update_head.size() &&
+           std::find(g.update_boundaries.begin(), g.update_boundaries.end(), static_cast<uint32_t>(n)) !=
+               g.update_boundaries.end() &&
+           std::equal(copied.begin(), copied.end(), g.update_head.begin());
 }
 
 // ---------------------------------------------------------------- the snapshot and its wire form (state 12)
@@ -234,22 +461,27 @@ struct Snapshot {
     uint64_t tick = 0;  // the host's server tick (ms) when it was read; 0 = unreadable
     uint16_t mask = 0;
     float pos[3] = {};  // the host's character (world, Y up), with kHasPos
-    uint32_t w[kFieldCount] = {};
+    uint32_t w[kMaxFields] = {};  // the layout's count() words; the rest 0
     float f(size_t i) const { return as_float(w[i]); }
 };
 
 // Tunnel control packet (troc_frame.h): opcode 1, slot -1, payload
-//   u8 12 | u8 version 1 | u16 mask | u32 seq | u64 tick | f32 pos[3] | u32 words[61]   = 272 bytes.
-// Only in ToGuestClient batches, only to a guest that announced kCapsWeatherSync (an older guest ignores an unknown
-// state). The mod's protocol (protocol.cpp) is untouched: kVersion stays.
-inline constexpr uint16_t kControlOpcode = 1;     // troc_frame.h kControlOpcode
-inline constexpr uint8_t kControlWeather = 12;    // troc_frame.h: 1 ready, 2 dead, 3, 4, 5; 6-11 the guest's save
+//   u8 12 | u8 version | u16 mask | u32 seq | u64 tick | f32 pos[3] | u32 words[count]
+// version 1 = build 2976 (61 words: 272-byte payload, 277-byte frame); version 2 = build 3549 (69 words in
+// kFields3549's order: 304 / 309). The two builds never play together (the mod's hello compares the PE timestamps):
+// each end decodes only its own version. Only in ToGuestClient batches, only to a guest that announced
+// kCapsWeatherSync (an older guest ignores an unknown state). The mod's protocol (protocol.cpp) is untouched:
+// kVersion stays.
+inline constexpr uint16_t kControlOpcode = 1;      // troc_frame.h kControlOpcode
+inline constexpr uint8_t kControlWeather = 12;     // troc_frame.h: 1 ready, 2 dead, 3, 4, 5; 6-11 the guest's save
 inline constexpr uint8_t kCapsWeatherSync = 0x04;  // troc_frame.h kCapsOpcode flags: 0x01 compressed, 0x02 own save
-inline constexpr uint8_t kWireVersion = 1;
 inline constexpr size_t kHeader = 5;
-inline constexpr size_t kPayloadSize = 28 + 4 * kFieldCount;
-inline constexpr size_t kFrameSize = kHeader + kPayloadSize;
-static_assert(kPayloadSize == 272 && kFrameSize == 277);
+inline constexpr size_t kPayloadFixed = 28;
+constexpr size_t payload_size(const Layout& L) { return kPayloadFixed + 4 * L.count(); }
+constexpr size_t frame_size(const Layout& L) { return kHeader + payload_size(L); }
+inline constexpr size_t kMaxFrameSize = kHeader + kPayloadFixed + 4 * kMaxFields;
+static_assert(payload_size(kLayout2976) == 272 && frame_size(kLayout2976) == 277);
+static_assert(payload_size(kLayout3549) == 304 && frame_size(kLayout3549) == 309);
 
 inline void put16(uint8_t* p, uint16_t v) {
     p[0] = static_cast<uint8_t>(v);
@@ -264,42 +496,49 @@ inline uint32_t get32(const uint8_t* p) {
            (static_cast<uint32_t>(p[3]) << 24);
 }
 
-inline std::array<uint8_t, kFrameSize> frame(const Snapshot& s) {
-    std::array<uint8_t, kFrameSize> f{};
-    put16(&f[0], kControlOpcode);
-    f[2] = 0xFF;
-    put16(&f[3], static_cast<uint16_t>(kPayloadSize));
-    uint8_t* p = f.data() + kHeader;
+struct Frame {
+    std::array<uint8_t, kMaxFrameSize> b{};
+    size_t n = 0;
+    std::span<const uint8_t> bytes() const { return {b.data(), n}; }
+};
+
+inline Frame frame(const Layout& L, const Snapshot& s) {
+    Frame f;
+    f.n = frame_size(L);
+    put16(&f.b[0], kControlOpcode);
+    f.b[2] = 0xFF;
+    put16(&f.b[3], static_cast<uint16_t>(payload_size(L)));
+    uint8_t* p = f.b.data() + kHeader;
     p[0] = kControlWeather;
-    p[1] = kWireVersion;
+    p[1] = L.wire_version;
     put16(p + 2, s.mask);
     put32(p + 4, s.seq);
     put32(p + 8, static_cast<uint32_t>(s.tick));
     put32(p + 12, static_cast<uint32_t>(s.tick >> 32));
     for (int i = 0; i < 3; ++i) put32(p + 16 + 4 * i, as_word(s.pos[i]));
-    for (size_t i = 0; i < kFieldCount; ++i) put32(p + 28 + 4 * i, s.w[i]);
+    for (size_t i = 0; i < L.count(); ++i) put32(p + kPayloadFixed + 4 * i, s.w[i]);
     return f;
 }
 
-// A whole state-12 frame of this exact form (opcode 1, slot -1, 272-byte payload, state 12): what the guest takes
-// out of the host's stream. Any other opcode-1 frame goes on as before.
-inline bool is_frame(std::span<const uint8_t> f) {
-    return f.size() == kFrameSize && get16(f.data()) == kControlOpcode && f[2] == 0xFF &&
-           get16(f.data() + 3) == kPayloadSize && f[kHeader] == kControlWeather;
+// A whole state-12 frame of this layout's exact form (opcode 1, slot -1, its payload size, state 12): what the guest
+// takes out of the host's stream. Any other opcode-1 frame goes on as before.
+inline bool is_frame(const Layout& L, std::span<const uint8_t> f) {
+    return f.size() == frame_size(L) && get16(f.data()) == kControlOpcode && f[2] == 0xFF &&
+           get16(f.data() + 3) == payload_size(L) && f[kHeader] == kControlWeather;
 }
 
-// is_frame, this version, no unknown mask bit.
-inline std::optional<Snapshot> decode(std::span<const uint8_t> f) {
-    if (!is_frame(f)) return std::nullopt;
+// is_frame, this layout's version, no unknown mask bit.
+inline std::optional<Snapshot> decode(const Layout& L, std::span<const uint8_t> f) {
+    if (!is_frame(L, f)) return std::nullopt;
     const uint8_t* p = f.data() + kHeader;
-    if (p[1] != kWireVersion) return std::nullopt;
+    if (p[1] != L.wire_version) return std::nullopt;
     Snapshot s;
     s.mask = get16(p + 2);
     if (s.mask & ~kKnownMask) return std::nullopt;
     s.seq = get32(p + 4);
     s.tick = get32(p + 8) | (static_cast<uint64_t>(get32(p + 12)) << 32);
     for (int i = 0; i < 3; ++i) s.pos[i] = as_float(get32(p + 16 + 4 * i));
-    for (size_t i = 0; i < kFieldCount; ++i) s.w[i] = get32(p + 28 + 4 * i);
+    for (size_t i = 0; i < L.count(); ++i) s.w[i] = get32(p + kPayloadFixed + 4 * i);
     return s;
 }
 
@@ -307,24 +546,24 @@ inline std::optional<Snapshot> decode(std::span<const uint8_t> f) {
 
 inline constexpr float kHuge = 1.0e7f;
 inline bool checked(Kind k) { return k == Kind::Lerp || k == Kind::Hold || k == Kind::Accum || k == Kind::Derived; }
-inline bool unit_field(size_t i) {
-    return i == kIdxPrecip || i == kIdxCloud || i == kIdxHumid || i == kIdxRain || i == kIdxSnow;
+inline bool unit_field(const Layout& L, size_t i) {
+    return i == L.idx_precip || i == L.idx_cloud || i == L.idx_humid || i == L.idx_rain || i == L.idx_snow;
 }
-// +-FLT_MAX: the data's "not set" (0x41DB60's sentinel). Should a block hold it, it is a valid value: passed through
-// as it is (never interpolated), counted apart (review item 8).
+// +-FLT_MAX: the data's "not set" (the data map's sentinel). Should a block hold it, it is a valid value: passed
+// through as it is (never interpolated), counted apart (review item 8).
 inline constexpr uint32_t kFltMaxBits = 0x7F7FFFFFu, kNegFltMaxBits = 0xFF7FFFFFu;
 inline bool is_unset(uint32_t w) { return w == kFltMaxBits || w == kNegFltMaxBits; }
 
 struct Sanity {
     uint32_t nonfinite = 0, huge = 0, outside_unit = 0, unset = 0;
-    int first_bad = -1;  // the first field index that failed (kFieldCount: the position)
+    int first_bad = -1;  // the first field index that failed (count(): the position)
     bool ok() const { return nonfinite == 0 && huge == 0; }
 };
 
 // The float fields of the present blocks (Lerp, Hold, Accum, Derived): finite and |v| < 1e7, +-FLT_MAX allowed
 // ("not set"); the five [0, 1] fields (precipitation, cloudiness, humidity, rain, snow) outside [-0.001, 1.001] are
 // only counted (the range is [E]). Colours and words of unknown type are not looked at. The position with kHasPos.
-inline Sanity check(const Snapshot& s) {
+inline Sanity check(const Layout& L, const Snapshot& s) {
     Sanity r;
     const auto look = [&](float v, int idx) {
         if (!std::isfinite(v)) {
@@ -336,36 +575,38 @@ inline Sanity check(const Snapshot& s) {
         }
         if (r.first_bad < 0) r.first_bad = idx;
     };
-    for (size_t i = 0; i < kFieldCount; ++i) {
-        if (!(s.mask & block_bit(kFields[i].block)) || !checked(kFields[i].kind)) continue;
+    for (size_t i = 0; i < L.count(); ++i) {
+        if (!(s.mask & block_bit(L[i].block)) || !checked(L[i].kind)) continue;
         if (is_unset(s.w[i])) {
             ++r.unset;
             continue;
         }
         const float v = s.f(i);
         look(v, static_cast<int>(i));
-        if (unit_field(i) && std::isfinite(v) && (v < -0.001f || v > 1.001f)) ++r.outside_unit;
+        if (unit_field(L, i) && std::isfinite(v) && (v < -0.001f || v > 1.001f)) ++r.outside_unit;
     }
     if (s.mask & kHasPos) {
-        for (float v : s.pos) look(v, static_cast<int>(kFieldCount));
+        for (float v : s.pos) look(v, static_cast<int>(L.count()));
     }
     return r;
 }
-inline const char* field_name(int idx) {
-    return idx >= 0 && static_cast<size_t>(idx) < kFieldCount ? kFields[idx].name : idx >= 0 ? "position" : "-";
+inline const char* field_name(const Layout& L, int idx) {
+    return idx >= 0 && static_cast<size_t>(idx) < L.count() ? L[static_cast<size_t>(idx)].name
+           : idx >= 0                                         ? "position"
+                                                              : "-";
 }
 
 // What the guest needs to apply anything: A, B and X (C is written when present).
-inline bool applicable(const Snapshot& s) {
-    return (s.mask & (kHasA | kHasB | kHasX)) == (kHasA | kHasB | kHasX) && check(s).ok();
+inline bool applicable(const Layout& L, const Snapshot& s) {
+    return (s.mask & (kHasA | kHasB | kHasX)) == (kHasA | kHasB | kHasX) && check(L, s).ok();
 }
 
 // ---------------------------------------------------------------- interpolation (guest, the hook's thread)
 
-inline constexpr uint32_t kDelayMs = 300;           // render this far behind the host's newest sample
-inline constexpr uint32_t kMaxGapMs = 2000;         // two samples further apart are not blended
+inline constexpr uint32_t kDelayMs = 300;            // render this far behind the host's newest sample
+inline constexpr uint32_t kMaxGapMs = 2000;          // two samples further apart are not blended
 inline constexpr uint32_t kMaxExtrapolateMs = 1000;  // the accumulators beyond the newest sample
-inline constexpr uint32_t kFreshMs = 1000;          // a sample older than this (local receive time) is stale
+inline constexpr uint32_t kFreshMs = 1000;           // a sample older than this (local receive time) is stale
 
 struct Timed {
     Snapshot s;
@@ -378,17 +619,18 @@ inline uint64_t age_ms(uint64_t now_ms, uint64_t recv_ms) { return now_ms > recv
 inline bool fresh(uint64_t now_ms, uint64_t recv_ms) { return recv_ms != 0 && age_ms(now_ms, recv_ms) < kFreshMs; }
 
 struct Blend {
-    bool blended = false;      // prev and cur were mixed (false: cur as it is)
+    bool blended = false;       // prev and cur were mixed (false: cur as it is)
     bool extrapolated = false;  // the render time was past cur: the accumulators went on with their slope
-    float t = 1.0f;            // 0 = prev, 1 = cur
+    float t = 1.0f;             // 0 = prev, 1 = cur
 };
 
 // The vector to write at the guest's local time now_ms. The time base is the host's server tick when both samples
 // carry one and it grows; otherwise the guest's receive times. The render time is the host's estimated "now"
 // (cur's time + what elapsed here since cur arrived) minus kDelayMs.
-inline Blend blend(const Timed* prev, const Timed& cur, uint64_t now_ms, uint32_t (&out)[kFieldCount]) {
+inline Blend blend(const Layout& L, const Timed* prev, const Timed& cur, uint64_t now_ms,
+                   uint32_t (&out)[kMaxFields]) {
     Blend b;
-    for (size_t i = 0; i < kFieldCount; ++i) out[i] = cur.s.w[i];
+    for (size_t i = 0; i < kMaxFields; ++i) out[i] = cur.s.w[i];
     if (!prev || !prev->recv_ms || prev->s.seq == cur.s.seq) return b;
     int64_t tp = 0, tc = 0;
     if (prev->s.tick && cur.s.tick && cur.s.tick > prev->s.tick) {
@@ -414,8 +656,8 @@ inline Blend blend(const Timed* prev, const Timed& cur, uint64_t now_ms, uint32_
     }
     b.blended = true;
     b.t = static_cast<float>(t);
-    for (size_t i = 0; i < kFieldCount; ++i) {
-        const Kind k = kFields[i].kind;
+    for (size_t i = 0; i < L.count(); ++i) {
+        const Kind k = L[i].kind;
         if (k != Kind::Lerp && k != Kind::Accum && k != Kind::Derived) continue;
         if (is_unset(prev->s.w[i]) || is_unset(cur.s.w[i])) continue;  // "not set" on either side: cur's word stays
         const double a = prev->s.f(i), c = cur.s.f(i);
@@ -426,44 +668,48 @@ inline Blend blend(const Timed* prev, const Timed& cur, uint64_t now_ms, uint32_
     return b;
 }
 
-// The precipitation command the guest writes to A+0x12C: the host's CURRENT rain or snow (max(A+0x16C, A+0x168)),
-// not its target (§5.2); 0x382A1A0 then makes it rain or snow with the guest's own temperature. In [0, 1].
-inline float precip_command(const uint32_t (&w)[kFieldCount]) {
+// The precipitation command the guest writes to A+0x12C: the host's CURRENT rain or snow (max(rain, snow)), not its
+// target (§5.2); X's update then makes it rain or snow with the guest's own temperature. In [0, 1].
+inline float precip_command(const Layout& L, const uint32_t (&w)[kMaxFields]) {
     const auto usable = [](uint32_t word) {
         const float f = as_float(word);
         return is_unset(word) || !std::isfinite(f) ? 0.0f : f;
     };
-    return std::clamp(std::max(usable(w[kIdxRain]), usable(w[kIdxSnow])), 0.0f, 1.0f);
+    return std::clamp(std::max(usable(w[L.idx_rain]), usable(w[L.idx_snow])), 0.0f, 1.0f);
 }
 
 // The words the guest writes (Lerp, Hold, Raw and Accum of the present blocks; A+0x12C is the command above).
-inline bool written(size_t i, uint16_t mask) {
-    const Kind k = kFields[i].kind;
-    return (mask & block_bit(kFields[i].block)) &&
-           (k == Kind::Lerp || k == Kind::Hold || k == Kind::Raw || k == Kind::Accum);
+inline bool written(const Layout& L, size_t i, uint16_t mask) {
+    if (i >= L.count()) return false;
+    const Kind k = L[i].kind;
+    return (mask & block_bit(L[i].block)) && (k == Kind::Lerp || k == Kind::Hold || k == Kind::Raw || k == Kind::Accum);
 }
 
 // What the guest keeps (on its first write to an X) and puts back when it lets that X go (review item 1: with no
 // WeatherComponent registered, X+0x88 == 0, the mixer never rewrites the holder): every holder word it may write,
-// and the four A outputs 0x382A1A0 rewrites in viewer mode. Not the accumulators (X+0x124/+0x128: putting minutes-
-// old values back would jump the clouds; the game integrates on from the host's).
-inline bool kept_for_release(size_t i) {
-    const Kind k = kFields[i].kind;
-    return kFields[i].block != Block::X && (k == Kind::Lerp || k == Kind::Hold || k == Kind::Raw || k == Kind::Derived);
+// and the A outputs X's update rewrites in viewer mode. Not X's own words (the accumulators, the turning angle:
+// putting minutes-old values back would jump the clouds; the game integrates on from the host's).
+inline bool kept_for_release(const Layout& L, size_t i) {
+    if (i >= L.count()) return false;
+    const Kind k = L[i].kind;
+    return L[i].block != Block::X && (k == Kind::Lerp || k == Kind::Hold || k == Kind::Raw || k == Kind::Derived);
 }
-inline uint64_t field_bit(size_t i) { return uint64_t{1} << i; }
-static_assert(kFieldCount <= 64);
+inline Bits field_bit(size_t i) {
+    Bits b;
+    if (i < kMaxFields) b.set(i);
+    return b;
+}
 // The fields a release writes back: kept at the first write AND written since (the derived outputs once the flag was
-// ours: 0x382A1A0 changed them).
-inline uint64_t restore_bits(uint64_t kept, uint64_t written_bits, bool flag_was_ours) {
-    uint64_t derived = 0;
-    for (size_t i = 0; i < kFieldCount; ++i) {
-        if (kFields[i].kind == Kind::Derived) derived |= field_bit(i);
+// ours: X's update changed them).
+inline Bits restore_bits(const Layout& L, const Bits& kept, const Bits& written_bits, bool flag_was_ours) {
+    Bits derived;
+    for (size_t i = 0; i < L.count(); ++i) {
+        if (L[i].kind == Kind::Derived) derived.set(i);
     }
-    return kept & (written_bits | (flag_was_ours ? derived : 0));
+    return kept & (written_bits | (flag_was_ours ? derived : Bits{}));
 }
-inline uint32_t value_to_write(size_t i, const uint32_t (&w)[kFieldCount]) {
-    return i == kIdxPrecip ? as_word(precip_command(w)) : w[i];
+inline uint32_t value_to_write(const Layout& L, size_t i, const uint32_t (&w)[kMaxFields]) {
+    return i == L.idx_precip ? as_word(precip_command(L, w)) : w[i];
 }
 
 // ---------------------------------------------------------------- the guest's gates (its worker thread)
@@ -615,7 +861,10 @@ private:
 
 // The X objects the hook put in viewer mode (and what it found there). An X is written only from the hook, while
 // the game updates THAT X (it is alive then): a record of an X no longer updated is never touched again.
-inline constexpr uint16_t kRestoreA[5] = {0x12C, 0x160, 0x164, 0x168, 0x16C};  // selftest: what 0x382A1A0 / we change
+// The selftest's A words: Layout::a in this order {precip, rain_out, rain_fx, snow, rain}.
+inline std::array<uint16_t, 5> restore_a(const Layout& L) {
+    return {L.a.precip, L.a.rain_out, L.a.rain_fx, L.a.snow, L.a.rain};
+}
 struct Owned {
     uintptr_t x = 0;
     uint8_t orig_flag = 0;
@@ -626,9 +875,9 @@ struct Owned {
     // Mode 1 (review item 1): the holder words kept at the first write (kept_for_release), the blocks they came from
     // (a block that changed since is not written back), the fields written since and whether the flag became ours.
     uintptr_t blk[3] = {};  // A, B, C
-    uint64_t kept = 0, written = 0;
+    Bits kept, written;
     bool flag_ours = false;
-    uint32_t orig_w[kFieldCount] = {};
+    uint32_t orig_w[kMaxFields] = {};
 };
 
 template <size_t N>
@@ -831,8 +1080,8 @@ private:
     std::array<std::array<std::atomic<uint32_t>, N>, 2> slots_{};
 };
 
-// A Timed in the buffer's words: seq, tick (2), mask, pos (3), recv (2), the vector.
-inline constexpr size_t kBoxWords = 9 + kFieldCount;
+// A Timed in the buffer's words: seq, tick (2), mask, pos (3), recv (2), the vector (kMaxFields words).
+inline constexpr size_t kBoxWords = 9 + kMaxFields;
 inline void pack(const Timed& t, uint32_t (&w)[kBoxWords]) {
     w[0] = t.s.seq;
     w[1] = static_cast<uint32_t>(t.s.tick);
@@ -841,7 +1090,7 @@ inline void pack(const Timed& t, uint32_t (&w)[kBoxWords]) {
     for (int i = 0; i < 3; ++i) w[4 + i] = as_word(t.s.pos[i]);
     w[7] = static_cast<uint32_t>(t.recv_ms);
     w[8] = static_cast<uint32_t>(t.recv_ms >> 32);
-    for (size_t i = 0; i < kFieldCount; ++i) w[9 + i] = t.s.w[i];
+    for (size_t i = 0; i < kMaxFields; ++i) w[9 + i] = t.s.w[i];
 }
 inline void unpack(const uint32_t (&w)[kBoxWords], Timed& t) {
     t.s.seq = w[0];
@@ -849,7 +1098,7 @@ inline void unpack(const uint32_t (&w)[kBoxWords], Timed& t) {
     t.s.mask = static_cast<uint16_t>(w[3]);
     for (int i = 0; i < 3; ++i) t.s.pos[i] = as_float(w[4 + i]);
     t.recv_ms = w[7] | (static_cast<uint64_t>(w[8]) << 32);
-    for (size_t i = 0; i < kFieldCount; ++i) t.s.w[i] = w[9 + i];
+    for (size_t i = 0; i < kMaxFields; ++i) t.s.w[i] = w[9 + i];
 }
 
 // The hook's own history (its thread only): the two newest samples it has seen.

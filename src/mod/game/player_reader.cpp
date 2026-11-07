@@ -5,6 +5,8 @@
 #include <cmath>
 
 #include "common/math3d.h"
+#include "mod/game/actor_lookup.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 
@@ -21,13 +23,22 @@ std::optional<proto::Vec3> read_vec3(uintptr_t addr) {
     return v;
 }
 
+// Builds 3527 and 3549 (read live on 3549, 2026-11-05): the main character's ClientMercenaryClanActorComponent and the key
+// of the character in control, which the game's focus routine 0x23144B0 writes (session2/focus_follow_logic.h).
+constexpr uintptr_t kVtMercenaryClan = 0x594D250;
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the vtable by RTTI name (vtable_map_3549_3576.json); its vf23 is
+// 3527's + 0xD50 (0x2315120) and the focus routine (3527 0x23144B0) moved the same way to 0x2315200, which still stores
+// the new key with `mov [rdi+0x118],r15d` (0x23154AC). The component slot +0x110 is 3527's (not re-derived: a wrong slot
+// fails the vtable check and the main character is read).
+constexpr uintptr_t kVtMercenaryClan3576 = 0x594F340;
+constexpr uint32_t kComponents_Clan = 0x110, kClan_Focus = 0x118;
+
 }  // namespace
 
 bool PlayerReader::init() {
     base_ = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base_);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base_ + dos->e_lfanew);
-    enabled_ = base_ == off::kImageBase && nt->FileHeader.TimeDateStamp == off::kPeTimestamp;
+    profile_ = reader_profile();
+    enabled_ = profile_ != nullptr;
     if (!enabled_) last_failure_ = "unsupported game build";
     return enabled_;
 }
@@ -38,15 +49,34 @@ std::nullopt_t PlayerReader::fail(const char* why) {
 }
 
 std::optional<uintptr_t> PlayerReader::resolve_actor() {
-    auto world = read_ptr(base_ + off::kWorldSystemSlot);
+    auto world = read_ptr(base_ + profile_->world_system);
     if (!world) return fail("WorldSystem not created");
     auto manager = read_ptr(*world + off::kWorldSystem_ActorManager);
-    if (!manager || !has_vtable(*manager, base_ + off::kVtClientActorManager))
+    if (!manager || !has_vtable(*manager, base_ + profile_->vt_actor_manager))
         return fail("ClientActorManager missing");
     auto actor = read_ptr(*manager + off::kActorManager_ControlledActor);
     if (!actor) return fail("no controlled actor (not in world)");
-    if (!has_vtable(*actor, base_ + off::kVtControlledActor))
+    if (!has_vtable(*actor, base_ + profile_->vt_controlled_actor))
         return fail("controlled actor has unexpected type");
+    if (follow_focus_ && layout_3527()) {
+        if (auto focus = focus_actor(*actor)) return focus;
+    }
+    return actor;
+}
+
+// The character in control when it is not the main one; nullopt otherwise (or when anything is unreadable: the main one).
+std::optional<uintptr_t> PlayerReader::focus_actor(uintptr_t main_actor) {
+    auto components = read_ptr(main_actor + off::kActor_ComponentTable);
+    if (!components) return std::nullopt;
+    auto clan = read_ptr(*components + kComponents_Clan);
+    const uintptr_t vt_clan = current_build() == Build::v3576 ? kVtMercenaryClan3576 : kVtMercenaryClan;
+    if (!clan || !has_vtable(*clan, base_ + vt_clan)) return std::nullopt;
+    auto focus = game::read<uint32_t>(*clan + kClan_Focus);
+    auto main_key = game::read<uint32_t>(main_actor + off::kActor_Key);
+    if (!focus || !main_key || *focus == 0 || *focus == *main_key) return std::nullopt;
+    if ((*focus >> 28) != 0xA && (*focus >> 28) != 0xB) return std::nullopt;
+    auto actor = find_actor(*focus);
+    if (!actor || !*actor || !has_vtable(*actor, base_ + profile_->vt_controlled_actor)) return std::nullopt;
     return actor;
 }
 
@@ -57,7 +87,7 @@ std::optional<uintptr_t> PlayerReader::character_control() {
     auto components = read_ptr(*actor + off::kActor_ComponentTable);
     if (!components) return fail("component table missing");
     auto control = read_ptr(*components + off::kComponents_CharacterControl);
-    if (!control || !has_vtable(*control, base_ + off::kVtCharacterControl))
+    if (!control || !has_vtable(*control, base_ + profile_->vt_character_control))
         return fail("CharacterControl component missing");
     return control;
 }
@@ -71,16 +101,16 @@ std::optional<PlayerSnapshot> PlayerReader::read() {
     auto components = read_ptr(*actor + off::kActor_ComponentTable);
     if (!components) return fail("component table missing");
     auto control = read_ptr(*components + off::kComponents_CharacterControl);
-    if (!control || !has_vtable(*control, base_ + off::kVtCharacterControl))
+    if (!control || !has_vtable(*control, base_ + profile_->vt_character_control))
         return fail("CharacterControl component missing");
     auto inner = read_ptr(*control + off::kControl_Inner);
     if (!inner) return fail("control inner missing");
     auto physics = read_ptr(*inner + off::kControlInner_Physics);
-    if (!physics || !has_vtable(*physics, base_ + off::kVtPhysicsObject))
+    if (!physics || !has_vtable(*physics, base_ + profile_->vt_physics))
         return fail("physics object missing");
 
     auto local = read_vec3(*physics + off::kPhysics_Position);
-    auto origin = read_vec3(base_ + off::kChunkOrigin);
+    auto origin = read_vec3(base_ + profile_->chunk_origin);
     auto ax = read_vec3(*physics + off::kPhysics_AxisX);
     auto ay = read_vec3(*physics + off::kPhysics_AxisY);
     auto az = read_vec3(*physics + off::kPhysics_AxisZ);
@@ -95,7 +125,7 @@ std::optional<PlayerSnapshot> PlayerReader::read() {
 
     // The game keeps its own world-space copy; a large mismatch means our
     // chunk-origin math or chain is off (it lags by a frame, so allow some).
-    if (auto global = read_vec3(base_ + off::kStaticPlayerPos)) {
+    if (auto global = read_vec3(base_ + profile_->static_player_position)) {
         snap.static_pos_error = math::length(math::sub(snap.position, *global));
     }
 
@@ -114,7 +144,7 @@ std::optional<PlayerSnapshot> PlayerReader::read() {
 
 void PlayerReader::read_stats(uintptr_t components, PlayerSnapshot& out) {
     auto status = read_ptr(components + off::kComponents_Status);
-    if (!status || !has_vtable(*status, base_ + off::kVtStatusComponent)) return;
+    if (!status || !has_vtable(*status, base_ + profile_->vt_status)) return;
     auto container = read_ptr(*status + off::kStatus_StatContainer);
     if (!container) return;
     auto entries = read_ptr(*container + off::kStatContainer_Entries);

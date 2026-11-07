@@ -1,0 +1,228 @@
+{
+  "dump": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp_crash.guest_20261105-002258_57692_1.dmp",
+  "thread_id": 41776,
+  "exception_code": "0xC0000005",
+  "exception_information": [
+    "0x0",
+    "0x116"
+  ],
+  "registers": {
+    "Rax": "0x5767E0944C0",
+    "Rbx": "0x57649F7F780",
+    "Rcx": "0x57649E3E100",
+    "Rdx": "0x0",
+    "Rsi": "0x5768A016600",
+    "Rdi": "0x57649F7F600",
+    "Rbp": "0x319EFBA0",
+    "Rsp": "0x319EFAA0",
+    "R8": "0x3",
+    "R9": "0x140000000",
+    "R10": "0x57649E3E100",
+    "R11": "0x319EFCF0",
+    "R12": "0x78",
+    "R13": "0x78",
+    "R14": "0x0",
+    "R15": "0x0",
+    "Rip": "0x1407F6876",
+    "EFlags": "0x10246"
+  },
+  "fault": "cmp byte ptr [rdx+0x116],r15b; RDX is selected layer current action (+0x10)",
+  "character_control": {
+    "address": "0x57649E3E100",
+    "first_qword": "0x1459438F0",
+    "rtti": "pa::ClientCharacterControlActorComponent",
+    "bytes": "f0 38 94 45 01 00 00 00 80 f7 f7 49 76 05 00 00 01 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a8 04 7e 76 05 00 00 00 13 be 79 76 05 00 00 80 e3 e3 49 76 05 00 00 40 de f4 d9 75 05 00 00 20 0d e5 fb 75 05 00 00 00 b7 fd 49 76 05 00 00 00 4f 05 7e 76 05 00 00 70 cd ff 49 76 05 00 00 80 0a e5 fb 75 05 00 00 e0 a7 04 7e 76 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 50 05 7e 76 05 00 00 c0 44 09 7e 76 05 00 00 00 46 09 7e 76 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 4e 05 7e 76 05 00 00 00 de f4 d9 75 05 00 00 40 0c e5 fb 75 05 00 00 00 38 06 7e 76 05 00 00 a0 5a 07 7e 76 05 00 00 00 a0 0b 7e 76 05 00 00 e0 e0 d0 49 76 05 00 00 80 e8 e3 49 76 05 00 00 80 cd ff 49 76 05 00 00 b0 cd ff 49 76 05 00 00 00 88 f8 6c 75 05 00 00 00 f6 f7 49 76 05 00 00 00 eb e3 49 76 05 00 00 80 a8 04 7e 76 05 00 00 00 86 f8 6c 75 05 00 00 e0 0a 0c 7e 76 05 00 00 00 66 01 8a 76 05 00 00 80 0a 0c 7e 76 05 00 00 00 15 04 8a 76 05 00 00 00 13 be 79 76 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+    "actor": 6005605267328,
+    "movement": 6005605266944,
+    "selector_object": 6005603951488,
+    "restore_data": 6004295404832,
+    "pending": 0,
+    "default_layers": [
+      0,
+      0
+    ],
+    "selected_layer": 0,
+    "restore": {
+      "address": "0x575FBE50D20",
+      "first_qword": null,
+      "rtti": null,
+      "byte_30": null,
+      "raw_30": "",
+      "field_f8": null
+    },
+    "layers": [
+      {
+        "index": 0,
+        "address": "0x5767E0944C0",
+        "first_qword": "0x0",
+        "rtti": null,
+        "current": 0,
+        "playback": 0,
+        "hash_3c": 638614844,
+        "chart_118": 6006405957216,
+        "bytes": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3c 7d 10 26 00 00 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 80 3f 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 ff ff ff ff ff ff ff ff 00 00 80 3f 00 00 80 3f 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 75 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 b8 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff 00 00 80 3f 00 00 80 3f 00 00 80 3f 60 86 b1 79 76 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+      },
+      {
+        "index": 1,
+        "address": "0x5767E094600",
+        "first_qword": "0x0",
+        "rtti": null,
+        "current": 0,
+        "playback": 0,
+        "hash_3c": 0,
+        "chart_118": 0,
+        "bytes": "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff 00 00 00 00 00 00 00 00 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 80 3f 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 ff ff ff ff ff ff ff ff 00 00 80 3f 00 00 80 3f 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 75 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff 00 00 80 3f 00 00 80 3f 00 00 80 3f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+      }
+    ]
+  },
+  "actor": {
+    "address": "0x57649F7F780",
+    "first_qword": "0x145912CD8",
+    "rtti": "pa::ClientNormalInGameActor",
+    "key": 2953839033,
+    "controller": 2416967680,
+    "state": 16,
+    "ready": 1,
+    "bytes": "d8 2c 91 45 01 00 00 00 a0 f8 f7 49 76 05 00 00 01 00 00 00 00 00 00 00 d0 37 ac 45 01 00 00 00 00 00 00 00 00 00 00 c0 00 00 00 00 00 00 00 00 f8 76 ab 45 01 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff 00 00 00 00 02 00 01 00 00 00 00 00 b9 01 00 00 00 00 00 00 00 00 00 00 01 06 10 00 b9 01 10 b0 00 00 00 00 00 8e f8 6c 75 05 00 00 39 00 00 00 00 00 00 00 00 84 f8 6c 75 05 00 00 1d 00 00 00 1d 00 00 00 70 5b 77 6b 75 05 00 00 00 00 10 90 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff 00 00 00 b7 01 10 b0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 01 01 00 01 00 00 00 00 00 01 00 01 00 01 01"
+  },
+  "movement_state": {
+    "address": "0x57649F7F600",
+    "first_pointer": 6005603950848,
+    "bits_b0": 0,
+    "bits_b4": 0,
+    "bytes": "00 e1 e3 49 76 05 00 00 00 51 05 7e 76 05 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 80 bf ff ff ff ff 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 80 3f 00 00 00 00 00 00 80 bf 00 00 00 00 00 00 80 bf 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00"
+  },
+  "prologue_derived_stack": [
+    {
+      "function": "0x7F66A0",
+      "stack_adjustment": "0x258",
+      "return_slot": "0x319EFCF8",
+      "fault_rsp_offset": "0x258",
+      "return_address": {
+        "address": "0x1407F2D04",
+        "module": "CrimsonDesert.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+        "module_base": "0x140000000",
+        "rva": "0x7F2D04",
+        "location": "CrimsonDesert.exe+0x7F2D04"
+      },
+      "return_function": {
+        "begin": 8334368,
+        "end": 8336581,
+        "unwind": 106089648,
+        "offset": 228
+      },
+      "static_bytes_before_return": "28 c8 48 8b cf e8 9c 39 00 00"
+    },
+    {
+      "function": "0x7F2C20",
+      "stack_adjustment": "0x88",
+      "return_slot": "0x319EFD88",
+      "fault_rsp_offset": "0x2E8",
+      "return_address": {
+        "address": "0x14094FB5C",
+        "module": "CrimsonDesert.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+        "module_base": "0x140000000",
+        "rva": "0x94FB5C",
+        "location": "CrimsonDesert.exe+0x94FB5C"
+      },
+      "return_function": {
+        "begin": 9762800,
+        "end": 9763887,
+        "unwind": 106335400,
+        "offset": 876
+      },
+      "static_bytes_before_return": "8e 08 01 00 00 e8 c4 30 ea ff"
+    },
+    {
+      "function": "0x94F7F0",
+      "stack_adjustment": "0x88",
+      "return_slot": "0x319EFE18",
+      "fault_rsp_offset": "0x378",
+      "return_address": {
+        "address": "0x14099B40F",
+        "module": "CrimsonDesert.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+        "module_base": "0x140000000",
+        "rva": "0x99B40F",
+        "location": "CrimsonDesert.exe+0x99B40F"
+      },
+      "return_function": {
+        "begin": 10072960,
+        "end": 10073200,
+        "unwind": 106402624,
+        "offset": 143
+      },
+      "static_bytes_before_return": "8e 98 03 00 00 e8 e1 43 fb ff"
+    },
+    {
+      "function": "0x99B380",
+      "stack_adjustment": "0x58",
+      "return_slot": "0x319EFE78",
+      "fault_rsp_offset": "0x3D8",
+      "return_address": {
+        "address": "0x1415DE1E0",
+        "module": "CrimsonDesert.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+        "module_base": "0x140000000",
+        "rva": "0x15DE1E0",
+        "location": "CrimsonDesert.exe+0x15DE1E0"
+      },
+      "return_function": {
+        "begin": 22929040,
+        "end": 22929994,
+        "unwind": 107869060,
+        "offset": 848
+      },
+      "static_bytes_before_return": "eb a8 48 8b d3 e8 40 b9 00 00"
+    },
+    {
+      "function": "0x15DDE90",
+      "stack_adjustment": "0x48",
+      "return_slot": "0x319EFEC8",
+      "fault_rsp_offset": "0x428",
+      "return_address": {
+        "address": "0x1415F7E5F",
+        "module": "CrimsonDesert.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+        "module_base": "0x140000000",
+        "rva": "0x15F7E5F",
+        "location": "CrimsonDesert.exe+0x15F7E5F"
+      },
+      "return_function": {
+        "begin": 23035264,
+        "end": 23035517,
+        "unwind": 107886112,
+        "offset": 223
+      },
+      "static_bytes_before_return": "48 8b 01 48 8b 56 08 ff 50 18"
+    },
+    {
+      "function": "0x15F7D80",
+      "stack_adjustment": "0x58",
+      "return_slot": "0x319EFF28",
+      "fault_rsp_offset": "0x488",
+      "return_address": {
+        "address": "0x7FFF6D89CD30",
+        "module": "ucrtbase.dll",
+        "module_path": "C:\\Windows\\System32\\ucrtbase.dll",
+        "module_base": "0x7FFF6D870000",
+        "rva": "0x2CD30",
+        "location": "ucrtbase.dll+0x2CD30"
+      }
+    }
+  ],
+  "stack_basis": "Each return slot uses statically verified prologue stack adjustment. Tail-called functions may be absent; raw scan candidates are in generic report.",
+  "native_role": "Worker loop 15F7D80 -> 15DDE90 -> 15E9B20 tail dispatch -> 99B380 actor iteration -> 94F7F0 CC phase -> 7F2C20 movement state -> 7F66A0 current-action reader.",
+  "coverage": {
+    "existing_guard_entries": [
+      "0x944E70",
+      "0x946060"
+    ],
+    "fault_path_cc_entry": "0x94F7F0",
+    "finding": "Fault path reaches the CC through a separate direct call; neither guarded entry occurs in this chain.",
+    "report_timing": "RemoteUpdateGuard holding lines drain a queue; log time is not the time the hook recorded the key."
+  },
+  "restore_capture_note": "The restore-data pointer is captured in the CC, but its target page is absent from this dump; null report fields are unavailable, not zero."
+}

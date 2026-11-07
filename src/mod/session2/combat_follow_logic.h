@@ -51,6 +51,7 @@
 #include <optional>
 #include <span>
 
+#include "common/movement_layout.h"
 #include "mod/session2/user2_funnels_logic.h"
 
 namespace cdmp::session2::cfl {
@@ -119,7 +120,7 @@ struct Seen {
     uint32_t gone = 0;     // an 0xB key that died or was removed: forgotten
 };
 
-inline Seen read_out(uint16_t op, std::span<const uint8_t> payload, uint32_t user2_char) {
+inline Seen read_out(uint16_t op, std::span<const uint8_t> payload, uint32_t user2_char, movement::Build build = movement::Build::v2976) {
     Seen s;
     if (op == kOpNotifyHandleDeadAck) {
         if (payload.size() >= kDeadMin && is_b(rd32(payload, 0))) s.gone = rd32(payload, 0);
@@ -141,23 +142,26 @@ inline Seen read_out(uint16_t op, std::span<const uint8_t> payload, uint32_t use
             return s;
         }
         case kOpStartActionAck: {
-            if (payload.size() != kStartAck) return s;
+            const auto* l = movement::layout(build);
+            if (!l || payload.size() != l->action) return s;
             const uint32_t key = rd32(payload, 0);
             if (!is_b(key)) return s;
-            if (rd32(payload, kStartTarget) == user2_char) s.engage = key;
-            if (is_a(rd32(payload, kStartTarget))) s.fight = key;
+            const size_t target_at = 143 + l->action_target;
+            if (rd32(payload, target_at) == user2_char) s.engage = key;
+            if (is_a(rd32(payload, target_at))) s.fight = key;
             s.sample = key;
-            s.ts = rd64(payload, kStartTs);
-            s.parent = rd64(payload, kStartParent) != ~0ull;
+            s.ts = rd64(payload, l->timestamp + movement::action_shift(true));
+            s.parent = rd64(payload, l->parent + movement::action_shift(true)) != ~0ull;
             return s;
         }
         case kOpMoveActorAck: {
-            if (payload.size() != kMoveAck) return s;
+            const auto* l = movement::layout(build);
+            if (!l || payload.size() != l->move_ack) return s;
             const uint32_t key = rd32(payload, 0);
             if (!is_b(key)) return s;
             s.sample = key;
-            s.ts = rd64(payload, kMoveTs);
-            s.parent = rd64(payload, kMoveParent) != ~0ull;
+            s.ts = rd64(payload, l->timestamp);
+            s.parent = rd64(payload, l->parent) != ~0ull;
             return s;
         }
         default: return s;
@@ -491,6 +495,40 @@ inline std::array<uint8_t, kPacketSize> make_move_ack(uint32_t key, const float 
     // +0xDD u8 0, +0xDE u8 0, +0xDF f32 0, f32 0
     const float speed = std::sqrt(vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]);
     put(p, 0xE7, &speed, 4);
+    return pk;
+}
+
+// 1.0.0.3527 (tools/porting/data/payload_abi_3527.json, movement_offset_comparison): the same fields in another order.
+// +0x00 key | +4 Path.local pos, quat, scale | +44 velocity | +56 angular | +68 parent | +76 Path.world pos, quat, scale
+// | +116, +128 vec3 | +140 Transform pos, quat, scale | +180 quat | +196 pos | +208 aux | +212 ts | +220 u32
+// | +224, +225 flags | +226 server flag | +227 f32, f32 | +235 speed.
+inline constexpr size_t kPacketSize3527 = kHeader + 239;
+inline std::array<uint8_t, kPacketSize3527> make_move_ack_3527(uint32_t key, const float (&pos)[3], const float (&quat)[4],
+                                                               const float (&vel)[3], uint64_t ts) {
+    std::array<uint8_t, kPacketSize3527> pk{};
+    pk[0] = static_cast<uint8_t>(kOpMoveActorAck & 0xFF);
+    pk[1] = static_cast<uint8_t>(kOpMoveActorAck >> 8);
+    pk[2] = 0xFF;
+    pk[3] = 239;
+    pk[4] = 0;
+    uint8_t* p = pk.data() + kHeader;
+    const float ident[4] = {0, 0, 0, 1};
+    const float scale[3] = {1, 1, 1};
+    put(p, 0, &key, 4);
+    put(p, 4, pos, 12);
+    put(p, 16, quat, 16);
+    put(p, 32, scale, 12);
+    put(p, 44, vel, 12);
+    std::memset(p + 68, 0xFF, 8);
+    put(p, 88, ident, 16);
+    put(p, 104, scale, 12);
+    put(p, 152, ident, 16);
+    put(p, 168, scale, 12);
+    put(p, 180, quat, 16);
+    put(p, 196, pos, 12);
+    put(p, 212, &ts, 8);
+    const float speed = std::sqrt(vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]);
+    put(p, 235, &speed, 4);
     return pk;
 }
 

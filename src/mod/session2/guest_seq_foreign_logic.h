@@ -430,6 +430,17 @@ inline constexpr uint32_t kMaxStageBinds = 64;
 inline constexpr uint32_t kDesc_Data = 0x08, kData_Ids = 0x30, kData_IdCount = 0x38;
 inline constexpr uint32_t kMaxIds = 16, kMissionNode = 0x1FFFFFFF;
 
+// The same stage fields per build. 1.0.0.3527 [V capstone]: 0x6C02C0 (P1) reads the actor list at +0x128 / +0x130 with
+// 0x28-byte entries (0x6C03A7, 0x6C03EA), entry +0 = the node with node+0xAC = its type (0x6C0580), entry +8 = the key
+// (0x6C0592); the name is [[stage+0x50]+0x1B8] (SetInteraction 0x255D3F0); the owner lookup 0x221877B (observer_scene_copy)
+// reads +0xA0. +0x68 / +0x69: 0xBA2409, 0xB9FB35. started +0x2C4 [E: 0xBA3043, only ever logged].
+struct StageOffsets {
+    uint32_t b60, b61, owner, binds, bind_count, started, info, name;
+};
+inline constexpr StageOffsets kStage2976{kStage_B60, kStage_B61, kStage_Owner, kStage_Binds, kStage_BindCount,
+                                         kStage_Started, 0x48, 0x1B8};
+inline constexpr StageOffsets kStage3527{0x68, 0x69, 0xA0, 0x128, 0x130, 0x2C4, 0x50, 0x1B8};
+
 struct StageBind {
     uint32_t key = 0;
     uint32_t node_id = 0;

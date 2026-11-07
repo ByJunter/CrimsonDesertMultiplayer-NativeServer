@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-11-05T00:19:20.5307003+04:00",
+  "build": "1.0.0.3527",
+  "installed_asi_sha256": "78EE4EEB64D5B212583B8110EAC35F8841E3A7D61F83F17AB0B3FA659557F069",
+  "confirmed_fault": "CrimsonDesert.exe+249423A null wrapper, exact return22E265C, derived stage0 parent9",
+  "fault_dump": "backups/native-debug-3527-20261105-0008/cdmp_debug.62480.20261105-000950-507.1.first.dmp",
+  "static_assertions": {
+    "child_hold": 23,
+    "interaction_rtti": 3,
+    "field_mover": 43,
+    "interaction_bytes": 41
+  },
+  "native_replay": {
+    "empty_marker_zero": true,
+    "empty_inverse": true,
+    "relocated_call": true,
+    "short_read_refused": true,
+    "original_null_fault": true,
+    "nonempty_unchanged": true
+  },
+  "ctest": {
+    "script_rerun_passed": 2,
+    "total": 87,
+    "initial_script_issue": "Inherited PowerShell7 module path prevented Windows PowerShell Get-FileHash autoload; rerun with Windows PowerShell module paths passed",
+    "initial_passed": 85
+  },
+  "logs": [
+    "build/port-3527-condition-fix-build.log",
+    "build/port-3527-condition-fix-ctest.log",
+    "build/port-3527-condition-fix-scripts-ctest.log",
+    "build/port-3527-condition-native-replay.log"
+  ],
+  "original_save_files_unchanged": 14,
+  "live_join_verified": false,
+  "host_fix_live": {
+    "guest_failure": "7F6876 selected current action null in separate unguarded character phase94F7F0",
+    "empty_conditions_encoded": 18,
+    "unrecognized_null": 0,
+    "host_remained_running": true,
+    "both_players_resolved_in_both_clients": true,
+    "host_pid": 58612,
+    "guest_dump": "backups/guest-control-crash-3527-20261105-0023/cdmp_crash.guest_20261105-002258_57692_1.dmp"
+  }
+}

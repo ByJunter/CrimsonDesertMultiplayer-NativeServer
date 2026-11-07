@@ -10,6 +10,7 @@
 
 #include <safetyhook.hpp>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/game/seq_ring.h"
@@ -24,6 +25,14 @@ namespace off = build_2976;
 // severity, arg12 = const char* message (printf format), arg13 = first value.
 constexpr uintptr_t kErrorLogger = 0x35D8D0;
 constexpr uint8_t kErrorLoggerHead[] = {0xE9};  // starts with a jmp into .xtls
+// 1.0.0.3527: a plain function, no Denuvo jmp, 2640 call sites with the same arguments
+// (0x2427710..0x2427753: [rsp+48] code, [rsp+50] severity, [rsp+58] text at the call).
+constexpr uintptr_t kErrorLogger3527 = 0x3A7380;
+constexpr uint8_t kErrorLoggerHead3527[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): moved by +0x2E0 with the same head (a .pdata function start, the
+// only match near), and again exactly 2640 call sites passing [rsp+48] code, [rsp+50] severity, [rsp+58] text
+// (e.g. 0xC754E4..0xC75524).
+constexpr uintptr_t kErrorLogger3576 = 0x3A7660;
 constexpr uint32_t kArgCode = 0x50, kArgSeverity = 0x58, kArgText = 0x60, kArgValue = 0x68;
 constexpr int kExtraValues = 3;  // arguments 14-16 (more format values, if any)
 
@@ -76,7 +85,8 @@ std::atomic<bool> g_installed{false};
 void on_error(safetyhook::Context& ctx) {
     Entry e;
     if (!copy_entry(ctx.rsp, e)) return;
-    if (g_base && e.caller == g_base + kActorCreateFailedFrom) {
+    // 2976's return address only (never ported to 3527 / 3576).
+    if (g_base && current_build() == Build::v2976 && e.caller == g_base + kActorCreateFailedFrom) {
         uint64_t found = 0;
         const uint64_t vals[] = {e.value, e.extra[0], e.extra[1], e.extra[2]};
         for (const uint64_t v : vals) {
@@ -102,6 +112,33 @@ void on_error(safetyhook::Context& ctx) {
 bool game_errors_install() {
     if (g_hook) return true;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (current_build() == Build::v3527 || current_build() == Build::v3576) {
+        // The same plain function on both (3576: kErrorLogger3576).
+        const bool is3576 = current_build() == Build::v3576;
+        const uintptr_t logger = is3576 ? kErrorLogger3576 : kErrorLogger3527;
+        const char* const name = is3576 ? "3576" : "3527";
+        uint8_t head3527[sizeof kErrorLoggerHead3527]{};
+        if (!safe_read(g_base + logger, head3527, sizeof head3527) ||
+            std::memcmp(head3527, kErrorLoggerHead3527, sizeof head3527) != 0) {
+            log::warn("Game errors: {} logger not recognised; not hooked", name);
+            return false;
+        }
+        auto hooked = safetyhook::MidHook::create(reinterpret_cast<void*>(g_base + logger), on_error);
+        if (!hooked) {
+            log::warn("Game errors: could not hook the {} logger", name);
+            return false;
+        }
+        g_hook = std::move(*hooked);
+        g_installed.store(true, std::memory_order_release);
+        log::info("Game errors: hook installed at {} logger exe+0x{:X} (the game's internal errors go to this log)", name,
+                  logger);
+        return true;
+    }
+    // Only 2976 reaches the jmp-stub path below; any other build is refused (its byte at kErrorLogger means nothing).
+    if (current_build() != Build::v2976) {
+        log::warn("Game errors: unsupported game build; not hooked");
+        return false;
+    }
     uint8_t head[1];
     if (g_base != off::kImageBase || !safe_read(g_base + kErrorLogger, head, 1) || head[0] != kErrorLoggerHead[0]) {
         log::warn("Game errors: logger not recognised; not hooked");

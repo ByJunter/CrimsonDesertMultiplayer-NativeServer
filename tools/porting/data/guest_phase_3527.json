@@ -1,0 +1,478 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "assertions": [
+    {
+      "rva": "0x9AC5E0",
+      "bytes": "48 8d 05 a9 1e 00 00",
+      "mnemonic": "lea",
+      "operands": "rax, [rip + 0x1ea9]",
+      "meaning": "Task constructor selects thunk9AE490"
+    },
+    {
+      "rva": "0x9AE490",
+      "bytes": "e9 eb ce fe ff",
+      "mnemonic": "jmp",
+      "operands": "0x99b380",
+      "meaning": "Task thunk enters actor iteration"
+    },
+    {
+      "rva": "0x9A03CC",
+      "bytes": "e8 ef c1 00 00",
+      "mnemonic": "call",
+      "operands": "0x9ac5c0",
+      "meaning": "Separate phase dispatcher constructs this task"
+    },
+    {
+      "rva": "0x99B397",
+      "bytes": "48 8b 81 48 02 00 00",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rcx + 0x248]",
+      "meaning": "Task actor vector"
+    },
+    {
+      "rva": "0x99B3F9",
+      "bytes": "48 8b 48 40",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax + 0x40]",
+      "meaning": "Task obtains CharacterControl"
+    },
+    {
+      "rva": "0x99B402",
+      "bytes": "c5 fa 10 8e 98 03 00 00",
+      "mnemonic": "vmovss",
+      "operands": "xmm1, dword ptr [rsi + 0x398]",
+      "meaning": "Phase dt argument"
+    },
+    {
+      "rva": "0x99B40A",
+      "bytes": "e8 e1 43 fb ff",
+      "mnemonic": "call",
+      "operands": "0x94f7f0",
+      "meaning": "Omitted native CC phase call"
+    },
+    {
+      "rva": "0x99B40F",
+      "bytes": "48 8b 4b 68",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rbx + 0x68]",
+      "meaning": "Caller does not consume phase return value"
+    },
+    {
+      "rva": "0x99B41F",
+      "bytes": "e8 ec 3d be ff",
+      "mnemonic": "call",
+      "operands": "0x57f210",
+      "meaning": "Caller continues other component work before actor reference cleanup"
+    },
+    {
+      "rva": "0x94F7F0",
+      "bytes": "48 89 5c 24 10",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x10], rbx",
+      "meaning": "Five-byte true entry instruction, before side effects"
+    },
+    {
+      "rva": "0x94F80D",
+      "bytes": "c5 f8 28 f1",
+      "mnemonic": "vmovaps",
+      "operands": "xmm6, xmm1",
+      "meaning": "Phase preserves dt"
+    },
+    {
+      "rva": "0x94F811",
+      "bytes": "48 8b f1",
+      "mnemonic": "mov",
+      "operands": "rsi, rcx",
+      "meaning": "Phase RCX is CharacterControl"
+    },
+    {
+      "rva": "0x94F82D",
+      "bytes": "88 99 71 08 00 00",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rcx + 0x871], bl",
+      "meaning": "Phase can mutate flags before movement operation"
+    },
+    {
+      "rva": "0x94F84E",
+      "bytes": "4c 8b a9 a8 01 00 00",
+      "mnemonic": "mov",
+      "operands": "r13, qword ptr [rcx + 0x1a8]",
+      "meaning": "Navigation component; not CC pending action storage"
+    },
+    {
+      "rva": "0x94F878",
+      "bytes": "49 8b bd c8 05 00 00",
+      "mnemonic": "mov",
+      "operands": "rdi, qword ptr [r13 + 0x5c8]",
+      "meaning": "Navigation pending object"
+    },
+    {
+      "rva": "0x94F883",
+      "bytes": "49 89 9d c8 05 00 00",
+      "mnemonic": "mov",
+      "operands": "qword ptr [r13 + 0x5c8], rbx",
+      "meaning": "Phase drains navigation pending object"
+    },
+    {
+      "rva": "0x94F93F",
+      "bytes": "e8 bc 03 87 01",
+      "mnemonic": "call",
+      "operands": "0x21bfd00",
+      "meaning": "Publish navigation object independently of action restore"
+    },
+    {
+      "rva": "0x94FB47",
+      "bytes": "e8 94 2d ea ff",
+      "mnemonic": "call",
+      "operands": "0x7f28e0",
+      "meaning": "Earlier movement pending operation"
+    },
+    {
+      "rva": "0x94FB50",
+      "bytes": "48 8b 8e 08 01 00 00",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rsi + 0x108]",
+      "meaning": "Movement object argument"
+    },
+    {
+      "rva": "0x94FB57",
+      "bytes": "e8 c4 30 ea ff",
+      "mnemonic": "call",
+      "operands": "0x7f2c20",
+      "meaning": "Movement update containing multiple unchecked consumers"
+    },
+    {
+      "rva": "0x7F2C4F",
+      "bytes": "48 8b 11",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rcx]",
+      "meaning": "Movement object first pointer is CC"
+    },
+    {
+      "rva": "0x7F2CEA",
+      "bytes": "e8 21 2e 00 00",
+      "mnemonic": "call",
+      "operands": "0x7f5b10",
+      "meaning": "Unchecked consumers before fault leaf"
+    },
+    {
+      "rva": "0x7F2CFF",
+      "bytes": "e8 9c 39 00 00",
+      "mnemonic": "call",
+      "operands": "0x7f66a0",
+      "meaning": "Fault leaf call"
+    },
+    {
+      "rva": "0x7F5BFC",
+      "bytes": "0f b6 48 1b",
+      "mnemonic": "movzx",
+      "operands": "ecx, byte ptr [rax + 0x1b]",
+      "meaning": "Native selected layer index"
+    },
+    {
+      "rva": "0x7F5C00",
+      "bytes": "48 8b 84 ca 88 00 00 00",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rdx + rcx*8 + 0x88]",
+      "meaning": "Selected layer in CC array"
+    },
+    {
+      "rva": "0x7F5C0C",
+      "bytes": "0f b6 81 16 01 00 00",
+      "mnemonic": "movzx",
+      "operands": "eax, byte ptr [rcx + 0x116]",
+      "meaning": "Earlier unchecked current-action read"
+    },
+    {
+      "rva": "0x7F5C94",
+      "bytes": "0f b6 91 17 01 00 00",
+      "mnemonic": "movzx",
+      "operands": "edx, byte ptr [rcx + 0x117]",
+      "meaning": "Second unchecked current-action read"
+    },
+    {
+      "rva": "0x7F5DF9",
+      "bytes": "48 8b 40 18",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rax + 0x18]",
+      "meaning": "Selected playback pointer"
+    },
+    {
+      "rva": "0x7F5DFD",
+      "bytes": "4c 8b 40 30",
+      "mnemonic": "mov",
+      "operands": "r8, qword ptr [rax + 0x30]",
+      "meaning": "Unchecked playback read"
+    },
+    {
+      "rva": "0x7F685F",
+      "bytes": "48 8b 0f",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rdi]",
+      "meaning": "Fault leaf obtains CC from movement object"
+    },
+    {
+      "rva": "0x7F6862",
+      "bytes": "48 8b 41 30",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rcx + 0x30]",
+      "meaning": "CC selected-state object"
+    },
+    {
+      "rva": "0x7F6866",
+      "bytes": "0f b6 50 1b",
+      "mnemonic": "movzx",
+      "operands": "edx, byte ptr [rax + 0x1b]",
+      "meaning": "Selected layer byte"
+    },
+    {
+      "rva": "0x7F686A",
+      "bytes": "48 8b 84 d1 88 00 00 00",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rcx + rdx*8 + 0x88]",
+      "meaning": "Selected layer pointer"
+    },
+    {
+      "rva": "0x7F6872",
+      "bytes": "48 8b 50 10",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rax + 0x10]",
+      "meaning": "Current-action pointer"
+    },
+    {
+      "rva": "0x7F6876",
+      "bytes": "44 38 ba 16 01 00 00",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rdx + 0x116], r15b",
+      "meaning": "Captured AV: current action is null"
+    },
+    {
+      "rva": "0x99F611",
+      "bytes": "e8 5a 58 fa ff",
+      "mnemonic": "call",
+      "operands": "0x944e70",
+      "meaning": "Existing guarded update task path"
+    },
+    {
+      "rva": "0x99F61E",
+      "bytes": "e8 3d 6a fa ff",
+      "mnemonic": "call",
+      "operands": "0x946060",
+      "meaning": "Existing guarded post task path"
+    },
+    {
+      "rva": "0x99A8FB",
+      "bytes": "e8 a0 ab fa ff",
+      "mnemonic": "call",
+      "operands": "0x9454a0",
+      "meaning": "Separate cleanup phase"
+    },
+    {
+      "rva": "0x2513754",
+      "bytes": "48 85 db",
+      "mnemonic": "test",
+      "operands": "rbx, rbx",
+      "meaning": "Later playback query has a native null check"
+    },
+    {
+      "rva": "0x2513757",
+      "bytes": "0f 84 d6 00 00 00",
+      "mnemonic": "je",
+      "operands": "0x2513833",
+      "meaning": "Null playback takes cleanup and false return"
+    },
+    {
+      "rva": "0xB5F870",
+      "bytes": "48 85 c0",
+      "mnemonic": "test",
+      "operands": "rax, rax",
+      "meaning": "Later animation path checks null playback"
+    },
+    {
+      "rva": "0xB5CF39",
+      "bytes": "48 85 c0",
+      "mnemonic": "test",
+      "operands": "rax, rax",
+      "meaning": "Related animation path checks null playback"
+    },
+    {
+      "rva": "0x99B0CA",
+      "bytes": "0f b6 41 08",
+      "mnemonic": "movzx",
+      "operands": "eax, byte ptr [rcx + 8]",
+      "meaning": "Sibling task has additional CC mode predicates"
+    },
+    {
+      "rva": "0x99B14E",
+      "bytes": "48 8b 89 c8 00 00 00",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rcx + 0xc8]",
+      "meaning": "Sibling phase argument is CC+C8 subobject"
+    },
+    {
+      "rva": "0x99B155",
+      "bytes": "e8 36 b3 fc ff",
+      "mnemonic": "call",
+      "operands": "0x966490",
+      "meaning": "Sibling transform phase"
+    },
+    {
+      "rva": "0x966780",
+      "bytes": "e8 bb 4f 1a 00",
+      "mnemonic": "call",
+      "operands": "0xb0b740",
+      "meaning": "Sibling phase invokes transform processing"
+    },
+    {
+      "rva": "0xB0B8A6",
+      "bytes": "e8 85 f9 ff ff",
+      "mnemonic": "call",
+      "operands": "0xb0b230",
+      "meaning": "Transform processing queries action byte"
+    },
+    {
+      "rva": "0xB0B8AB",
+      "bytes": "88 85 18 01 00 00",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rbp + 0x118], al",
+      "meaning": "Query result is a byte in AL"
+    },
+    {
+      "rva": "0xB0B230",
+      "bytes": "48 89 5c 24 08",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 8], rbx",
+      "meaning": "Five-byte true query entry, before side effects"
+    },
+    {
+      "rva": "0xB0B242",
+      "bytes": "0f b6 ea",
+      "mnemonic": "movzx",
+      "operands": "ebp, dl",
+      "meaning": "Query second argument is byte DL"
+    },
+    {
+      "rva": "0xB0B257",
+      "bytes": "48 8b 59 08",
+      "mnemonic": "mov",
+      "operands": "rbx, qword ptr [rcx + 8]",
+      "meaning": "Query component owner actor at +8"
+    },
+    {
+      "rva": "0xB0B25B",
+      "bytes": "4c 8b 43 68",
+      "mnemonic": "mov",
+      "operands": "r8, qword ptr [rbx + 0x68]",
+      "meaning": "Actor component table"
+    },
+    {
+      "rva": "0xB0B342",
+      "bytes": "48 8b 50 40",
+      "mnemonic": "mov",
+      "operands": "rdx, qword ptr [rax + 0x40]",
+      "meaning": "Query obtains CC from component table"
+    },
+    {
+      "rva": "0xB0B34A",
+      "bytes": "0f b6 48 1b",
+      "mnemonic": "movzx",
+      "operands": "ecx, byte ptr [rax + 0x1b]",
+      "meaning": "Query uses the selected layer"
+    },
+    {
+      "rva": "0xB0B356",
+      "bytes": "48 8b 48 10",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax + 0x10]",
+      "meaning": "One query branch loads current without a null check"
+    },
+    {
+      "rva": "0xB0B35A",
+      "bytes": "0f b6 81 f8 00 00 00",
+      "mnemonic": "movzx",
+      "operands": "eax, byte ptr [rcx + 0xf8]",
+      "meaning": "Latent unchecked current-action byte read"
+    },
+    {
+      "rva": "0xB0B5FC",
+      "bytes": "48 8b 40 10",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rax + 0x10]",
+      "meaning": "Another native query branch loads current"
+    },
+    {
+      "rva": "0xB0B600",
+      "bytes": "48 85 c0",
+      "mnemonic": "test",
+      "operands": "rax, rax",
+      "meaning": "That native branch explicitly accepts null current"
+    },
+    {
+      "rva": "0xB0B603",
+      "bytes": "74 09",
+      "mnemonic": "je",
+      "operands": "0xb0b60e",
+      "meaning": "Null current chooses the native neutral result"
+    },
+    {
+      "rva": "0xB0B60E",
+      "bytes": "32 c0",
+      "mnemonic": "xor",
+      "operands": "al, al",
+      "meaning": "Native neutral result is AL=0"
+    },
+    {
+      "rva": "0xB0B622",
+      "bytes": "c3",
+      "mnemonic": "ret",
+      "operands": "",
+      "meaning": "Normal query return"
+    }
+  ],
+  "guarded_entry_candidates": [
+    {
+      "rva": "0x94F7F0",
+      "head32": "48 89 5c 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8b ec 48 83 ec 50 c5 f8 29 74 24 40 c5 f8 28",
+      "first_instruction_size": 5,
+      "abi": "RCX=CC; XMM1=dt; caller ignores return"
+    },
+    {
+      "rva": "0xB0B230",
+      "head32": "48 89 5c 24 08 48 89 6c 24 10 56 57 41 56 48 83 ec 40 0f b6 ea 48 8b f1 33 ff 40 38 3d 37 5f 60",
+      "first_instruction_size": 5,
+      "abi": "RCX=component; [RCX+8]=actor; DL=flag; return byte AL"
+    }
+  ],
+  "selected_state": {
+    "cc_selector": "0x30",
+    "selector_index": "0x1B",
+    "cc_layers": "0x88",
+    "layer_stride": 8,
+    "current": "0x10",
+    "playback": "0x18",
+    "note": "Unchecked movement reads do not predicate access on chart presence."
+  },
+  "fault_path": [
+    "9A0360 task construction",
+    "9AC5C0 -> 9AE490",
+    "99B380",
+    "94F7F0",
+    "7F2C20",
+    "7F66A0",
+    "7F6876"
+  ],
+  "latent_path": [
+    "99AFF0",
+    "966490",
+    "B0B740",
+    "B0B230 -> B0B35A"
+  ],
+  "query_neutral": "For remote selected-action-unready, an entry return AL=0 matches native B0B600/B0B603/B0B60E missing-current fallback. Nonremote and ready calls should retain native behavior.",
+  "recovery": "94F7F0 navigation+5C8 is distinct from CC+80 pending records and CC+A8. Independent Restore949B40 and Pending251A650 must remain callable. Eventual first-action arrival is not proven by this report.",
+  "limitations": [
+    "Only the fault path was captured; sibling B0B230 branch activation was not captured.",
+    "No live process, build, or UI validation is performed.",
+    "Bounded static call-path audit; no exhaustive claim about indirect calls or every phase."
+  ]
+}

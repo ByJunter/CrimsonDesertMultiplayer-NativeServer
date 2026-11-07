@@ -1,0 +1,57 @@
+src\mod\net\aggro_test.cpp:432:    std::memcpy(&op, packet, 2);
+src\mod\net\guest_hits.cpp:366:    std::memcpy(&op, packet, 2);
+src\mod\net\guest_hits.cpp:401:    std::memcpy(&op, packet, 2);
+src\mod\net\enemy_relay.cpp:743:    std::memcpy(&op, packet, 2);
+src\mod\net\enemy_relay.cpp:816:    std::memcpy(&op, packet, 2);
+src\mod\net\enemy_relay.cpp:1019:        std::memcpy(&op, ev.payload.data(), 2);
+src\mod\net\enemy_relay.cpp:1091:    std::memcpy(&op, bytes.data(), 2);
+src\mod\net\troc_sniffer.cpp:341:        auto op = game::read<uint16_t>(a + off::kTroc_Opcode);
+src\mod\net\troc_sniffer.cpp:493:        const uint16_t op = static_cast<uint16_t>(data[0] | (data[1] << 8));
+src\mod\net\coop.cpp:44:    std::memcpy(&op, ev.payload.data(), 2);
+src\mod\net\attack_probe.cpp:176:    std::memcpy(&op, packet, 2);
+src\mod\net\piece4_test.cpp:178:    std::memcpy(&op, packet, 2);
+src\mod\net\piece4_test.cpp:205:    std::memcpy(&op, packet, 2);
+src\mod\net\remote_puppet.cpp:431:        std::memcpy(&op, pk.data(), 2);
+src\mod\net\remote_puppet.cpp:1373:            std::memcpy(&op, payload.data(), 2);
+src\mod\net\remote_puppet.cpp:1486:            if (const auto slot = game::read<uint16_t>(*data + i * 0xD0 + 0xC8)) slots += std::format(" {}", *slot);
+src\mod\net\local_capture.cpp:456:    std::memcpy(&op, packet, 2);
+src\mod\net\local_capture.cpp:644:    std::memcpy(&op, packet, 2);
+src\mod\net\player_hits.cpp:157:    std::memcpy(&op, packet, 2);
+src\mod\net\player_hits.cpp:282:    std::memcpy(&op, packet, 2);
+src\mod\session2\door_trace.cpp:233:      frame.size() < 5 || !dt::relevant(dt::u16(frame.data())))
+src\mod\session2\guest_sched_load.cpp:1011:    if (packet.size() >= gsl::kHeader) timer.op = gsl::rd16(packet.data());
+src\mod\session2\guest_sched_load.cpp:1031:    const uint16_t op = gsl::rd16(packet.data());
+src\mod\session2\clock_push.cpp:367:    const auto op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+src\mod\session2\guest_lifecycle.cpp:152:                       u16(user_ok, user_state), u16(pj_ok, pj_state), u16(fm_ok, fm_moving), u16(fm_ok, fm_busy),
+src\mod\session2\guest_lifecycle.cpp:153:                       u16(ts_ok, ts_moving));
+src\mod\session2\guest_lifecycle.cpp:159:    if (const auto s = read<uint16_t>(user + c4::kActorState)) {
+src\mod\session2\guest_lifecycle.cpp:165:    if (const auto s = read<uint16_t>(*pj + c4::kActorState)) {
+src\mod\session2\guest_lifecycle.cpp:177:    const auto busy = read<uint16_t>(*ts + fld::kTsFieldMover + fld::kFmBusy);
+src\mod\session2\guest_save_guest.cpp:843:        const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+src\mod\session2\guest_seq_route.cpp:1635:    const uint16_t op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
+src\mod\session2\guest.cpp:260:uint16_t opcode_of(std::span<const uint8_t> p) {
+src\mod\session2\guest.cpp:618:    const uint16_t op = opcode_of(p);
+src\mod\session2\guest.cpp:672:    switch (opcode_of(p)) {
+src\mod\session2\guest.cpp:976:        if (pb) peek(pb + off::kFrameHeader, op);
+src\mod\session2\guest.cpp:991:        if (uint16_t op = 0; pb && peek(pb + off::kFrameHeader, op)) {
+src\mod\session2\guest.cpp:1033:                if (opcode_of(p) == troc::kOpLogoutSessionReq) {
+src\mod\session2\guest.cpp:1045:                if (opcode_of(p) == kOpReserveShutDownServerReq) {
+src\mod\session2\guest.cpp:1080:                    if (ok) guest_reload_wait_on_out(opcode_of(p));  // P8 S15: the client's 2283 time only
+src\mod\session2\guest.cpp:1083:                    if (ok && !gs.held && opcode_of(p) == troc::kOpLogoutSessionReq) g_goodbye_ms.store(GetTickCount64());
+src\mod\session2\guest.cpp:1085:                    if (ok && opcode_of(p) == kOpLoginUserToFieldServerReq) arm_title_refresh(epoch);
+src\mod\session2\guest.cpp:1306:            if (opcode_of(p) == troc::kOpLogoutSessionReq) g_goodbye_ms.store(now);
+src\mod\session2\observer_seq_copy.cpp:595:    const uint16_t op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
+src\mod\session2\owner_fanout.cpp:390:    g_extra.add(static_cast<uint16_t>(packet[0] | packet[1] << 8));
+src\mod\session2\owner_fanout.cpp:398:    const uint16_t op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
+src\mod\session2\rope_probe.cpp:215:    e.v[8] = data[0];
+src\mod\session2\rope_probe.cpp:343:    const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+src\mod\session2\ride_filter.cpp:237:    const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
+src\mod\session2\travel_probe.cpp:332:    const auto op = static_cast<uint16_t>(packet[0] | packet[1] << 8);
+src\mod\session2\session2.cpp:1557:                             (packet[0] | (packet[1] << 8)) == troc::kControlOpcode;
+src\mod\session2\session2.cpp:1586:    if (packet.size() >= 2 && (packet[0] | (packet[1] << 8)) == troc::kControlOpcode) {
+src\mod\session2\server.cpp:420:        attach_follow_on_out(static_cast<uint16_t>(packet[0] | (packet[1] << 8)), packet, nullptr);
+src\mod\session2\server.cpp:825:    if (pkt && peek(pkt, op) && (op == 3037 || op == 2910)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+src\mod\session2\server.cpp:983:        auto op = game::read<uint16_t>(a + off::kTroc_Opcode);
+src\mod\session2\user2_stages.cpp:8128:        std::memcpy(&op, packet, 2); std::memcpy(&key, packet + kHeader, 4);
+src\mod\session2\user2_stages.cpp:8160:    std::memcpy(&op, packet, 2);
+src\mod\session2\user2_funnels.cpp:2057:    std::memcpy(&op, packet, 2);

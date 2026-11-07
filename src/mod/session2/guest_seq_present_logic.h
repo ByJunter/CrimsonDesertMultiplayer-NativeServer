@@ -39,6 +39,8 @@ inline constexpr size_t kProcSlots = 105;  // slot 105 of each is data (its COL 
 // The StageChart_Function_* trampolines reach the slots +0x108 .. +0x2A0 (scf.txt); the rest are the processor's own
 // (tick, conditions, binding) and are NOT a presentation classification (they differ between client and common too).
 inline constexpr uint32_t kFnSlotLo = 0x100, kFnSlotHi = 0x2A8;
+// The largest slot count of any build (RaPlan's array; a build's own count is RaLayout::slots).
+inline constexpr size_t kProcSlotsMax = 107;
 
 // The stage (S44, nativo.md §2.1): [stage+0x28] its manager G, +0x30 its sequencer id, +0x58 its processor, +0x98 its
 // owner key, +0x28B started, +0x298 its timeline's id in the client's player (0xA9D8FD mov edx,[rdx+0x298] ->
@@ -258,15 +260,126 @@ inline const RaExpect* ra_expect(uint32_t off) {
     }
     return nullptr;
 }
+
+// Build 1.0.0.3527 [V capstone + RTTI: each slot's name is the StageChart_Function_* class whose vf8 / vf9 is that
+// trampoline; tools: rtti_3527.json]. Slots from +0x138 on moved by +8: the new StageChart_Function_ReserveMiniGame
+// (vtable 0x5D434D0) took +0x138. Its handler 0x6A0C30 appends func[0x20] to a vector of the client service
+// [[0x71BDF40]+0x18]+0x78: client state only, the server and the common have ret: Ret, as ActivateMiniGame.
+// Pairs re-read: +0x1C0 / +0x1C8 lea r9 ; dl = 0 / 1 -> 0x6A6F90 (0x6AB320, 0x6AB340); +0x1F0 -> 0x6A7BC0 = the
+// processor's own +0x320 (0x6AB300); +0x210 dl = 1 -> 0x6B7690 (0x6AFD90); +0x290 calls the common's 0x2208110 first
+// (0x6B2420). The processor's lifetime: kRaLifetime3527 in guest_seq_present.cpp.
+inline constexpr RaExpect kRaExpect3527[] = {
+    {0x128, 0x69F990, 0x255BEE0, SlotKind::ClientOnly, RaUse::Ret},    // ActivateMiniGame
+    {0x130, 0x6A0700, 0x255BF00, SlotKind::ClientOnly, RaUse::Off},    // DeactivateMiniGame: off
+    {0x138, 0x6A0C30, 0x255BF20, SlotKind::ClientOnly, RaUse::Ret},    // ReserveMiniGame (new in this build)
+    {0x140, 0x6A0CA0, 0x255BF40, SlotKind::ClientOnly, RaUse::Ret},    // ExecuteMiniGameEvent
+    {0x148, 0x6A0D00, 0x255C020, SlotKind::ClientOnly, RaUse::Ret},    // Craft
+    {0x158, 0x6A1000, 0x255C110, SlotKind::ClientOnly, RaUse::Ret},    // InputBlock
+    {0x160, 0x6A1050, 0x255C800, SlotKind::ClientOnly, RaUse::Ret},    // UIControl (the shop)
+    {0x168, 0x6A60F0, 0x255C820, SlotKind::ClientOnly, RaUse::Ret},    // ChangePhasePanelTag
+    {0x170, 0x6A9CB0, 0x255DA80, SlotKind::ClientOnly, RaUse::Ret},    // UIShowMinimap
+    {0x178, 0x6AAAA0, 0x255DAA0, SlotKind::ClientOnly, RaUse::Ret},    // UIFindPath
+    {0x1A0, 0x6A6150, 0x255DC30, SlotKind::ClientOnly, RaUse::Ret},    // SetCustomMesh
+    {0x1A8, 0x6A63B0, 0x255DC50, SlotKind::ClientOnly, RaUse::World},  // DisableCharacterCollision: world
+    {0x1B0, 0x6A64F0, 0x255DC70, SlotKind::ClientOnly, RaUse::World},  // its end: world
+    {0x1B8, 0x6A6630, 0x255DC90, SlotKind::ClientOnly, RaUse::Ret},    // SetPreviewTarget
+    {0x1C0, 0x6AB320, 0x255DCB0, SlotKind::ClientOnly, RaUse::Off},    // DeactiveSequencerCamera (dl 0): off
+    {0x1C8, 0x6AB340, 0x255DCD0, SlotKind::ClientOnly, RaUse::Ret},    // its end (dl 1): back on
+    {0x1D0, 0x6AB360, 0x255DCF0, SlotKind::ClientOnly, RaUse::Off},    // SequencerCamera: on/off in data
+    {0x1D8, 0x6AB1D0, 0x255DD10, SlotKind::ClientOnly, RaUse::Off},    // DeactivateSequencerCameraFadeIn: off
+    {0x1E0, 0x6AB270, 0x255DD30, SlotKind::ClientOnly, RaUse::Off},    // its end (opaque): kept
+    {0x1E8, 0x6AAE30, 0x255DD50, SlotKind::ClientOnly, RaUse::Ret},    // CameraPreset: on
+    {0x1F0, 0x6AB300, 0x255DD70, SlotKind::ClientOnly, RaUse::Off},    // its end: off
+    {0x1F8, 0x6A7800, 0x255DD90, SlotKind::ClientOnly, RaUse::Ret},    // ForceLockOn
+    {0x200, 0x6AFDA0, 0x255DF00, SlotKind::ClientOnly, RaUse::Ret},    // UIStageIcon
+    {0x208, 0x6B20F0, 0x255DFF0, SlotKind::ClientServer, RaUse::Ret},  // HireMercenary
+    {0x210, 0x6AFD90, 0x255E010, SlotKind::ClientOnly, RaUse::Ret},    // LetterBox (dl 1): on
+    {0x218, 0x6B2830, 0x255E030, SlotKind::ClientOnly, RaUse::Off},    // FadeInOut: direction in data
+    {0x220, 0x6AFE10, 0x255E120, SlotKind::ClientServer, RaUse::Ret},  // Loading
+    {0x228, 0x6B0B00, 0x255E140, SlotKind::ClientOnly, RaUse::Ret},    // LookAt: on
+    {0x230, 0x6B0D20, 0x255E160, SlotKind::ClientOnly, RaUse::Off},    // its end: off
+    {0x240, 0x6B0FA0, 0x255E1A0, SlotKind::ClientOnly, RaUse::Ret},    // UIStageGuide
+    {0x248, 0x6B1560, 0x255E1C0, SlotKind::ClientOnly, RaUse::Ret},    // UIStageBackgroundGuide
+    {0x250, 0x6B1610, 0x255E1E0, SlotKind::ClientOnly, RaUse::Ret},    // UIHint: on
+    {0x258, 0x6B1700, 0x255E200, SlotKind::ClientOnly, RaUse::Off},    // its end: off
+    {0x260, 0x6B1780, 0x255E2D0, SlotKind::ClientServer, RaUse::Ret},  // Reward
+    {0x268, 0x6B1930, 0x255E370, SlotKind::ClientOnly, RaUse::Ret},    // PostProcess
+    {0x270, 0x6B1A80, 0x255E420, SlotKind::ClientOnly, RaUse::Ret},    // MaterialParameter
+    {0x290, 0x6B23F0, 0x255E540, SlotKind::CommonDiffers, RaUse::Common},  // VarySharpness -> the common's 0x2208110
+};
+// What R-A needs from a build: its three vtables, its `ret`, how many slots, the function range and the decisions.
+struct RaLayout {
+    uint32_t vt_client, vt_common, vt_server, col_client, col_common, col_server, ret;
+    size_t slots;
+    uint32_t fn_lo, fn_hi;
+    std::span<const RaExpect> expect;
+    uint8_t stage_proc;  // the trampolines' `mov rcx,[rax+stage_proc]`
+};
+inline constexpr RaLayout kRaLayout2976{kVtProcClient, kVtProcCommon, kVtProcServer, kColProcClient, kColProcCommon,
+                                        kColProcServer, kRetRva, kProcSlots, kFnSlotLo, kFnSlotHi, kRaExpect, 0x58};
+inline constexpr RaLayout kRaLayout3527{0x5919128, 0x5CC2E68, 0x5EE7020, 0x6187890, 0x62C0200, 0x63656E8, 0x3A3450, 107,
+                                        0x100, 0x2B0, kRaExpect3527, 0x60};
+// Build 1.0.0.3576 (static, 2026-11-06 evening; not yet run): the same 107 slots and the same 37 decisions with the same
+// kinds (slot_kind of the three vtables matched by RTTI name, vtable_map_3549_3576.json); every handler moved by +0x660
+// and every trampoline by +0xDD0, each trampoline unique in the PE (stage_proc 0x60); ret 0x3A3730 (CameraSelector's
+// slots 97 / 98); COLs read at [vt-8].
+inline constexpr RaExpect kRaExpect3576[] = {
+    {0x128, 0x69FFF0, 0x255CCB0, SlotKind::ClientOnly, RaUse::Ret},  // ActivateMiniGame
+    {0x130, 0x6A0D60, 0x255CCD0, SlotKind::ClientOnly, RaUse::Off},  // DeactivateMiniGame: off
+    {0x138, 0x6A1290, 0x255CCF0, SlotKind::ClientOnly, RaUse::Ret},  // ReserveMiniGame (new in this build)
+    {0x140, 0x6A1300, 0x255CD10, SlotKind::ClientOnly, RaUse::Ret},  // ExecuteMiniGameEvent
+    {0x148, 0x6A1360, 0x255CDF0, SlotKind::ClientOnly, RaUse::Ret},  // Craft
+    {0x158, 0x6A1660, 0x255CEE0, SlotKind::ClientOnly, RaUse::Ret},  // InputBlock
+    {0x160, 0x6A16B0, 0x255D5D0, SlotKind::ClientOnly, RaUse::Ret},  // UIControl (the shop)
+    {0x168, 0x6A6750, 0x255D5F0, SlotKind::ClientOnly, RaUse::Ret},  // ChangePhasePanelTag
+    {0x170, 0x6AA310, 0x255E850, SlotKind::ClientOnly, RaUse::Ret},  // UIShowMinimap
+    {0x178, 0x6AB100, 0x255E870, SlotKind::ClientOnly, RaUse::Ret},  // UIFindPath
+    {0x1A0, 0x6A67B0, 0x255EA00, SlotKind::ClientOnly, RaUse::Ret},  // SetCustomMesh
+    {0x1A8, 0x6A6A10, 0x255EA20, SlotKind::ClientOnly, RaUse::World},  // DisableCharacterCollision: world
+    {0x1B0, 0x6A6B50, 0x255EA40, SlotKind::ClientOnly, RaUse::World},  // its end: world
+    {0x1B8, 0x6A6C90, 0x255EA60, SlotKind::ClientOnly, RaUse::Ret},  // SetPreviewTarget
+    {0x1C0, 0x6AB980, 0x255EA80, SlotKind::ClientOnly, RaUse::Off},  // DeactiveSequencerCamera (dl 0): off
+    {0x1C8, 0x6AB9A0, 0x255EAA0, SlotKind::ClientOnly, RaUse::Ret},  // its end (dl 1): back on
+    {0x1D0, 0x6AB9C0, 0x255EAC0, SlotKind::ClientOnly, RaUse::Off},  // SequencerCamera: on/off in data
+    {0x1D8, 0x6AB830, 0x255EAE0, SlotKind::ClientOnly, RaUse::Off},  // DeactivateSequencerCameraFadeIn: off
+    {0x1E0, 0x6AB8D0, 0x255EB00, SlotKind::ClientOnly, RaUse::Off},  // its end (opaque): kept
+    {0x1E8, 0x6AB490, 0x255EB20, SlotKind::ClientOnly, RaUse::Ret},  // CameraPreset: on
+    {0x1F0, 0x6AB960, 0x255EB40, SlotKind::ClientOnly, RaUse::Off},  // its end: off
+    {0x1F8, 0x6A7E60, 0x255EB60, SlotKind::ClientOnly, RaUse::Ret},  // ForceLockOn
+    {0x200, 0x6B0400, 0x255ECD0, SlotKind::ClientOnly, RaUse::Ret},  // UIStageIcon
+    {0x208, 0x6B2750, 0x255EDC0, SlotKind::ClientServer, RaUse::Ret},  // HireMercenary
+    {0x210, 0x6B03F0, 0x255EDE0, SlotKind::ClientOnly, RaUse::Ret},  // LetterBox (dl 1): on
+    {0x218, 0x6B2E90, 0x255EE00, SlotKind::ClientOnly, RaUse::Off},  // FadeInOut: direction in data
+    {0x220, 0x6B0470, 0x255EEF0, SlotKind::ClientServer, RaUse::Ret},  // Loading
+    {0x228, 0x6B1160, 0x255EF10, SlotKind::ClientOnly, RaUse::Ret},  // LookAt: on
+    {0x230, 0x6B1380, 0x255EF30, SlotKind::ClientOnly, RaUse::Off},  // its end: off
+    {0x240, 0x6B1600, 0x255EF70, SlotKind::ClientOnly, RaUse::Ret},  // UIStageGuide
+    {0x248, 0x6B1BC0, 0x255EF90, SlotKind::ClientOnly, RaUse::Ret},  // UIStageBackgroundGuide
+    {0x250, 0x6B1C70, 0x255EFB0, SlotKind::ClientOnly, RaUse::Ret},  // UIHint: on
+    {0x258, 0x6B1D60, 0x255EFD0, SlotKind::ClientOnly, RaUse::Off},  // its end: off
+    {0x260, 0x6B1DE0, 0x255F0A0, SlotKind::ClientServer, RaUse::Ret},  // Reward
+    {0x268, 0x6B1F90, 0x255F140, SlotKind::ClientOnly, RaUse::Ret},  // PostProcess
+    {0x270, 0x6B20E0, 0x255F1F0, SlotKind::ClientOnly, RaUse::Ret},  // MaterialParameter
+    {0x290, 0x6B2A50, 0x255F310, SlotKind::CommonDiffers, RaUse::Common},  // VarySharpness -> the common's 0x2208110
+};
+inline constexpr RaLayout kRaLayout3576{0x591B1B8, 0x5CC4F30, 0x5EE8FE0, 0x6189988, 0x62C2308, 0x6367800, 0x3A3730, 107,
+                                        0x100, 0x2B0, kRaExpect3576, 0x60};
+inline const RaExpect* ra_expect(const RaLayout& l, uint32_t off) {
+    for (const RaExpect& e : l.expect) {
+        if (e.off == off) return &e;
+    }
+    return nullptr;
+}
 // The trampoline every StageChart_Function_* Execute uses (52 of them, tramp.py): mov rax,[rdx] (the stage) ; mov
 // r8,rcx ; mov rcx,[rax+0x58] (its processor) ; mov rax,[rcx] (the vptr) ; jmp [rax+off]. A tail jump: what the slot
 // returns is what Execute returns, and Execute is void (the base StageChart_Function's vf8 / vf9 are the folded void
 // `ret 0` 0x359B50, while the folded bool `xor al,al ; ret` is 0x359BA0).
 inline constexpr size_t kTrampBytes = 20;
-inline void tramp_bytes(uint32_t off, uint8_t out[kTrampBytes]) {
+inline void tramp_bytes(uint32_t off, uint8_t out[kTrampBytes], uint8_t stage_proc = 0x58) {
     constexpr uint8_t head[16] = {0x48, 0x8B, 0x02, 0x4C, 0x8B, 0xC1, 0x48, 0x8B,
                                   0x48, 0x58, 0x48, 0x8B, 0x01, 0x48, 0xFF, 0xA0};
     for (size_t i = 0; i < 16; ++i) out[i] = head[i];
+    out[9] = stage_proc;
     for (size_t i = 0; i < 4; ++i) out[16 + i] = static_cast<uint8_t>(off >> (8 * i));
 }
 
@@ -274,22 +387,23 @@ struct RaPlan {
     bool ok = false;
     const char* why = "";
     uint16_t bad_off = 0;      // the slot that failed, when !ok
-    RaUse use[kProcSlots] = {};  // Native everywhere but the decided slots
+    RaUse use[kProcSlotsMax] = {};  // Native everywhere but the decided slots
     size_t n_ret = 0, n_common = 0, n_world = 0, n_off = 0, n_client_server = 0;
 };
-// c / m / s: the 105 slots (RVAs) of the client, common and server vtables.
-inline RaPlan ra_plan(std::span<const uint32_t> c, std::span<const uint32_t> m, std::span<const uint32_t> s,
-                      uint32_t ret = kRetRva) {
+// c / m / s: the build's slots (RVAs) of the client, common and server vtables.
+inline RaPlan ra_plan_for(const RaLayout& l, std::span<const uint32_t> c, std::span<const uint32_t> m,
+                          std::span<const uint32_t> s) {
+    const uint32_t ret = l.ret;
     RaPlan p;
-    if (c.size() < kProcSlots || m.size() < kProcSlots || s.size() < kProcSlots) {
+    if (c.size() < l.slots || m.size() < l.slots || s.size() < l.slots || l.slots > kProcSlotsMax) {
         p.why = "fewer than 105 slots read";
         return p;
     }
     size_t seen = 0;
-    for (size_t k = 0; k < kProcSlots; ++k) {
+    for (size_t k = 0; k < l.slots; ++k) {
         const auto off = static_cast<uint16_t>(8 * k);
-        const RaExpect* e = ra_expect(off);
-        if (off < kFnSlotLo || off >= kFnSlotHi) {
+        const RaExpect* e = ra_expect(l, off);
+        if (off < l.fn_lo || off >= l.fn_hi) {
             if (e) {
                 p.why = "a decided slot is outside the StageChart function range";
                 p.bad_off = off;
@@ -307,12 +421,12 @@ inline RaPlan ra_plan(std::span<const uint32_t> c, std::span<const uint32_t> m, 
             continue;
         }
         if (!e) {
-            p.why = "a slot differs between the vtables and has no decision (not build 2976's table)";
+            p.why = "a slot differs between the vtables and has no decision (not this build's table)";
             p.bad_off = off;
             return p;
         }
         if (e->client != c[k] || e->kind != kind) {
-            p.why = "a decided slot has another handler or another kind (not build 2976's table)";
+            p.why = "a decided slot has another handler or another kind (not this build's table)";
             p.bad_off = off;
             return p;
         }
@@ -330,22 +444,30 @@ inline RaPlan ra_plan(std::span<const uint32_t> c, std::span<const uint32_t> m, 
         if (e->use == RaUse::Off) ++p.n_off;
         if (e->kind == SlotKind::ClientServer) ++p.n_client_server;
     }
-    if (seen != kRaExpected) {
+    if (seen != l.expect.size()) {
         p.why = "not every decided slot was found";
         return p;
     }
     p.ok = true;
     return p;
 }
+// Build 2976's plan. ret: the tests' own value (the build's kRetRva otherwise).
+inline RaPlan ra_plan(std::span<const uint32_t> c, std::span<const uint32_t> m, std::span<const uint32_t> s,
+                      uint32_t ret = kRetRva) {
+    RaLayout l = kRaLayout2976;
+    l.ret = ret;
+    return ra_plan_for(l, c, m, s);
+}
 // The mod's table: out[0] = the client vtable's [-1] (its COL: typeid / dynamic_cast keep working), out[1 + k] = the
 // slot: the client's (Native / World / Off) or the common's (Ret / Common). c_abs / m_abs: the slots as absolute addresses.
 inline bool ra_build(const RaPlan& p, std::span<const uint64_t> c_abs, std::span<const uint64_t> m_abs, uint64_t col_abs,
-                     std::span<uint64_t> out) {
-    if (!p.ok || c_abs.size() < kProcSlots || m_abs.size() < kProcSlots || out.size() < 1 + kProcSlots || !col_abs) {
+                     std::span<uint64_t> out, size_t slots = kProcSlots) {
+    if (!p.ok || slots > kProcSlotsMax || c_abs.size() < slots || m_abs.size() < slots || out.size() < 1 + slots ||
+        !col_abs) {
         return false;
     }
     out[0] = col_abs;
-    for (size_t k = 0; k < kProcSlots; ++k) out[1 + k] = ra_keeps_native(p.use[k]) ? c_abs[k] : m_abs[k];
+    for (size_t k = 0; k < slots; ++k) out[1 + k] = ra_keeps_native(p.use[k]) ? c_abs[k] : m_abs[k];
     return true;
 }
 
@@ -434,12 +556,23 @@ inline const char* ra_verdict_name(RaVerdict v) {
 //   class's empty void body does. Slots 100, 101 (the end) and 103 stay native.
 inline constexpr uint32_t kVtTimeline = 0x5C75F30;  // the timeline object's vptr ([ctx+8]); no RTTI ([-1] is code)
 inline constexpr uint32_t kRbCallers[] = {0x36574CD, 0x36575D6};
-inline bool rb_caller_ok(uint32_t caller_rva) {
-    for (uint32_t c : kRbCallers) {
+inline bool rb_caller_ok(uint32_t caller_rva, std::span<const uint32_t> callers = kRbCallers) {
+    for (uint32_t c : callers) {
         if (c == caller_rva) return true;
     }
     return false;
 }
+// Build 1.0.0.3527 [V capstone]: the dispatcher's two slot-99 sites return to 0x392F58D (then its jmp to the epilogue) and
+// 0x392F696 (then slot 101); its own return `mov al,1` 0x392F6C0: the same bytes as 2976's. The timeline object: its
+// constructor 0x1062DB50 (thunk 0x3790270) writes vptr 0x6042EF0 at [T] and 0x6043310 at [T+0x28], [-1] is code (no RTTI),
+// and 0x37AC63D writes its id at +0x1F8 (a counter, lock xadd), compared by 0x37ACCA5 [E strong: what the dispatcher
+// passes at [ctx+8] is only provable live; a mismatch reads 'NoTimeline' and nothing is skipped].
+inline constexpr uint32_t kVtTimeline3527 = 0x6042EF0;
+inline constexpr uint32_t kRbCallers3527[] = {0x392F58D, 0x392F696};
+// 1.0.0.3576 (static): the dispatcher moved by +0xDB0 with the same bytes (0x3930334 / 0x393043D, ret 0x3930470); the
+// timeline vtable (no RTTI) is the only one whose slots 0 / 1 are 3527's + 0xD00 (0x37912A0 / 0x378DE40).
+inline constexpr uint32_t kVtTimeline3576 = 0x6043A90;
+inline constexpr uint32_t kRbCallers3576[] = {0x393033D, 0x3930446};
 
 enum class RbVerdict : uint8_t {
     NotSlot99,      // the return address is not one of the dispatcher's two slot-99 call sites
@@ -467,9 +600,10 @@ struct RbFacts {
     uint64_t stage_mgr = 0, m = 0;
     bool x_known = false;
     uint32_t tid = 0, main_tid = 0;
+    std::span<const uint32_t> callers = kRbCallers;  // the build's two slot-99 return addresses
 };
 inline RbVerdict rb_judge(const RbFacts& f) {
-    if (!rb_caller_ok(f.caller)) return RbVerdict::NotSlot99;
+    if (!rb_caller_ok(f.caller, f.callers)) return RbVerdict::NotSlot99;
     if (!f.event_class) return RbVerdict::NotClass;
     if (!f.timeline) return RbVerdict::NoTimeline;
     if (!f.found) return RbVerdict::NoStage;
@@ -651,6 +785,38 @@ inline EvInfo ev_info(Ev e) {
         default: return {"?", 0, 0, 0};
     }
 }
+
+// R-B's two classes on build 1.0.0.3527 [V RTTI + capstone]; the other four are not ported (S-B / S-C refuse there).
+inline EvInfo ev_info_3527(Ev e) {
+    switch (e) {
+        case Ev::CameraSelector: return {"CameraSelectorEventData", 0x59185A0, 0x6187570, 0x37A0620};
+        case Ev::PlayerCameraPreset: return {"SequencerPlayerCameraPreset", 0x5987070, 0x61B94F8, 0xC345C0};
+        default: return {"?", 0, 0, 0};
+    }
+}
+// 1.0.0.3576 (static): vtables by RTTI name, COLs at [vt-8], slot 99 read from them.
+inline EvInfo ev_info_3576(Ev e) {
+    switch (e) {
+        case Ev::CameraSelector: return {"CameraSelectorEventData", 0x591A668, 0x6189668, 0x37A1320};
+        case Ev::PlayerCameraPreset: return {"SequencerPlayerCameraPreset", 0x5988D88, 0x61BBB80, 0xC349E0};
+        default: return {"?", 0, 0, 0};
+    }
+}
+
+// The stage's, timeline's and context's fields R-A and R-B read, per build. 3527 [V capstone]: the processor at +0x60
+// (the trampolines; the stage constructor 0x8E26FB3..0x8E26FCB), the owner at +0xA0 (0x221877B), the timeline id at
+// +0x2D0 (0xBA9008 / 0xBA906D) and the name at [[stage+0x50]+0x1B8]; the timeline's id +0x1F8 and its listed flag +0x1F1
+// (0x37ACC9C, 0x37ACCA5). started +0x2C4 [E, only ever logged].
+struct StageLayout {
+    uint32_t proc, owner, started, timeline, info, name;
+    uint32_t tl_id, tl_listed, vt_timeline;
+};
+inline constexpr StageLayout kStageLayout2976{kStage_Proc, kStage_Owner, kStage_Started, kStage_Timeline, 0x48, 0x1B8,
+                                              kTl_Id, kTl_Listed, kVtTimeline};
+inline constexpr StageLayout kStageLayout3527{0x60, 0xA0, 0x2C4, 0x2D0, 0x50, 0x1B8, 0x1F8, 0x1F1, kVtTimeline3527};
+// 3576: the same fields (the trampolines' +0x60, the base destructor's bytes, 0xBA9486's +0x2D0 / +0x120, the id's
+// +0x1F8 at 0x37AD9A5 / 0x37AD33D: all with 3527's bytes); only the timeline vtable moved.
+inline constexpr StageLayout kStageLayout3576{0x60, 0xA0, 0x2C4, 0x2D0, 0x50, 0x1B8, 0x1F8, 0x1F1, kVtTimeline3576};
 
 // Whose timeline an event belongs to.
 enum class Tl : uint8_t {

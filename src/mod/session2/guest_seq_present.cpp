@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -33,6 +34,16 @@ namespace off = game::build_2976;
 using gpr::Ev;
 using gpr::Tl;
 using gpr::Whose;
+
+// The build, its fields and its world slot: written by guest_seq_present_start before any hook or thread.
+bool g_3527 = false;  // 3527's layout (3527, 3549, 3576)
+bool g_3576 = false;  // 3576's addresses
+const gpr::StageLayout* g_sl = &gpr::kStageLayout2976;
+const gpr::RaLayout* g_rl = &gpr::kRaLayout2976;
+uintptr_t g_world_slot = off::kWorldSystemSlot;
+gpr::EvInfo ev_of(Ev e) {
+    return g_3576 ? gpr::ev_info_3576(e) : g_3527 ? gpr::ev_info_3527(e) : gpr::ev_info(e);
+}
 
 // ---------------------------------------------------------------- verified code (build 2976, capstone; s45-datos)
 //
@@ -93,6 +104,42 @@ constexpr bool ev_points_in_order() {
 }
 static_assert(ev_points_in_order(), "kEvPoints follows gpr::Ev (the hook callbacks index it)");
 
+// Build 1.0.0.3527 (capstone 2026-11-05), R-B's two points only; S-A, S-B, S-C and S-D are not ported (the probe key is
+// refused there). CameraSelectorEventData slot 99 0x37A0620: a 5-byte thunk jmp .text 0x1068DEB0, no .pdata.
+// SequencerPlayerCameraPreset slot 99 0xC345C0 (.pdata 0xC345C0-0xC34AA0): mov [rsp+0x10],rbx (5). RTTI: their vtables
+// 0x59185A0 / 0x5987070, slots 97 / 98 = `ret 0` 0x3A3450, 100 / 101 native. No branch lands in the patched bytes.
+constexpr uint8_t kCamSelSig3527[] = {0xE9, 0x8B, 0xD8, 0xEE, 0x0C, 0x85, 0x19, 0xA3,
+                                      0xE9, 0x48, 0x61, 0xCD, 0x01, 0xD5, 0x22, 0xA9};
+constexpr uint8_t kPresetSig3527[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D,
+                                      0x6C, 0x24, 0xC9, 0x48, 0x81, 0xEC, 0xD0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xFA, 0x4C,
+                                      0x8B, 0xF1, 0x48, 0x8B, 0x41, 0x38, 0x83, 0x78, 0x40, 0x00, 0x75, 0x0C};
+constexpr EvPoint kEvPoints3527[] = {
+    {Ev::CameraSelector, 0x37A0620, 5, 0, 0, kCamSelSig3527, {}},
+    {Ev::PlayerCameraPreset, 0xC345C0, 5, 0xC345C0, 0xC34AA0, kPresetSig3527, {}},
+};
+// 1.0.0.3549: the same points; the thunk's rel32 moved (jmp 0x104B17F0), the next 11 bytes did not.
+constexpr uint8_t kCamSelSig3549[] = {0xE9, 0xCB, 0x11, 0xD1, 0x0C, 0x85, 0x19, 0xA3,
+                                      0xE9, 0x48, 0x61, 0xCD, 0x01, 0xD5, 0x22, 0xA9};
+constexpr EvPoint kEvPoints3549[] = {
+    {Ev::CameraSelector, 0x37A0620, 5, 0, 0, kCamSelSig3549, {}},
+    {Ev::PlayerCameraPreset, 0xC345C0, 5, 0xC345C0, 0xC34AA0, kPresetSig3527, {}},
+};
+// 1.0.0.3576 (static): slot 99 of each vtable (RTTI). The thunk moved +0xD00 (jmp 0x1035B910; the 11 bytes after it are
+// other thunks, read as they are); the preset +0x420 with 3527's 40 bytes and .pdata 0xC349E0-0xC34EC0 (the same size).
+constexpr uint8_t kCamSelSig3576[] = {0xE9, 0xEB, 0xA5, 0xBB, 0x0C, 0xE9, 0xF5, 0xE6,
+                                      0xCE, 0xFF, 0xC5, 0x5F, 0x0D, 0xE9, 0x63, 0xEC};
+constexpr EvPoint kEvPoints3576[] = {
+    {Ev::CameraSelector, 0x37A1320, 5, 0, 0, kCamSelSig3576, {}},
+    {Ev::PlayerCameraPreset, 0xC349E0, 5, 0xC349E0, 0xC34EC0, kPresetSig3527, {}},
+};
+// 0xBA9066 mov rcx,[0x71BDF40] ; mov edx,[rdx+0x2D0] ; mov rcx,[rcx+0x120] ; call 0x37ACC60 (right before P1's call)
+constexpr uint8_t kStartLookup3527[] = {0x48, 0x8B, 0x0D, 0xD3, 0x4E, 0x61, 0x06, 0x8B, 0x92, 0xD0, 0x02, 0x00, 0x00,
+                                        0x48, 0x8B, 0x89, 0x20, 0x01, 0x00, 0x00, 0xE8, 0xE1, 0x3B, 0xC0, 0x02};
+constexpr uint8_t kTlIdCmp3527[] = {0x39, 0xA8, 0xF8, 0x01, 0x00, 0x00};  // 0x37ACCA5 cmp [rax+0x1F8],ebp
+constexpr uint8_t kTlIdSet3527[] = {0x89, 0x9F, 0xF8, 0x01, 0x00, 0x00};  // 0x37AC63D mov [rdi+0x1F8],ebx
+// 3576: 0xBA9486 mov rcx,[0x71C0150] ; ... ; call 0x37AD960 (+0x420; the global +0x2210, the callee +0xD00).
+constexpr uint8_t kStartLookup3576[] = {0x48, 0x8B, 0x0D, 0xC3, 0x6C, 0x61, 0x06, 0x8B, 0x92, 0xD0, 0x02, 0x00, 0x00,
+                                        0x48, 0x8B, 0x89, 0x20, 0x01, 0x00, 0x00, 0xE8, 0xC1, 0x44, 0xC0, 0x02};
 // S-A / S-D context (no hook there; checked so the offsets read are this build's).
 constexpr uint8_t kStartLookup[] = {0x48, 0x8B, 0x0D, 0xE3, 0xB8, 0x2C, 0x06, 0x8B, 0x92, 0x98, 0x02, 0x00, 0x00,
                                     0x48, 0x8B, 0x89, 0x20, 0x01, 0x00, 0x00, 0xE8, 0x21, 0xE8, 0xA3, 0x02};
@@ -115,6 +162,12 @@ constexpr uint8_t kRbCall2[] = {0x48, 0x8B, 0x01, 0xFF, 0x90, 0x18, 0x03, 0x00, 
                                 0x00};
 constexpr uint8_t kRbRet[] = {0xB0, 0x01, 0x48, 0x83, 0xC4, 0x38, 0x5E, 0x5D, 0xC3};
 const Bytes kRbCode[] = {{0x36574C4, kRbCall1}, {0x36575CD, kRbCall2}, {0x3657600, kRbRet}};
+// 3527: the same bytes at 0x392F584, 0x392F68D and 0x392F6C0 (their rel32 and the slot offsets did not change).
+const Bytes kRbCode3527[] = {{0x392F584, kRbCall1}, {0x392F68D, kRbCall2}, {0x392F6C0, kRbRet}};
+const Bytes kSaCode3527[] = {{0xBA9066, kStartLookup3527}, {0x37ACCA5, kTlIdCmp3527}, {0x37AC63D, kTlIdSet3527}};
+// 3576: the dispatcher +0xDB0 with the same bytes; the id's compare and store +0xD00 with the same bytes.
+const Bytes kRbCode3576[] = {{0x3930334, kRbCall1}, {0x393043D, kRbCall2}, {0x3930470, kRbRet}};
+const Bytes kSaCode3576[] = {{0xBA9486, kStartLookup3576}, {0x37AD9A5, kTlIdCmp3527}, {0x37AD33D, kTlIdSet3527}};
 
 // ---------------------------------------------------------------- state
 
@@ -129,6 +182,21 @@ struct Jmp {
 };
 constexpr Jmp kRaLifetime[] = {{0x5D94F0, 0x8F08E30}, {0x5D9750, 0x8F094A0}, {0x5D97B0, 0x8F0E3D0}, {0x20516B0, 0xE0617E0}};
 constexpr uint32_t kRaDeletingDtor = 0x5D9750;  // the client vtable's slot 0
+// 1.0.0.3527 [V capstone]: only the constructor 0x8DF2F60 and the destructor 0x8DF44E0 load the vtable 0x5919128 (lea
+// refs of the whole PE); the first is reached by the thunk 0x695740 and by 0x8E26FAB, inside ClientSequencerStage's
+// constructor 0x8E26D40, which allocates, constructs with r8 = the stage and stores it in [stage+0x60] (0x8E26FCB); the
+// deleting destructor (slot 0, 0x6959B0 -> 0x8DF4480 -> 0x8DF44E0, which writes 0x5919128 back at 0x8DF44F4) is called through
+// [vptr] by the stage's base destructor at 0x220BCE5: mov rcx,[rdi+0x60] ; ... ; mov edx,1 ; call [rax] ; mov [rdi+0x60],rsi.
+constexpr Jmp kRaLifetime3527[] = {{0x695740, 0x8DF2F60}, {0x6959B0, 0x8DF4480}, {0x695A10, 0x8DF44E0}};
+constexpr Jmp kRaLifetime3549[] = {{0x695740, 0x8DBACE0}, {0x6959B0, 0x8DBC940}, {0x695A10, 0x8DBDAA0}};  // the same thunks, relocated targets
+constexpr uint32_t kRaDeletingDtor3527 = 0x6959B0;
+// 3576 (static): the thunks +0x660; the constructor 0x8E885D0 and the destructor 0x8E8AF20 are the two that load the
+// client vtable 0x591B1B8 (0x8E885EA, 0x8E8AF34); the deleting destructor 0x8E89070 calls 0x8E8AF20 first. The stage's
+// base destructor: 3527's 23 bytes at 0x220C925 (+0xC40), the only hit in the PE.
+constexpr Jmp kRaLifetime3576[] = {{0x695DA0, 0x8E885D0}, {0x696010, 0x8E89070}, {0x696070, 0x8E8AF20}};
+constexpr uint32_t kRaDeletingDtor3576 = 0x696010;
+constexpr uint8_t kRaBaseDtor3527[] = {0x48, 0x8B, 0x4F, 0x60, 0x48, 0x85, 0xC9, 0x74, 0x0E, 0x48, 0x8B, 0x01,
+                                       0xBA, 0x01, 0x00, 0x00, 0x00, 0xFF, 0x10, 0x48, 0x89, 0x77, 0x60};  // 0x220BCE5
 
 uintptr_t g_base = 0;
 std::atomic<bool> g_wanted{false};
@@ -179,10 +247,11 @@ std::string g_ra_cut_text;            // the decided slots, for the lines (writt
 std::atomic<uint64_t> g_ra_verdicts[static_cast<size_t>(gpr::RaVerdict::Count)] = {};
 std::atomic<uint64_t> g_ra_p1{0}, g_ra_written{0}, g_ra_write_failed{0}, g_ra_restored{0}, g_ra_restore_failed{0};
 std::atomic<uint32_t> g_image_size{0};  // the exe's SizeOfImage (review P3-1: rva_of's bound), set before any hook
+std::atomic<uint32_t> g_rb_bad_tl_vt{0};  // R-B: the last vptr of a [ctx+8] that was not the timeline's (RVA, for the summary)
 
 // The processor slot of each of guest_x_veto's interface / camera handlers (guest_x_veto_logic.h's gxv::Fn); 0 for
 // the dialogue ones (not processor slots).
-uint16_t gxv_slot(size_t fn) {
+uint16_t gxv_slot_2976(size_t fn) {
     switch (static_cast<gxv::Fn>(fn)) {
         case gxv::Fn::InputBlock: return 0x150;
         case gxv::Fn::UIControl: return 0x158;
@@ -209,6 +278,11 @@ uint16_t gxv_slot(size_t fn) {
         case gxv::Fn::PostProcess: return 0x260;
         default: return 0;
     }
+}
+// 3527: every slot above moved by +8 (kRaExpect3527).
+uint16_t gxv_slot(size_t fn) {
+    const uint16_t s = gxv_slot_2976(fn);
+    return s && g_3527 ? static_cast<uint16_t>(s + 8) : s;
 }
 
 // R-B counters, per hooked class (0 CameraSelector, 1 PlayerCameraPreset) and verdict.
@@ -263,8 +337,8 @@ void emit(Kind k, p::Event& e) noexcept {
 
 void put_name(uintptr_t stage, uint64_t seq, p::Event& e) noexcept {
     if (!stage || rdv<uint64_t>(stage + gpr::kStage_Seq) != seq) return;  // gone (or reused): no name
-    const uintptr_t info = rdp(stage + 0x48);
-    const uintptr_t name = info ? rdp(info + 0x1B8) : 0;
+    const uintptr_t info = rdp(stage + g_sl->info);
+    const uintptr_t name = info ? rdp(info + g_sl->name) : 0;
     for (int k = 0; k < 3 && name; ++k) e.v[9 + k] = rdv<uint64_t>(name + 8 * k);
 }
 
@@ -292,11 +366,11 @@ void ra_p1(uintptr_t stage, uint32_t resource, gpr::RaMode mode) noexcept {
     gpr::RaFacts f;
     f.mode = mode;
     f.stage = stage;
-    const uint32_t owner = rdv<uint32_t>(stage + gpr::kStage_Owner);
+    const uint32_t owner = rdv<uint32_t>(stage + g_sl->owner);
     f.whose = whose_now(owner);
     f.stage_mgr = rdp(stage + gpr::kStage_Mgr);
     f.m = g_m.load(std::memory_order_relaxed);
-    f.proc = rdp(stage + gpr::kStage_Proc);
+    f.proc = rdp(stage + g_sl->proc);
     f.vt_read = f.proc && rd(f.proc, f.vt);
     f.client_vt = g_ra_client_vt;
     f.mod_vt = g_ra_mod_vt;
@@ -329,7 +403,7 @@ void ra_p1(uintptr_t stage, uint32_t resource, gpr::RaMode mode) noexcept {
              static_cast<uint64_t>(restored) << 10 | static_cast<uint64_t>(mode) << 16;
     e.v[1] = seq;
     e.v[2] = owner | static_cast<uint64_t>(guest_seq_route_own_key()) << 32;
-    e.v[3] = resource | static_cast<uint64_t>(rdv<uint8_t>(stage + gpr::kStage_Started, 0xFF)) << 32;
+    e.v[3] = resource | static_cast<uint64_t>(rdv<uint8_t>(stage + g_sl->started, 0xFF)) << 32;
     e.v[4] = f.vt_read ? rva_of(f.vt) : 0;
     e.v[5] = f.proc;
     e.v[6] = (f.vt_read && f.vt == f.mod_vt ? 1 : 0) | (f.stage_mgr == f.m && f.m ? 2 : 0) |
@@ -347,8 +421,8 @@ gpr::StageRec note_stage(uintptr_t stage) noexcept {
     r.mgr = rdp(stage + gpr::kStage_Mgr);
     r.stage = stage;
     r.us = p8_now_us();
-    r.tl = rdv<uint32_t>(stage + gpr::kStage_Timeline, 0xFFFFFFFFu);
-    r.owner = rdv<uint32_t>(stage + gpr::kStage_Owner);
+    r.tl = rdv<uint32_t>(stage + g_sl->timeline, 0xFFFFFFFFu);
+    r.owner = rdv<uint32_t>(stage + g_sl->owner);
     r.whose = whose_now(r.owner);
     g_stages.note(r);
     if (r.whose == Whose::Foreign) g_foreign.note(r);
@@ -360,7 +434,7 @@ void sa_p1(uintptr_t stage) noexcept {
     g_sa_calls.fetch_add(1, std::memory_order_relaxed);
     const gpr::StageRec r = note_stage(stage);
     if (r.tl == 0 || r.tl == 0xFFFFFFFFu) g_sa_no_tl.fetch_add(1, std::memory_order_relaxed);
-    const uintptr_t proc = rdp(stage + gpr::kStage_Proc);
+    const uintptr_t proc = rdp(stage + g_sl->proc);
     uintptr_t vt = 0;
     const bool vt_ok = proc && rd(proc, vt);
     const uint32_t vt_rva = vt_ok ? rva_of(vt) : 0;
@@ -377,7 +451,7 @@ void sa_p1(uintptr_t stage) noexcept {
     e.v[0] = static_cast<uint64_t>(pv) | static_cast<uint64_t>(proc && p_mgr == r.mgr) << 8 |
              static_cast<uint64_t>(proc && p_stage == stage) << 9 | static_cast<uint64_t>(m != 0) << 10 |
              static_cast<uint64_t>(m && r.mgr == m) << 11 |
-             static_cast<uint64_t>(rdv<uint8_t>(stage + gpr::kStage_Started, 0xFF)) << 16 |
+             static_cast<uint64_t>(rdv<uint8_t>(stage + g_sl->started, 0xFF)) << 16 |
              static_cast<uint64_t>(g_sa_vt.load(std::memory_order_relaxed)) << 24;
     e.v[1] = r.seq;
     e.v[2] = r.owner | static_cast<uint64_t>(guest_seq_route_own_key()) << 32;
@@ -418,7 +492,7 @@ void guest_seq_present_x_fn(size_t fn, uintptr_t proc) noexcept {
         return;
     }
     const uint64_t seq = rdv<uint64_t>(stage + gpr::kStage_Seq);
-    const uint32_t owner = rdv<uint32_t>(stage + gpr::kStage_Owner);
+    const uint32_t owner = rdv<uint32_t>(stage + g_sl->owner);
     const bool foreign = whose_now(owner) == Whose::Foreign;
     gpr::StageRec r;
     const bool seen = g_stages.find_seq(seq, r);
@@ -426,10 +500,10 @@ void guest_seq_present_x_fn(size_t fn, uintptr_t proc) noexcept {
     if (seen) return;
     p::Event e;
     e.v[0] = fn | static_cast<uint64_t>(foreign) << 8 |
-             static_cast<uint64_t>(rdv<uint8_t>(stage + gpr::kStage_Started, 0xFF)) << 16;
+             static_cast<uint64_t>(rdv<uint8_t>(stage + g_sl->started, 0xFF)) << 16;
     e.v[1] = seq;
     e.v[2] = owner | static_cast<uint64_t>(guest_seq_route_own_key()) << 32;
-    e.v[3] = rdv<uint32_t>(stage + gpr::kStage_Timeline, 0xFFFFFFFFu);
+    e.v[3] = rdv<uint32_t>(stage + g_sl->timeline, 0xFFFFFFFFu);
     put_name(stage, seq, e);
     emit(kESA2, e);
 }
@@ -452,7 +526,7 @@ void on_event(Ev ev, safetyhook::Context& ctx) noexcept {
     const uintptr_t root = gpr::root_of(node, [](uint64_t a, uint64_t& out) { return rd<uint64_t>(a, out); }, depth, cut);
     if (cut) g_ev_cut[i].fetch_add(1, std::memory_order_relaxed);
     uint32_t id = 0;
-    const bool id_ok = root && !cut && rd(root + gpr::kTl_Id, id);
+    const bool id_ok = root && !cut && rd(root + g_sl->tl_id, id);
     gpr::StageRec r;
     const bool found = id_ok && g_stages.find_tl(id, r);
     const Whose w = found ? whose_now(r.owner) : Whose::OwnUnknown;
@@ -463,7 +537,7 @@ void on_event(Ev ev, safetyhook::Context& ctx) noexcept {
     p::Event e;
     e.v[0] = static_cast<uint64_t>(ev) | static_cast<uint64_t>(t) << 8 | static_cast<uint64_t>(vt_ok) << 16 |
              static_cast<uint64_t>(depth & 0xFF) << 24 | static_cast<uint64_t>(cut) << 32 |
-             static_cast<uint64_t>(root ? rdv<uint8_t>(root + gpr::kTl_Listed, 0xFF) : 0xFF) << 40 |
+             static_cast<uint64_t>(root ? rdv<uint8_t>(root + g_sl->tl_listed, 0xFF) : 0xFF) << 40 |
              static_cast<uint64_t>(root ? rdv<uint8_t>(root + gpr::kTl_Playing, 0xFF) : 0xFF) << 48;
     e.v[1] = found ? r.seq : 0;
     e.v[2] = id | static_cast<uint64_t>(found ? r.owner : 0) << 32;
@@ -495,16 +569,22 @@ void rb_event(Ev ev, safetyhook::Context& ctx, gpr::RaMode mode) noexcept {
     gpr::RbFacts f;
     f.mode = mode;
     f.caller = rva_of(rdv<uint64_t>(ctx.rsp));
-    f.event_class = rdp(ctx.rcx) == g_base + gpr::ev_info(ev).vt;  // review P3-2
+    if (g_3576) {
+        f.callers = gpr::kRbCallers3576;
+    } else if (g_3527) {
+        f.callers = gpr::kRbCallers3527;
+    }
+    f.event_class = rdp(ctx.rcx) == g_base + ev_of(ev).vt;  // review P3-2
     const uintptr_t tl = rdp(ctx.rdx + gpr::kCtx_Node);
-    f.timeline = tl && rdp(tl) == g_base + gpr::kVtTimeline;
+    f.timeline = tl && rdp(tl) == g_base + g_sl->vt_timeline;
+    if (tl && !f.timeline) g_rb_bad_tl_vt.store(rva_of(rdp(tl)), std::memory_order_relaxed);
     uint32_t id = 0;
     gpr::StageRec r;
-    f.found = f.timeline && rd(tl + gpr::kTl_Id, id) && g_stages.find_tl(id, r);
+    f.found = f.timeline && rd(tl + g_sl->tl_id, id) && g_stages.find_tl(id, r);
     if (f.found) {
         // Review P3-1: still the same stage, with the same timeline id.
-        f.alive = rdv<uint64_t>(r.stage + gpr::kStage_Seq) == r.seq && rdv<uint32_t>(r.stage + gpr::kStage_Owner) == r.owner &&
-                  rdv<uint32_t>(r.stage + gpr::kStage_Timeline) == id;
+        f.alive = rdv<uint64_t>(r.stage + gpr::kStage_Seq) == r.seq && rdv<uint32_t>(r.stage + g_sl->owner) == r.owner &&
+                  rdv<uint32_t>(r.stage + g_sl->timeline) == id;
         f.whose = whose_now(r.owner);
         f.stage_mgr = r.mgr;
         f.x_known = r.mgr && guest_seq_play_knows_x(r.mgr, r.owner);
@@ -524,7 +604,7 @@ void rb_event(Ev ev, safetyhook::Context& ctx, gpr::RaMode mode) noexcept {
     e.v[2] = id | static_cast<uint64_t>(f.found ? r.owner : 0) << 32;
     e.v[3] = f.caller | static_cast<uint64_t>(guest_seq_route_own_key()) << 32;
     e.v[4] = rdv<uint64_t>(ctx.rcx + gpr::kEv_Data);
-    e.v[5] = tl ? rdv<uint8_t>(tl + gpr::kTl_Playing, 0xFF) : 0xFF;
+    e.v[5] = tl && !g_3527 ? rdv<uint8_t>(tl + gpr::kTl_Playing, 0xFF) : 0xFF;  // not re-derived on 3527 (log only)
     e.v[7] = f.tid | static_cast<uint64_t>(f.main_tid) << 32;
     if (f.found) put_name(r.stage, r.seq, e);
     emit(kERB, e);
@@ -565,8 +645,8 @@ uint8_t find_timeline(uintptr_t player, uint32_t id, uint8_t& playing) noexcept 
         for (uint32_t k = 0; k < n && arr; ++k) {
             const uintptr_t t = rdp(arr + 8ull * k);
             if (!t) continue;
-            if (L.needs_listed && !rdv<uint8_t>(t + gpr::kTl_Listed)) continue;
-            if (rdv<uint32_t>(t + gpr::kTl_Id) != id) continue;
+            if (L.needs_listed && !rdv<uint8_t>(t + g_sl->tl_listed)) continue;
+            if (rdv<uint32_t>(t + g_sl->tl_id) != id) continue;
             playing = rdv<uint8_t>(t + gpr::kTl_Playing, 0xFF);
             return static_cast<uint8_t>(l + 1);
         }
@@ -612,7 +692,7 @@ void guest_seq_present_frame(uintptr_t m) noexcept {
     const uint64_t now = p8_now_us();
     if (g_foreign.latest_foreign(f)) {  // the 16 most recent foreign starts
         const uint64_t seq = rdv<uint64_t>(f.stage + gpr::kStage_Seq);
-        const uint32_t owner = rdv<uint32_t>(f.stage + gpr::kStage_Owner);
+        const uint32_t owner = rdv<uint32_t>(f.stage + g_sl->owner);
         if (gpr::foreign_live(f, now, seq, owner)) {
             best = f;
             have = true;
@@ -778,7 +858,7 @@ std::string line_of(const p::Event& e) {
                 "owner: {} | P1 thread {} (frame thread {}) | guest_seq_foreign_present={}: {}{}",
                 head, when, e.tid, v[1], name_of(e), static_cast<uint32_t>(v[3]), static_cast<uint32_t>(v[2]),
                 static_cast<uint32_t>(v[2] >> 32), (v[3] >> 32) & 0xFF, hex_or_none(v[5]), v[4],
-                (v[6] & 1) ? " (the mod's table)" : v[4] == gpr::kVtProcClient ? " (client)" : "",
+                (v[6] & 1) ? " (the mod's table)" : v[4] == g_rl->vt_client ? " (client)" : "",
                 v[8] ? std::format(" | [proc+0x10] 0x{:X} is NOT the stage", v[8]) : std::string(),
                 (v[6] & 2) ? "= M" : "!= M", (v[6] & 4) ? "yes" : "no", static_cast<uint32_t>(v[7]), static_cast<uint32_t>(v[7] >> 32), gpr::ra_mode_name(mode),
                 gpr::ra_verdict_name(verdict),
@@ -894,7 +974,7 @@ std::string ra_summary() {
     for (size_t fn = 0; fn < gxv::kFns; ++fn) {
         const uint16_t off = gxv_slot(fn);
         if (!off) continue;
-        const gpr::RaExpect* x = gpr::ra_expect(off);
+        const gpr::RaExpect* x = gpr::ra_expect(*g_rl, off);
         const gpr::RaUse use = x ? x->use : gpr::RaUse::Native;
         const uint64_t bf = g_a2[fn][0][1].load(), af = g_a2[fn][1][1].load();
         const uint64_t nf = g_a2[fn][0][0].load() + g_a2[fn][1][0].load();
@@ -937,9 +1017,12 @@ std::string rb_summary() {
                              g_rb[1][static_cast<size_t>(gpr::RbVerdict::Skip)].load();
     const uint64_t would = g_rb[0][static_cast<size_t>(gpr::RbVerdict::Would)].load() +
                            g_rb[1][static_cast<size_t>(gpr::RbVerdict::Would)].load();
-    return std::format("GuestSeqPresent R-B summary (guest_seq_foreign_timeline={}{}) | SKIPPED {}, WOULD SKIP {} |{}",
+    return std::format("GuestSeqPresent R-B summary (guest_seq_foreign_timeline={}{}) | SKIPPED {}, WOULD SKIP {} |{}{}",
                        gpr::ra_mode_name(static_cast<gpr::RaMode>(g_rb_wanted.load())),
-                       g_rb_mode.load() ? "" : ", NOT armed: see the install line", skipped, would, rows);
+                       g_rb_mode.load() ? "" : ", NOT armed: see the install line", skipped, would, rows,
+                       g_rb_bad_tl_vt.load() ? std::format(" | last [ctx+8] whose vtable is not the timeline's: exe+0x{:X}",
+                                                           g_rb_bad_tl_vt.load())
+                                             : std::string());
 }
 
 // ---------------------------------------------------------------- install
@@ -952,7 +1035,7 @@ bool bytes_at(uint32_t rva, std::span<const uint8_t> expected) {
 bool code_ok(std::span<const gad::Section> secs, std::span<const Bytes> code, std::string& why) {
     for (const Bytes& c : code) {
         if (!gad::in_real_code(secs, c.rva, static_cast<uint32_t>(c.bytes.size())) || !bytes_at(c.rva, c.bytes)) {
-            why = std::format("the code at exe+0x{:X} ({} bytes) is not build 2976's", c.rva, c.bytes.size());
+            why = std::format("the code at exe+0x{:X} ({} bytes) is not this build's", c.rva, c.bytes.size());
             return false;
         }
     }
@@ -968,8 +1051,8 @@ bool read_pdata(std::vector<RUNTIME_FUNCTION>& out, std::string& why) {
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) || dos.e_magic != IMAGE_DOS_SIGNATURE ||
         dos.e_lfanew <= 0 || dos.e_lfanew > 0x100000 ||
         !game::safe_read(g_base + static_cast<uint32_t>(dos.e_lfanew), &nt, sizeof nt) ||
-        nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
-        why = "not build 1.0.0.2976 (base / PE timestamp)";
+        nt.Signature != IMAGE_NT_SIGNATURE || !(game::legacy_layout() || g_3576)) {
+        why = "not build 1.0.0.2976, 3527, 3549 nor 3576 (base / PE timestamp)";
         return false;
     }
     g_image_size.store(nt.OptionalHeader.SizeOfImage, std::memory_order_relaxed);  // before any hook (rva_of)
@@ -995,7 +1078,7 @@ bool covered(const std::vector<RUNTIME_FUNCTION>& pdata, uint32_t begin, uint32_
 }
 // An event class: its vtable's COL and its slot 99 = the entry.
 bool class_ok(Ev ev, std::string& why) {
-    const gpr::EvInfo i = gpr::ev_info(ev);
+    const gpr::EvInfo i = ev_of(ev);
     if (q64(i.vt - 8) != g_base + i.col) {
         why = std::format("the vtable exe+0x{:X}'s COL is not {}'s", i.vt, i.name);
         return false;
@@ -1052,63 +1135,75 @@ void verify_ra(std::span<const gad::Section> secs, gpr::RaMode mode) {
         log::warn("GuestSeqPresent: R-A (guest_seq_foreign_present={}) NOT armed, nothing will be written: {}",
                   gpr::ra_mode_name(mode), why);
     };
-    if (q64(gpr::kVtProcClient - 8) != g_base + gpr::kColProcClient ||
-        q64(gpr::kVtProcCommon - 8) != g_base + gpr::kColProcCommon ||
-        q64(gpr::kVtProcServer - 8) != g_base + gpr::kColProcServer) {
-        refuse("the three processor vtables' COLs are not build 2976's");
+    const gpr::RaLayout& layout = *g_rl;
+    if (q64(layout.vt_client - 8) != g_base + layout.col_client ||
+        q64(layout.vt_common - 8) != g_base + layout.col_common ||
+        q64(layout.vt_server - 8) != g_base + layout.col_server) {
+        refuse("the three processor vtables' COLs are not this build's");
         return;
     }
-    std::vector<uint32_t> c(gpr::kProcSlots), m(gpr::kProcSlots), s(gpr::kProcSlots);
-    std::vector<uint64_t> c_abs(gpr::kProcSlots), m_abs(gpr::kProcSlots);
-    for (size_t k = 0; k < gpr::kProcSlots; ++k) {
-        c_abs[k] = q64(gpr::kVtProcClient + static_cast<uint32_t>(8 * k));
-        m_abs[k] = q64(gpr::kVtProcCommon + static_cast<uint32_t>(8 * k));
+    std::vector<uint32_t> c(layout.slots), m(layout.slots), s(layout.slots);
+    std::vector<uint64_t> c_abs(layout.slots), m_abs(layout.slots);
+    for (size_t k = 0; k < layout.slots; ++k) {
+        c_abs[k] = q64(layout.vt_client + static_cast<uint32_t>(8 * k));
+        m_abs[k] = q64(layout.vt_common + static_cast<uint32_t>(8 * k));
         c[k] = rva_of(c_abs[k]);
         m[k] = rva_of(m_abs[k]);
-        s[k] = rva_of(q64(gpr::kVtProcServer + static_cast<uint32_t>(8 * k)));
+        s[k] = rva_of(q64(layout.vt_server + static_cast<uint32_t>(8 * k)));
         if (!c[k] || !m[k] || !s[k]) {
             refuse(std::format("slot +0x{:X} of a processor vtable is not a pointer into the exe", 8 * k));
             return;
         }
     }
-    const gpr::RaPlan plan = gpr::ra_plan(c, m, s);
+    const gpr::RaPlan plan = gpr::ra_plan_for(layout, c, m, s);
     if (!plan.ok) {
         refuse(std::format("{} (slot +0x{:X})", plan.why, plan.bad_off));
         return;
     }
     // Each decided slot is reached by its StageChart_Function_* Execute through [[stage]+0x58]'s vptr at that offset.
-    for (const gpr::RaExpect& x : gpr::kRaExpect) {
+    for (const gpr::RaExpect& x : layout.expect) {
         uint8_t tb[gpr::kTrampBytes];
-        gpr::tramp_bytes(x.off, tb);
+        gpr::tramp_bytes(x.off, tb, layout.stage_proc);
         if (!gad::in_real_code(secs, x.tramp, gpr::kTrampBytes) || !bytes_at(x.tramp, tb)) {
-            refuse(std::format("the trampoline exe+0x{:X} to slot +0x{:X} is not build 2976's", x.tramp, x.off));
+            refuse(std::format("the trampoline exe+0x{:X} to slot +0x{:X} is not this build's", x.tramp, x.off));
             return;
         }
     }
     // The lifetime evidence (per stage, deleted through slot 0): the .rsrc thunks it goes through.
-    if (c[0] != kRaDeletingDtor || plan.use[0] != gpr::RaUse::Native) {
-        refuse("slot 0 (the deleting destructor) is not 0x5D9750 or not kept native");
+    if (c[0] != (g_3576 ? kRaDeletingDtor3576 : g_3527 ? kRaDeletingDtor3527 : kRaDeletingDtor) ||
+        plan.use[0] != gpr::RaUse::Native) {
+        refuse("slot 0 (the deleting destructor) is not the expected one or not kept native");
         return;
     }
-    for (const Jmp& j : kRaLifetime) {
+    const uint32_t base_dtor = g_3576 ? 0x220C925u : 0x220BCE5u;
+    if (g_3527 &&
+        !(gad::in_real_code(secs, base_dtor, sizeof kRaBaseDtor3527) && bytes_at(base_dtor, kRaBaseDtor3527))) {
+        refuse(std::format("the stage's base destructor exe+0x{:X} is not this build's", base_dtor));
+        return;
+    }
+    const std::span<const Jmp> lifetime = !g_3527            ? std::span<const Jmp>(kRaLifetime)
+                                          : g_3576          ? std::span<const Jmp>(kRaLifetime3576)
+                                          : game::is_3549() ? std::span<const Jmp>(kRaLifetime3549)
+                                                            : std::span<const Jmp>(kRaLifetime3527);
+    for (const Jmp& j : lifetime) {
         const int64_t rel = static_cast<int64_t>(j.to) - static_cast<int64_t>(j.at) - 5;
         const uint8_t jb[5] = {0xE9, static_cast<uint8_t>(rel), static_cast<uint8_t>(rel >> 8),
                                static_cast<uint8_t>(rel >> 16), static_cast<uint8_t>(rel >> 24)};
         if (!gad::in_real_code(secs, j.at, 5) || !bytes_at(j.at, jb)) {
-            refuse(std::format("the lifetime thunk exe+0x{:X} -> exe+0x{:X} is not build 2976's", j.at, j.to));
+            refuse(std::format("the lifetime thunk exe+0x{:X} -> exe+0x{:X} is not this build's", j.at, j.to));
             return;
         }
     }
     // The table: its own page, filled, then read-only. Never freed once armed (it must outlive every processor pointed
     // at it); released on a refusal below (review P3-4), when nothing can point at it yet.
-    const size_t bytes = (1 + gpr::kProcSlots) * sizeof(uint64_t);
+    const size_t bytes = (1 + layout.slots) * sizeof(uint64_t);
     auto* page = static_cast<uint64_t*>(VirtualAlloc(nullptr, bytes, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
     if (!page) {
         refuse("VirtualAlloc failed");
         return;
     }
-    const uint64_t col = q64(gpr::kVtProcClient - 8);
-    if (!gpr::ra_build(plan, c_abs, m_abs, col, std::span<uint64_t>(page, 1 + gpr::kProcSlots))) {
+    const uint64_t col = q64(layout.vt_client - 8);
+    if (!gpr::ra_build(plan, c_abs, m_abs, col, std::span<uint64_t>(page, 1 + layout.slots), layout.slots)) {
         refuse("the table could not be built");
         VirtualFree(page, 0, MEM_RELEASE);
         return;
@@ -1119,7 +1214,7 @@ void verify_ra(std::span<const gad::Section> secs, gpr::RaMode mode) {
         VirtualFree(page, 0, MEM_RELEASE);
         return;
     }
-    for (size_t k = 0; k < gpr::kProcSlots; ++k) {
+    for (size_t k = 0; k < layout.slots; ++k) {
         const uint64_t want = gpr::ra_keeps_native(plan.use[k]) ? c_abs[k] : m_abs[k];
         if (page[1 + k] != want || page[0] != col) {
             refuse("the table reads back wrong");
@@ -1128,7 +1223,7 @@ void verify_ra(std::span<const gad::Section> secs, gpr::RaMode mode) {
         }
     }
     std::string ret, common, world, offs;
-    for (size_t k = 0; k < gpr::kProcSlots; ++k) {
+    for (size_t k = 0; k < layout.slots; ++k) {
         if (plan.use[k] == gpr::RaUse::Ret) ret += std::format(" +0x{:X}", 8 * k);
         if (plan.use[k] == gpr::RaUse::Common) common += std::format(" +0x{:X} (0x{:X})", 8 * k, m[k]);
         if (plan.use[k] == gpr::RaUse::World) world += std::format(" +0x{:X}", 8 * k);
@@ -1137,19 +1232,20 @@ void verify_ra(std::span<const gad::Section> secs, gpr::RaMode mode) {
     g_ra_cut_text = std::format("{} slots that turn presentation ON to the common's ret 0x{:X}:{}; {} to the common's "
                                 "own:{}; kept native as world effects:{}; kept native as they turn it OFF or carry the "
                                 "direction in their data:{}",
-                                plan.n_ret, gpr::kRetRva, ret, plan.n_common, common, world, offs);
+                                plan.n_ret, layout.ret, ret, plan.n_common, common, world, offs);
     g_ra_page = page;
-    g_ra_client_vt = g_base + gpr::kVtProcClient;
+    g_ra_client_vt = g_base + layout.vt_client;
     g_ra_mod_vt = reinterpret_cast<uint64_t>(page + 1);
     g_ra_mode.store(static_cast<uint8_t>(mode), std::memory_order_release);
     log::info("GuestSeqPresent R-A guest_seq_foreign_present={} ARMED{} | the mod's table at 0x{:X} (its [-1] = the "
-              "client's COL exe+0x{:X}; 105 slots, read-only page, never freed): {}; the other {} copied from 0x558C080 "
+              "client's COL exe+0x{:X}; {} slots, read-only page, never freed): {}; the other {} copied from 0x{:X} "
               "| verified: base / PE timestamp, three COLs, the {} decisions, their {} trampolines, slot 0 and the {} "
-              "lifetime thunks | per foreign stage, in P1: vptr == exe+0x558C080, [proc+0x10] == the stage, [proc+8] == "
+              "lifetime thunks | per foreign stage, in P1: vptr == exe+0x{:X}, [proc+0x10] == the stage, [proc+8] == "
               "[stage+0x28], P1 on guest_seq_play's frame thread; {}",
               gpr::ra_mode_name(mode), mode == gpr::RaMode::Probe ? " (probe: nothing is ever written)" : "",
-              g_ra_mod_vt, gpr::kColProcClient, g_ra_cut_text,
-              gpr::kProcSlots - plan.n_ret - plan.n_common, gpr::kRaExpected, gpr::kRaExpected, std::size(kRaLifetime),
+              g_ra_mod_vt, layout.col_client, layout.slots, g_ra_cut_text,
+              layout.slots - plan.n_ret - plan.n_common, layout.vt_client, layout.expect.size(), layout.expect.size(),
+              lifetime.size(), layout.vt_client,
               mode == gpr::RaMode::On ? "then ONE locked compare-exchange of that processor's vptr"
                                       : "then a '[R-A WOULD CUT presentation]' line");
 }
@@ -1168,18 +1264,26 @@ void verify_rb(std::span<const gad::Section> secs, gpr::RaMode mode) {
         refuse("a camera start hook (0x34CFC20 / 0xB27880) is not installed (see its line)");
         return;
     }
-    if (!code_ok(secs, kRbCode, why) || !code_ok(secs, kSaCode, why)) {
+    const std::span<const Bytes> rb_code = g_3576   ? std::span<const Bytes>(kRbCode3576)
+                                           : g_3527 ? std::span<const Bytes>(kRbCode3527)
+                                                    : std::span<const Bytes>(kRbCode);
+    const std::span<const Bytes> sa_code = g_3576   ? std::span<const Bytes>(kSaCode3576)
+                                           : g_3527 ? std::span<const Bytes>(kSaCode3527)
+                                                    : std::span<const Bytes>(kSaCode);
+    if (!code_ok(secs, rb_code, why) || !code_ok(secs, sa_code, why)) {
         refuse(why);
         return;
     }
-    if (q64(gpr::kVtTimeline) != g_base + 0x34C0B60 || q64(gpr::kVtTimeline + 8) != g_base + 0x34BD680) {
-        refuse("the timeline object's vtable exe+0x5C75F30 is not build 2976's");
+    // The timeline object's vtable has no RTTI: its first two slots (3527: the constructor 0x1062DB50 writes it).
+    if (q64(g_sl->vt_timeline) != g_base + (g_3576 ? 0x37912A0 : g_3527 ? 0x37905A0 : 0x34C0B60) ||
+        q64(g_sl->vt_timeline + 8) != g_base + (g_3576 ? 0x378DE40 : g_3527 ? 0x378D140 : 0x34BD680)) {
+        refuse(std::format("the timeline object's vtable exe+0x{:X} is not this build's", g_sl->vt_timeline));
         return;
     }
     for (const Ev ev : {Ev::CameraSelector, Ev::PlayerCameraPreset}) {
-        const uint32_t vt = gpr::ev_info(ev).vt;
-        if (q64(vt + 8 * 97) != g_base + gpr::kRetRva || q64(vt + 8 * 98) != g_base + gpr::kRetRva) {
-            refuse(std::format("slots 97 / 98 of exe+0x{:X} are not the void ret 0x359B50", vt));
+        const uint32_t vt = ev_of(ev).vt;
+        if (q64(vt + 8 * 97) != g_base + g_rl->ret || q64(vt + 8 * 98) != g_base + g_rl->ret) {
+            refuse(std::format("slots 97 / 98 of exe+0x{:X} are not the void ret 0x{:X}", vt, g_rl->ret));
             return;
         }
     }
@@ -1198,7 +1302,7 @@ DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     for (int i = 0; i < 1200; ++i) {  // WorldSystem (up to 10 minutes), as the other guest modules
         uintptr_t world = 0;
-        if (game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world) break;
+        if (game::safe_read(g_base + g_world_slot, &world, sizeof world) && world) break;
         Sleep(500);
     }
     LARGE_INTEGER f;
@@ -1238,9 +1342,13 @@ DWORD WINAPI install_thread(LPVOID) {
         return 0;
     }
     std::string on, refused;
-    for (const EvPoint& pt : kEvPoints) {
+    const std::span<const EvPoint> ev_points = !g_3527            ? std::span<const EvPoint>(kEvPoints)
+                                               : g_3576          ? std::span<const EvPoint>(kEvPoints3576)
+                                               : game::is_3549() ? std::span<const EvPoint>(kEvPoints3549)
+                                                                 : std::span<const EvPoint>(kEvPoints3527);
+    for (const EvPoint& pt : ev_points) {
         const size_t i = static_cast<size_t>(pt.ev);
-        const gpr::EvInfo info = gpr::ev_info(pt.ev);
+        const gpr::EvInfo info = ev_of(pt.ev);
         // Without the probe only R-B's two camera starts are hooked.
         if (!probe && pt.ev != Ev::CameraSelector && pt.ev != Ev::PlayerCameraPreset) continue;
         std::string w;
@@ -1250,9 +1358,9 @@ DWORD WINAPI install_thread(LPVOID) {
         } else if (!pt.fn_begin && covered(pdata, info.entry, pt.hook + pt.patch)) {
             w = "a RUNTIME_FUNCTION covers what should be a leaf stub";
         } else if (!pt.head.empty() && !bytes_at(info.entry, pt.head)) {
-            w = std::format("the entry exe+0x{:X} is not build 2976's", info.entry);
+            w = std::format("the entry exe+0x{:X} is not this build's", info.entry);
         } else if (!gad::in_real_code(secs, pt.hook, static_cast<uint32_t>(pt.sig.size())) || !bytes_at(pt.hook, pt.sig)) {
-            w = std::format("its {}-byte signature is not build 2976's", pt.sig.size());
+            w = std::format("its {}-byte signature is not this build's", pt.sig.size());
         } else if (!p8_install_mid(g_base, secs, pt.hook, pt.patch, pt.sig, kEvFns[i], g_ev_hooks[i], "GuestSeqPresent",
                                    info.name)) {
             w = "p8_install_mid refused it (see the line above)";
@@ -1297,6 +1405,19 @@ bool guest_seq_present_needs_p1(bool probe, const std::string& ra, const std::st
 }
 
 void guest_seq_present_start(bool probe, const std::string& ra, const std::string& rb, const std::string& route_mode) {
+    g_3576 = game::current_build() == game::Build::v3576;
+    g_3527 = game::current_build() == game::Build::v3527 || g_3576;
+    if (g_3527) {
+        g_sl = g_3576 ? &gpr::kStageLayout3576 : &gpr::kStageLayout3527;
+        g_rl = g_3576 ? &gpr::kRaLayout3576 : &gpr::kRaLayout3527;
+        if (const auto* profile = game::reader_profile()) g_world_slot = profile->world_system;
+        if (g_3576) g_world_slot = 0x71C0100;  // core_globals_3576.json (no reader profile for 3576 yet)
+        if (probe) {
+            log::warn("GuestSeqPresent: guest_seq_foreign_present_probe (S-A, S-B, S-C, S-D) is not ported to build 3527: "
+                      "REFUSED; R-A and R-B do not need it, and their own 'probe' value still works");
+            probe = false;
+        }
+    }
     bool bad = false;
     const gpr::RaMode mode = gpr::parse_ra_mode(ra, &bad);
     if (bad) log::warn("GuestSeqPresent: guest_seq_foreign_present={} is not 0, probe or 1: 0", ra);
@@ -1314,6 +1435,26 @@ void guest_seq_present_start(bool probe, const std::string& ra, const std::strin
 }
 
 bool guest_seq_present_wanted() { return g_wanted.load(); }
+
+bool guest_seq_present_set_muted(uint64_t seq, bool muted) noexcept {
+    if (!g_ra_client_vt || !g_ra_mod_vt || !g_sl || !seq) return false;
+    gpr::StageRec r;
+    if (!g_stages.find_seq(seq, r) || !r.stage || rdv<uint64_t>(r.stage + gpr::kStage_Seq) != seq) return false;
+    const uintptr_t proc = rdp(r.stage + g_sl->proc);
+    if (!proc) return false;
+    const uint64_t want = muted ? g_ra_mod_vt : g_ra_client_vt, from = muted ? g_ra_client_vt : g_ra_mod_vt;
+    if (rdv<uint64_t>(proc) == want) return true;
+    return cas_vptr(proc, from, want) && rdv<uint64_t>(proc) == want;
+}
+
+bool guest_seq_present_stage_ready(uint64_t seq) noexcept {
+    if (!g_sl || !seq) return false;
+    gpr::StageRec r;
+    if (!g_stages.find_seq(seq, r) || !r.stage || rdv<uint64_t>(r.stage + gpr::kStage_Seq) != seq) return false;
+    const uintptr_t proc = rdp(r.stage + g_sl->proc);
+    const uintptr_t charts = proc ? rdp(proc + 0x38) : 0;
+    return charts && rdp(charts + 8);
+}
 
 void guest_seq_present_tick() noexcept {
     if (!g_wanted.load(std::memory_order_relaxed)) return;

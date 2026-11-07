@@ -45,6 +45,14 @@ inline constexpr uint32_t hash_id(uint64_t id) {
 // ---------------------------------------------------------------- the table walk
 
 inline constexpr uint32_t kMgr_Buckets = 0x108, kMgr_Count = 0x10C, kMgr_BucketArray = 0x118, kMgr_Elements = 0x120;
+// Where the manager keeps its table, per build. 3527 / 3549: the same walk in 0x2156CA0 with every offset +0x28
+// (count +0x134, buckets +0x130, bucket array +0x140, elements +0x148; the hash 0x1546830 is the same lookup3 with
+// lea ebx,[rdx-0x2145E233]; element +8 the id, +0x10 the instance, +0x15 dead), capstone 2026-11-06.
+struct MgrLayout {
+    uint32_t buckets, count, bucket_array, elements;
+};
+inline constexpr MgrLayout kLayout2976{kMgr_Buckets, kMgr_Count, kMgr_BucketArray, kMgr_Elements};
+inline constexpr MgrLayout kLayout3527{0x130, 0x134, 0x140, 0x148};
 inline constexpr uint32_t kBucketStride = 0x100, kBucketPairs = (kBucketStride - 8) / 8;  // 31 pairs fit a bucket
 inline constexpr uint32_t kElem_Id = 0x08, kElem_Inst = 0x10, kInst_Dead = 0x15;
 inline constexpr uint32_t kMaxIndex = 1u << 20;  // a sane element index (the game has hundreds)
@@ -61,24 +69,24 @@ struct Lookup {
 // Rd: an object with `template <class T> bool rd(uintptr_t addr, T& out) const` (SEH reads in the mod, a fake
 // memory in the tests). Mirrors 0x1F6C190 step by step.
 template <class Rd>
-Lookup find_stage(const Rd& m, uintptr_t mgr, uint64_t id) {
+Lookup find_stage(const Rd& m, uintptr_t mgr, uint64_t id, const MgrLayout& lay = kLayout2976) {
     Lookup r;
     r.hash = hash_id(id);
     if (!mgr) return r;
     uint32_t count = 0, buckets = 0;
-    if (!m.rd(mgr + kMgr_Count, count)) return r;
+    if (!m.rd(mgr + lay.count, count)) return r;
     r.count = count;
     if (count == 0) {
         r.read_ok = true;
         return r;
     }
-    if (!m.rd(mgr + kMgr_Buckets, buckets)) return r;
+    if (!m.rd(mgr + lay.buckets, buckets)) return r;
     if (buckets == 0) {
         r.read_ok = true;
         return r;
     }
     uintptr_t barr = 0, elems = 0;
-    if (!m.rd(mgr + kMgr_BucketArray, barr) || !m.rd(mgr + kMgr_Elements, elems) || !barr || !elems) return r;
+    if (!m.rd(mgr + lay.bucket_array, barr) || !m.rd(mgr + lay.elements, elems) || !barr || !elems) return r;
     const uintptr_t bucket = barr + static_cast<uintptr_t>(r.hash % buckets) * kBucketStride;
     uint32_t n = 0;
     if (!m.rd(bucket, n)) return r;
@@ -188,6 +196,41 @@ inline constexpr uint32_t kRspField = 0x48;     // [rsp+0x48] at A: the field wh
 inline constexpr uint32_t kRbpMgrUsed = 0x8E8;  // [rbp+0x8E8] after A: the manager the lookup used
 inline constexpr uint32_t kEntry_StageId = 0x20;  // u64 [entry+0x20] (0x2126A5C), tested & 0x1FFFFFFF at 0x212694D
 inline constexpr uint32_t kJ_User = 0xA0, kUser_Key = 0x60;
+
+// Builds 3527 / 3549 (same code; capstone on the 3549 PE, 2026-11-06): the function is 0x22ED620 (RUNTIME_FUNCTION
+// 0x22ED620-0x22EDA76): rcx = the entry (r13), rdx = J (r15), the stage id test [rcx+0x20] & 0x1FFFFFFF at 0x22ED64D.
+//   A 0x22ED729  mov rdi,rax ; mov [rbp+0x8F8],rax  after field.vf48 (0x22ED71E: mov rcx,[rsp+0x48] ; mov rax,[rcx] ;
+//                (10 bytes)                         call [rax+0x48]); then vf40, the lock of [rdi+8] (0x3E4100 at
+//                                                   0x22ED760) and 0x2156CA0(rdi, &out [rbp+0x8F0], [r13+0x20]) at
+//                                                   0x22ED774; the dead check 0x215A5F0 reads [rbp+0x8F8] (0x22ED7DA).
+//   R 0x22ED7B5  lea rcx,[rbp+0x8F0]                both paths of the lookup join here (a je target at its start):
+//                (7 bytes)                          RSI = the instance found or 0, [rbp+0x8F8] = the manager used.
+//   F 0x22EDA49  mov [rsp+0x70],rdi ; lea rcx,[rsp+0x70]  every path but the two early returns (no stage id: al = 2,
+//                (10 bytes; a jmp target at start)  straight to 0x22EDA5B) reaches it with BL = the result; r13 and
+//                                                   rsp are those of the entry (no push in the body).
+inline constexpr uintptr_t kPointA3527 = 0x22ED729, kPointR3527 = 0x22ED7B5, kPointF3527 = 0x22EDA49;
+// F's first instruction is already 5 bytes: safetyhook relocates only it (live 2026-11-06: a 10-byte patch was refused).
+inline constexpr uint32_t kPatchA3527 = 10, kPatchR3527 = 7, kPatchF3527 = 5;
+inline constexpr uint8_t kBytesA3527[] = {0x48, 0x8B, 0xF8, 0x48, 0x89, 0x85, 0xF8, 0x08, 0x00, 0x00};
+inline constexpr uint8_t kBytesR3527[] = {0x48, 0x8D, 0x8D, 0xF0, 0x08, 0x00, 0x00};
+inline constexpr uint8_t kBytesF3527[] = {0x48, 0x89, 0x7C, 0x24, 0x70, 0x48, 0x8D, 0x4C, 0x24, 0x70};
+inline constexpr uintptr_t kCtxA3527 = 0x22ED71E, kCtxLookup3527 = 0x22ED766;
+inline constexpr uint8_t kCtxABytes3527[] = {0x48, 0x8B, 0x4C, 0x24, 0x48, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};
+inline constexpr uint8_t kCtxLookupBytes3527[] = {0x4D, 0x8B, 0x45, 0x20, 0x48, 0x8D, 0x95, 0xF0, 0x08, 0x00, 0x00,
+                                                  0x48, 0x8B, 0xCF, 0xE8, 0x27, 0x95, 0xE6, 0xFF};
+inline constexpr uint32_t kRbpMgrUsed3527 = 0x8F8;
+inline constexpr uintptr_t kVtClientField3527 = 0x594BA50;    // pa::ClientField (rtti_3527.json; vf48 0xAAA7A0)
+inline constexpr uintptr_t kVtClientStageMgr3527 = 0x59572E0;  // pa::ClientSequencerStageManager
+
+// Build 3576 (static, 2026-11-06 evening; not yet run): the same function, moved as one block to 0x22EE2D0
+// (+0xCB0; RUNTIME_FUNCTION 0x22EE2D0-0x22EE726, the same 0x456 bytes), its five points unique there with the same
+// bytes but the lookup call's rel32; the lookup 0x21578E0 reads the manager's +0x134 / +0x130 / +0x140 as in 3527.
+inline constexpr uintptr_t kPointA3576 = 0x22EE3D9, kPointR3576 = 0x22EE465, kPointF3576 = 0x22EE6F9;
+inline constexpr uintptr_t kCtxA3576 = 0x22EE3CE, kCtxLookup3576 = 0x22EE416;
+inline constexpr uint8_t kCtxLookupBytes3576[] = {0x4D, 0x8B, 0x45, 0x20, 0x48, 0x8D, 0x95, 0xF0, 0x08, 0x00, 0x00,
+                                                  0x48, 0x8B, 0xCF, 0xE8, 0xB7, 0x94, 0xE6, 0xFF};
+inline constexpr uintptr_t kVtClientField3576 = 0x594DB40;    // pa::ClientField (vtable_map_3549_3576.json)
+inline constexpr uintptr_t kVtClientStageMgr3576 = 0x5959438;  // pa::ClientSequencerStageManager
 
 // RTTI vtables (build 2976).
 inline constexpr uintptr_t kVtClientField = 0x55BCEA0;    // pa::ClientField (vf48 0x9A5BE0)

@@ -1,0 +1,148 @@
+68:constexpr uint64_t kMagic = 0x32534553'44504F43ull;  // "COPDSES2"
+71:// 0x2774076..87 takes it as the key and 0x143A580 sends key 0 to the common
+73:// (0x143A5CA..D8), and the table has 1 entry: with 2 the server read past it,
+83:AllocFn g_alloc_global = nullptr;  // 0x47EFA78, only if the thread's TLS+0x1FD says so (never seen)
+84:AllocFn g_alloc_thread = nullptr;  // 0x47EF9B0, the calling thread's own heap
+124:std::array<uint8_t, 0x10000> g_channel;
+127:std::array<uint8_t, 0x10000> g_blocked_channel;
+249:        n.in_exe = n.address >= g_base && n.address < g_base + 0x20000000;
+267:// The game's own allocator choice (e.g. PostPacket 0x35C692..0x35C6BA), on the
+273:    const uint32_t index = *reinterpret_cast<const uint32_t*>(g_base + off::kTlsIndexSlot);
+275:    if (*reinterpret_cast<const uint8_t*>(tls + off::kTls_UseGlobalHeap) != 0) {
+318:// 0x35DF50 (Q2's lock): an exception inside it is the game's, passed on (I1).
+325:                                          "returning an S->C buffer to Q2 (0x35DF50, under the queue's lock)")) {
+342:    return peek(g_base + off::kServerNetSlot, net) && net == g_built_net.load() &&
+343:           peek(net + off::kServerNet_Session, s1) && s1 == g_built_s1.load();
+362:    return session && peek(session + off::kSession_User, user) && user && peek(user, vt) &&
+363:           vt == g_base + off::kServerUserActorVtable && peek(user + off::kUser_Session, back) && back == session;
+372:    if (!game_alloc(off::kSessionSize, obj, 0, g_want_epoch.load())) return false;
+375:        std::memset(obj, 0, off::kSessionSize);
+376:        step = inj::Step::BuildCtor;  // allocates (either heap) and may raise 0xA0000002 itself
+380:        *reinterpret_cast<uintptr_t*>(s) = g_base + off::kNwAsyncSessionVtable;
+381:        *reinterpret_cast<uint64_t*>(s + off::kSession_B0) = 0;
+382:        *reinterpret_cast<uint64_t*>(s + off::kSession_B8) = 0;
+383:        *reinterpret_cast<uint16_t*>(s + off::kSession_C0) = 0;
+385:        *reinterpret_cast<uint16_t*>(s + off::kSession_Name) = '2';
+389:        const uintptr_t server_net = *reinterpret_cast<uintptr_t*>(g_base + off::kServerNetSlot);
+390:        *reinterpret_cast<uintptr_t*>(s + off::kSession_OutQueue) =
+391:            *reinterpret_cast<uintptr_t*>(server_net + off::kServerNet_FreeS2C);
+392:        if (auto* id = *reinterpret_cast<uint32_t**>(s + off::kSession_IdPtr)) *id = kSessionId;
+394:        g_built_s1.store(*reinterpret_cast<uintptr_t*>(server_net + off::kServerNet_Session));
+452:        const uintptr_t frame = rq + off::kRq_Frame;
+454:        if (!peek(frame, flen) || flen < off::kFrameOverhead + troc::kInternalHeaderSize || flen > 0x8000) {
+458:        std::vector<uint8_t> p(flen - off::kFrameOverhead);
+459:        const bool copied = guarded_copy(p.data(), frame + off::kFrameHeader, p.size());
+519:        // and uses its character unchecked (.xtls 0x940B170 via 0x9A5BE0): in the
+527:        // P8 S15 (travel_probe_logic.h): user 2's fast travel in the shared field is answered by 0x2BCA3D0 with
+528:        // LoadingFieldDataAck 2643 (writer 0x299B520) + 3066, not a 2174; its u32 +9 is the same field owner
+690:        // Hand the buffer back as the client's NetworkThread does (0x35BB5C):
+694:        if (!peek(g_base + off::kServerNetSlot, server_net) || !peek(server_net + off::kServerNet_FreeS2C, q2) ||
+695:            !guarded_push(q2, reinterpret_cast<void*>(r + off::kRq_Frame))) {
+799:        const uintptr_t pb = pkt - off::kFrameHeader;
+802:        if (peek(pb + off::kPb_FramePtr, frame) && frame == pb && peek(pb + off::kPb_Base, base) && base == pb &&
+803:            peek(pb + off::kPb_Magic, magic) && magic == kMagic) {
+811:                peek(pb + off::kPb_Tag, tag) ? route_pb(tag, g_session_epoch.load(), table, kEpochSlots) : PbRoute{};
+866:    return session_user(session, user) && peek(user + off::kUser_Key, key);
+886:        auto& count = *reinterpret_cast<uint32_t*>(arr + off::kArray_Count);
+905:    return game::game_fault_continue(ep, "Session2 relay fix", "ToNear::vf1 (exe+0x2A75860) built the recipients");
+924:    if (g_opt.finder_log && peek(arr + off::kArray_Count, count) && count) {
+932:    // ToNear reads it (0x2BC5233): TS = [[[finder+0x10]+0x68]+0x1A0], actor = [TS+8].
+936:    if (!peek(reinterpret_cast<uintptr_t>(finder) + off::kFinder_Actor, a) || !a || !peek(a + 0x68, b) || !b ||
+938:        !peek(actor + off::kServerActor_Controller, controller) || !session_user_key(s1, key1)) {
+978:    for (uintptr_t a = g_base + off::kTrocInstancesBegin; a < g_base + off::kTrocInstancesEnd; a += 8) {
+980:        if (!vt || *vt < g_base || *vt >= g_base + 0x10000000) continue;
+982:        auto kind = game::read<uint32_t>(a + off::kTroc_Kind);
+983:        auto op = game::read<uint16_t>(a + off::kTroc_Opcode);
+984:        auto ch = game::read<uint8_t>(a + off::kTroc_Channel);
+986:            kind && *kind != off::kTrocKindServer ? game::short_class_name(game::rtti_name_of_vtable(*vt), "TrocTr")
+988:        // ConnectCryptogramToServerReq is an "internal" handler (kind 0x7FFFFFFE) that
+989:        // the server finds by bit mask (Troc::Find, 0x143B351): the login's first
+997:        if (kind && op && ch && (*kind == off::kTrocKindServer || connect) && *ch < kBlocked) {
+1027:    if (!game::safe_read(g_base + off::kNwVirtualAsyncSessionVtable - 8, vt,
+1028:                         (off::kSessionVtableEntries + 1) * sizeof(uintptr_t))) {
+1031:    if (vt[1 + off::kSessionVfSend] != g_base + off::kSessionSend) return false;
+1032:    vt[1 + off::kSessionVfSend] = reinterpret_cast<uintptr_t>(&session2_send);
+1051:    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+1058:        if (!head_matches(off::kServerOnRecvPacket, off::kServerOnRecvPacketHead, sizeof off::kServerOnRecvPacketHead,
+1060:            !head_matches(off::kSessionSend, off::kSessionSendHead, sizeof off::kSessionSendHead,
+1062:            !head_matches(off::kNwSessionCtor, off::kNwSessionCtorHead, sizeof off::kNwSessionCtorHead,
+1064:            !head_matches(off::kQueuePush, off::kQueuePushHead, sizeof off::kQueuePushHead, "queue push") ||
+1065:            !head_matches(off::kAllocGlobal, off::kAllocGlobalHead, sizeof off::kAllocGlobalHead, "alloc") ||
+1066:            !head_matches(off::kAllocThread, off::kAllocThreadBytes, sizeof off::kAllocThreadBytes,
+1068:            !head_matches(off::kNetLoopPump, off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob,
+1074:        if (!vtable_slot_is(off::kToNearExceptOneControlVtable, 1, off::kExceptOneVf1) ||
+1075:            !vtable_slot_is(off::kToNearExceptOneSelfVtable, 1, off::kExceptOneSelfVf1) ||
+1076:            !vtable_slot_is(off::kToNearVtable, 1, off::kToNearVf1)) {
+1080:        if (!head_matches(off::kExceptOneVf1, off::kExceptOneVf1Head, sizeof off::kExceptOneVf1Head,
+1082:            !head_matches(off::kExceptOneSelfVf1, off::kExceptOneVf1Head, sizeof off::kExceptOneVf1Head,
+1084:            !head_matches(off::kToNearVf1, off::kToNearVf1Head, sizeof off::kToNearVf1Head, "ToNear::vf1")) {
+1089:    g_alloc_global = reinterpret_cast<AllocFn>(g_base + off::kAllocGlobal);
+1090:    g_alloc_thread = reinterpret_cast<AllocFn>(g_base + off::kAllocThread);
+1091:    g_ctor = reinterpret_cast<CtorFn>(g_base + off::kNwSessionCtor);
+1092:    g_push = reinterpret_cast<PushFn>(g_base + off::kQueuePush);
+1093:    g_to_near = reinterpret_cast<FinderVf1>(g_base + off::kToNearVf1);
+1108:        g_recv_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + off::kServerOnRecvPacket), on_server_recv);
+1122:            !p8_install_mid(g_base, secs, off::kNetLoopPump, off::kNetLoopPumpPatch,
+1123:                            std::span<const uint8_t>(off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob),
+1128:                       off::kNetLoopPump);
+1134:                  off::kNetLoopPump, off::kAllocThread, off::kQueuePush, g_q.limits().max_packets,
+1141:        log::info("Session2: hooked ServerNet::OnRecvPacket (exe+0x{:X}); session 2 {}", off::kServerOnRecvPacket,
+1147:        g_control_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + off::kExceptOneVf1),
+1150:        g_self_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + off::kExceptOneSelfVf1),
+1168:    const auto sn = read_ptr(g_base + off::kServerNetSlot);
+1169:    const auto cn = read_ptr(g_base + off::kClientNetSlot);
+1170:    const auto sam = read_ptr(g_base + off::kSamSlot);
+1179:    const auto s1 = read_ptr(*sn + off::kServerNet_Session);
+1182:        const auto idp = read_ptr(*s1 + off::kSession_IdPtr);
+1184:        const auto user = read_ptr(*s1 + off::kSession_User);
+1185:        const auto crypto = read_ptr(*s1 + off::kSession_Crypto);
+1187:        const auto outq = read_ptr(*s1 + off::kSession_OutQueue);
+1188:        const auto cin = cn ? read_ptr(*cn + off::kClientNet_InQueue) : std::nullopt;
+1192:            const auto key = read<uint32_t>(*user + off::kUser_Key);
+1193:            const auto back = read_ptr(*user + off::kUser_Session);
+1201:    const auto q2 = read_ptr(*sn + off::kServerNet_FreeS2C);
+1202:    const auto q3 = read_ptr(*sn + off::kServerNet_FreeC2S);
+1209:                  hex(read<uint32_t>(*sam + off::kSam_FreeKeys)), hex(read<uint32_t>(*sam + off::kSam_ActorCount)));
+1212:        const auto user = read_ptr(s2 + off::kSession_User);
+1213:        const auto idp = read_ptr(s2 + off::kSession_IdPtr);
+1216:                  user ? hex(read<uint32_t>(*user + off::kUser_Key)) : std::string("-"));
+1224:        const auto user = read_ptr(*session + off::kSession_User);
+1226:        const auto key = pj ? read<uint32_t>(*pj + off::kServerActor_Key) : std::nullopt;
+1246:    // The server's world time (FieldTime, exe+0x6A6D238): user 2's MoveField and
+1249:    if (game::safe_read(g_base + 0x6A6D238, ft, sizeof ft)) {
+1273:    return s2 && peek(g_base + off::kServerNetSlot, net) && peek(net + off::kServerNet_Session, s1) &&
+1279:    return peek(g_base + off::kServerNetSlot, net) && peek(net + off::kServerNet_Session, s1) &&
+1312:// buffer as ClientNet::PostPacket 0x35C670 does and pushes it to Q0 with the
+1313:// same 0x35DF50 the native forwarder (0x14380B0) calls on this thread. The
+1315:// (0x35BB7B-0x35BBE6). An exception is noted (code, address, step) and stops
+1322:    if (!game_alloc(off::kPbSize, mem, opcode, epoch)) return false;
+1324:    const auto flen = static_cast<uint16_t>(len + off::kFrameOverhead);
+1327:        std::memset(mem, 0, off::kFrameHeader + len + (off::kFrameOverhead - off::kFrameHeader));
+1330:        std::memcpy(reinterpret_cast<void*>(pb + off::kFrameHeader), pkt, len);
+1331:        std::memset(reinterpret_cast<void*>(pb + off::kPb_FramePtr), 0, off::kPbSize - off::kPb_FramePtr);
+1332:        *reinterpret_cast<uintptr_t*>(pb + off::kPb_FramePtr) = pb;
+1333:        *reinterpret_cast<uint16_t*>(pb + off::kPb_Len1) = flen;
+1334:        *reinterpret_cast<uint16_t*>(pb + off::kPb_Len2) = flen;
+1335:        *reinterpret_cast<uint16_t*>(pb + off::kPb_Cap) = flen;
+1336:        *reinterpret_cast<uint8_t*>(pb + off::kPb_IsRequest) = 0;
+1337:        *reinterpret_cast<uint32_t*>(pb + off::kPb_Tag) = tag;
+1338:        *reinterpret_cast<uint64_t*>(pb + off::kPb_Magic) = kMagic;
+1339:        *reinterpret_cast<uint64_t*>(pb + 0x8020) = 0x7FFFFFFFFFFFFFFFull;
+1340:        *reinterpret_cast<uintptr_t*>(pb + off::kPb_Base) = pb;
+1341:        const uintptr_t q0 = *reinterpret_cast<uintptr_t*>(server_net + off::kServerNet_InQueue);
+1360:    // Only the client of the current game (r15 = ClientNet at 0x35BAD4) and a live server.
+1361:    if (!peek(g_base + off::kClientNetSlot, cn) || cn != client_net) {
+1365:    if (!peek(g_base + off::kServerNetSlot, server_net) || !server_net) return;
+1422:// The mid-hook at 0x35BAD4 (NetworkThread, every turn, before the native
+1455:        // branch 0x2C17B88, docs/research/data/b2-login-pasos.md).
+1461:    // 7FFF...FFFF in its 3093 (0x65DB90, docs/research/pendientes/p8-titulo.md),
+1479:    if (!v || packet.size() + off::kFrameOverhead > 0x8000) {
+1543:    if (!peek(g_base + off::kServerNetSlot, server_net) || !server_net) {
+1865:    const auto sam = probe_ptr(g_base + off::kSamSlot);
+1883:    const auto key = probe<uint32_t>(host + off::kUser_Key);
+1904:        const auto u = probe<uintptr_t>(s + off::kSession_User);
+1911:            r.move_diag = vt && *vt == g_base + off::kServerUserActorVtable
+1919:    if (const auto sam = probe_ptr(g_base + off::kSamSlot)) {
+1979:    if (!peek(g_base + off::kServerNetSlot, net) || !net || !peek(net + off::kServerNet_Threads, arr) || !arr ||
+1980:        !peek(net + off::kServerNet_ThreadCount, n)) {
+1988:        if (!peek(arr + i * off::kServerThreadEntry, tid) || !peek(arr + i * off::kServerThreadEntry + 8, flag) ||

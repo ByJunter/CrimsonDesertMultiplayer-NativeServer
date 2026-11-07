@@ -419,6 +419,11 @@ public:
     // READY -> ACTIVE with epoch+1, for a connection newer than make_ready's.
     bool start_epoch(uint32_t link_epoch);
     bool may_start(uint32_t link_epoch) const { return state_ == GuestState::Ready && link_epoch > ready_link_; }
+    // A guest lost without a goodbye comes back on a newer connection, which breaks the link. A broken link drops all it
+    // receives, the new guest's identity first, and connected() needs that identity, so the start_epoch that would reset
+    // the link never runs: BROKEN for good (2026-11-05, build 3549, the first crash and rejoin between two PCs). In READY no
+    // conversation is left for the broken state to protect, so the link starts over. During the logout it stays as it is.
+    bool link_reset_due(bool link_broken) const { return state_ == GuestState::Ready && link_broken; }
     // P8 re-entry (rejoin_logic.h, s25/reentrada.md §3): READY -> ACTIVE with epoch+1 on the SAME transport connection,
     // asked for by the guest's REJOIN control frame (the reliable channel's order separates the conversations: what
     // the guest sent before its REJOIN was dropped while READY). Never on a connection older than make_ready's.

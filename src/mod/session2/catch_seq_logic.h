@@ -1,6 +1,7 @@
 #pragma once
 // P8 session 25, grabs (finishers and takedowns) by the OTHER player (docs/research/s25/finisher-sigilo.md §2.2, §4):
-// the pure logic of catch_seq.cpp, with no game access, so the tests can run it. Build 1.0.0.2976 only.
+// the pure logic of catch_seq.cpp, with no game access, so the tests can run it. Builds 1.0.0.2976 and 1.0.0.3527
+// (the addresses named below are 2976's; 3527's table follows them).
 //
 // The fault [V, S25 captures]: a grab is a catch frame event. The server answers both clients with
 // CatchActionResultAck 2156; the client that CONTROLS the victim applies it and launches the victim's paired action
@@ -75,7 +76,61 @@ inline constexpr uint8_t kCheckSiteBytes[] = {
 };
 inline constexpr size_t kCheckCmpAt = 0x935E8E - kCheckSite;  // the cmp inside kCheckSiteBytes
 
-// The chain the comparison reads (the same hops as 0x935E7E..0x935E8E).
+// ---------------------------------------------------------------- build 1.0.0.3527 [V capstone on the installed PE]
+// CatchActionResultAck vtable 0x5999BF8 slot 2 = handler 0xC64EB0, whose only such call is 0xC6554B `call 0xA241B0`
+// (20 arguments, the same frame: arg 3 [rbp-0x3C] the victim, arg 17 [rbp-0x50] the sixth u8, arg 20 [rbp+0x90] the
+// packet's last u8, parsed in the same order). 0xA241B0 has one caller, the same 25-byte head (kApplyHead) and the same
+// prologue, so [rbp+0xB7] / [rbp+0xCF] are still arguments 17 / 20; [rbp+0xCF] is read at 0xA24254 only. Only the rel32 of
+// the lock call differs in the check. Same chain and fields: 0xA2425E..0xA2426E, 0xA2427A..0xA24280, vf188 0x5AEEA0
+// (`[actor+0xC8] != 0` for 5) called with 5 at 0x226CEE4. Captures: StartActionAck +0x3C is still 0 (127 / 127 of player
+// characters in host_20261105-070654) while the Req's byte varies.
+inline constexpr uintptr_t kApply3527 = 0xA241B0;
+inline constexpr uintptr_t kApplyCall3527 = 0xC6554B;
+inline constexpr uint8_t kApplyCallBytes3527[5] = {0xE8, 0x60, 0xEC, 0xDB, 0xFF};
+inline constexpr uintptr_t kApplyReturn3527 = 0xC65550;
+inline constexpr uintptr_t kCheckSite3527 = 0xA24223;
+inline constexpr uint8_t kCheckSiteBytes3527[] = {
+    0x4C, 0x8B, 0xAD, 0xB7, 0x00, 0x00, 0x00,  // 0xA24223 mov r13,[rbp+0xB7]      (argument 17: &c8)
+    0x41, 0x80, 0x7D, 0x00, 0x00,              // 0xA2422A cmp byte [r13],0
+    0x0F, 0x84, 0x4D, 0x01, 0x00, 0x00,        // 0xA2422F jz 0xA24382               (c8 == 0: no check)
+    0x49, 0x8B, 0x47, 0x08,                    // 0xA24235 mov rax,[r15+8]
+    0x48, 0x8D, 0x50, 0x08,                    // 0xA24239 lea rdx,[rax+8]
+    0x48, 0x85, 0xC0,                          // 0xA2423D test rax,rax
+    0x48, 0x0F, 0x44, 0xD7,                    // 0xA24240 cmovz rdx,rdi
+    0x41, 0xB0, 0x01,                          // 0xA24244 mov r8b,1
+    0x48, 0x8B, 0x12,                          // 0xA24247 mov rdx,[rdx]
+    0x48, 0x8D, 0x4D, 0xAF,                    // 0xA2424A lea rcx,[rbp-0x51]
+    0xE8, 0xDD, 0xF6, 0x9B, 0xFF,              // 0xA2424E call 0x3E3930 (Actor_Lock of the grabber)
+    0x90,                                      // 0xA24253 nop
+    0x48, 0x8B, 0x85, 0xCF, 0x00, 0x00, 0x00,  // 0xA24254 mov rax,[rbp+0xCF]      (argument 20: &seq)
+    0x0F, 0xB6, 0x10,                          // 0xA2425B movzx edx,byte [rax]
+    0x49, 0x8B, 0x47, 0x08,                    // 0xA2425E mov rax,[r15+8]          grabber = [comp+8]
+    0x48, 0x8B, 0x48, 0x68,                    // 0xA24262 mov rcx,[rax+0x68]       its components
+    0x48, 0x8B, 0x41, 0x40,                    // 0xA24266 mov rax,[rcx+0x40]       CharacterControl (CC)
+    0x48, 0x8B, 0x48, 0x48,                    // 0xA2426A mov rcx,[rax+0x48]
+    0x38, 0x91, 0x93, 0x00, 0x00, 0x00,        // 0xA2426E cmp [rcx+0x93],dl
+    0x0F, 0x84, 0xC8, 0x00, 0x00, 0x00,        // 0xA24274 jz 0xA24342               (equal: the catch applies)
+};
+
+// ---------------------------------------------------------------- build 1.0.0.3576 (static, 2026-11-06; not yet run)
+// CatchActionResultAck vtable 0x5999BF8 -> 0x599BD10 (RTTI map), slot 2 = handler 0xC64EB0 -> 0xC652D0 (+0x420); its
+// call 0xC6554B -> 0xC6596B (new rel32) goes to 0xA241B0 -> 0xA24400 (+0x250), the only E8 caller of it in the code
+// section, with the same 25-byte head. The check 0xA24223 -> 0xA24473: only the lock call's rel32 differs (0x3E3930 ->
+// 0x3E3C10, +0x2E0); its two jz stay inside the function. Code section end 0x5597000.
+inline constexpr uintptr_t kApply3576 = 0xA24400;
+inline constexpr uintptr_t kApplyCall3576 = 0xC6596B;
+inline constexpr uint8_t kApplyCallBytes3576[5] = {0xE8, 0x90, 0xEA, 0xDB, 0xFF};  // 0xC6596B: call 0xA24400
+inline constexpr uintptr_t kApplyReturn3576 = 0xC65970;
+inline constexpr uintptr_t kCheckSite3576 = 0xA24473;
+inline constexpr uint8_t kCheckSiteBytes3576[] = {  // 0xA24473
+    0x4C, 0x8B, 0xAD, 0xB7, 0x00, 0x00, 0x00, 0x41, 0x80, 0x7D, 0x00, 0x00, 0x0F, 0x84, 0x4D, 0x01, 0x00, 0x00,
+    0x49, 0x8B, 0x47, 0x08, 0x48, 0x8D, 0x50, 0x08, 0x48, 0x85, 0xC0, 0x48, 0x0F, 0x44, 0xD7, 0x41, 0xB0, 0x01,
+    0x48, 0x8B, 0x12, 0x48, 0x8D, 0x4D, 0xAF, 0xE8, 0x6D, 0xF7, 0x9B, 0xFF, 0x90, 0x48, 0x8B, 0x85, 0xCF, 0x00,
+    0x00, 0x00, 0x0F, 0xB6, 0x10, 0x49, 0x8B, 0x47, 0x08, 0x48, 0x8B, 0x48, 0x68, 0x48, 0x8B, 0x41, 0x40, 0x48,
+    0x8B, 0x48, 0x48, 0x38, 0x91, 0x93, 0x00, 0x00, 0x00, 0x0F, 0x84, 0xC8, 0x00, 0x00, 0x00};
+static_assert(sizeof kCheckSiteBytes3576 == sizeof kCheckSiteBytes3527);
+
+// The chain the comparison reads (the same hops as 0x935E7E..0x935E8E; the same in 3527).
 inline constexpr uint32_t kComp_Owner = 0x08;      // ClientCatchActorComponent -> its actor (the grabber)
 inline constexpr uint32_t kActor_Comps = 0x68;     // actor -> component table
 inline constexpr uint32_t kComps_Control = 0x40;   // -> ClientCharacterControlActorComponent (CC)

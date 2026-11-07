@@ -18,7 +18,7 @@
 //          final save's SAVE_RESULT (15 s at most; at once when the server's 3016 says it failed) when the host says
 //          the own save is
 //          active.
-// Never a write inside the game's save folder: tools/scripts/aplicar-progreso-invitado.ps1 applies a generation with
+// Never a write inside the game's save folder: tools/scripts/apply-guest-progress.ps1 applies a generation with
 // the game closed.
 
 #include <cstdint>

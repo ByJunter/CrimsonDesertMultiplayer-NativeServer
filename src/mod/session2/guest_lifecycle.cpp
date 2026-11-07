@@ -82,11 +82,12 @@ std::optional<bool> sam_user_listed(uintptr_t sam, uint32_t key) {
 }
 
 bool read_field(uintptr_t field, FieldSnap& out) {
+    const auto& layout = runtime_field_layout();
     const auto open = read<uint8_t>(field + fld::kOpen);
     const auto owner = read<uint32_t>(field + fld::kOwner);
-    const auto users = read<uint32_t>(field + fld::kUserCount);
-    const auto actors = read<uint32_t>(field + fld::kUserActors);
-    const auto gen = read<uint32_t>(field + fld::kKey);
+    const auto users = read<uint32_t>(field + layout.user_count);
+    const auto actors = read<uint32_t>(field + layout.user_actors);
+    const auto gen = read<uint32_t>(field + layout.key);
     if (!field || !open || !owner || !users || !actors || !gen) return false;
     out.field = field;
     out.open = *open;
@@ -98,10 +99,11 @@ bool read_field(uintptr_t field, FieldSnap& out) {
 }
 
 std::optional<bool> field_lists_user(uintptr_t field, uintptr_t user) {
-    const auto count = read<uint32_t>(field + fld::kUserCount);
+    const auto& layout = runtime_field_layout();
+    const auto count = read<uint32_t>(field + layout.user_count);
     if (!count || *count > 64) return std::nullopt;
     if (*count == 0) return false;
-    const auto data = read_ptr(field + fld::kUsers);
+    const auto data = read_ptr(field + layout.users);
     if (!data) return std::nullopt;
     std::vector<FieldUserEntry> entries(*count);
     if (!probe_read(*data, entries.data(), entries.size() * sizeof(FieldUserEntry))) return std::nullopt;
@@ -112,10 +114,11 @@ std::optional<bool> field_lists_user(uintptr_t field, uintptr_t user) {
 }
 
 std::optional<uint64_t> field_listed_actors(uintptr_t field) {
-    const auto count = read<uint32_t>(field + fld::kUserCount);
+    const auto& layout = runtime_field_layout();
+    const auto count = read<uint32_t>(field + layout.user_count);
     if (!count || *count > 64) return std::nullopt;
     if (*count == 0) return 0;
-    const auto data = read_ptr(field + fld::kUsers);
+    const auto data = read_ptr(field + layout.users);
     if (!data) return std::nullopt;
     std::vector<FieldUserEntry> entries(*count);
     if (!probe_read(*data, entries.data(), entries.size() * sizeof(FieldUserEntry))) return std::nullopt;
@@ -125,12 +128,13 @@ std::optional<uint64_t> field_listed_actors(uintptr_t field) {
 }
 
 std::optional<FieldListScan> scan_field_list(uintptr_t field, uintptr_t departed, uintptr_t host_user) {
-    const auto count = read<uint32_t>(field + fld::kUserCount);
+    const auto& layout = runtime_field_layout();
+    const auto count = read<uint32_t>(field + layout.user_count);
     if (!count || *count > 64) return std::nullopt;
     FieldListScan s;
     s.entries = *count;
     if (*count == 0) return s;
-    const auto data = read_ptr(field + fld::kUsers);
+    const auto data = read_ptr(field + layout.users);
     if (!data) return std::nullopt;
     std::vector<FieldUserEntry> entries(*count);
     if (!probe_read(*data, entries.data(), entries.size() * sizeof(FieldUserEntry))) return std::nullopt;
@@ -148,8 +152,10 @@ std::optional<FieldListScan> scan_field_list(uintptr_t field, uintptr_t departed
 
 std::string MoveDiag::describe() const {
     auto u16 = [](bool ok, uint16_t v) { return ok ? std::format("0x{:X}", v) : std::string("?"); };
-    return std::format("user +0x5E {} | character +0x5E {} | FM+0x58 {} FM+0x5A {} | TS+0x3DC {}",
-                       u16(user_ok, user_state), u16(pj_ok, pj_state), u16(fm_ok, fm_moving), u16(fm_ok, fm_busy),
+    const auto& layout = runtime_field_layout();
+    return std::format("user +0x5E {} | character +0x5E {} | FM+0x{:X} {} FM+0x{:X} {} | TS+0x3DC {}",
+                       u16(user_ok, user_state), u16(pj_ok, pj_state), layout.fm_moving, u16(fm_ok, fm_moving),
+                       layout.fm_busy, u16(fm_ok, fm_busy),
                        u16(ts_ok, ts_moving));
 }
 
@@ -169,12 +175,15 @@ MoveDiag read_move_diag(uintptr_t user) {
     const auto comps = read_ptr(*pj + c4::kActorComponents);
     const auto ts = comps && *comps ? read_ptr(*comps + c4::kComponentsTransformSync) : std::nullopt;
     if (!ts || !*ts) return d;
-    if (const auto m = read<uint8_t>(*ts + c4::kTsMoving)) {
-        d.ts_ok = true;
-        d.ts_moving = *m;
+    const auto& layout = runtime_field_layout();
+    if (layout.ts_moving_verified) {
+        if (const auto m = read<uint8_t>(*ts + c4::kTsMoving)) {
+            d.ts_ok = true;
+            d.ts_moving = *m;
+        }
     }
-    const auto moving = read<uint8_t>(*ts + fld::kTsFieldMover + c4::kFmMoving);
-    const auto busy = read<uint16_t>(*ts + fld::kTsFieldMover + fld::kFmBusy);
+    const auto moving = read<uint8_t>(*ts + layout.ts_field_mover + layout.fm_moving);
+    const auto busy = read<uint16_t>(*ts + layout.ts_field_mover + layout.fm_busy);
     if (moving && busy) {
         d.fm_ok = true;
         d.fm_moving = *moving;

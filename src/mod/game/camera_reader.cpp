@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "common/math3d.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 
@@ -43,9 +44,8 @@ bool axes_from_view(const float m[16], const Vec3& forward, Vec3& right, Vec3& u
 
 bool CameraReader::init() {
     base_ = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base_);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base_ + dos->e_lfanew);
-    enabled_ = base_ == off::kImageBase && nt->FileHeader.TimeDateStamp == off::kPeTimestamp;
+    profile_ = reader_profile();
+    enabled_ = profile_ != nullptr;
     if (!enabled_) last_failure_ = "unsupported game build";
     return enabled_;
 }
@@ -57,9 +57,9 @@ std::nullopt_t CameraReader::fail(const char* why) {
 
 std::optional<CameraData> CameraReader::read() {
     if (!enabled_) return fail("unsupported game build");
-    auto camera = read_ptr(base_ + off::kCameraSlot);
-    if (!camera || !has_vtable(*camera, base_ + off::kVtCamera)) return fail("no camera");
-    auto block = read_ptr(*camera + off::kCamera_Block);
+    auto camera = read_ptr(base_ + profile_->camera_slot);
+    if (!camera || !has_vtable(*camera, base_ + profile_->vt_camera)) return fail("no camera");
+    auto block = read_ptr(*camera + profile_->camera_block);
     if (!block) return fail("no camera block");
     auto sentinel = game::read<float>(*block + off::kCameraBlock_Sentinel);
     if (!sentinel || *sentinel != off::kCameraBlockSentinelValue) return fail("camera block sentinel mismatch");

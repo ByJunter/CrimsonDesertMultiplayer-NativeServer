@@ -1,0 +1,45 @@
+
+=== B747F5C: 0xB747F5C range={'begin': 192184156, 'end': 192184288, 'unwind': 108355516, 'offset': 0} section=.text ===
+0B747F5C 48895c2410               mov      qword ptr [rsp + 0x10], rbx
+0B747F61 48897c2418               mov      qword ptr [rsp + 0x18], rdi
+0B747F66 488b3d83019efb           mov      rdi, qword ptr [rip - 0x461fe7d]
+0B747F6D 0f1f00                   nop      dword ptr [rax]
+0B747F70 418b1a                   mov      ebx, dword ptr [r10]
+0B747F73 83fb02                   cmp      ebx, 2
+0B747F76 7608                     jbe      0xb747f80
+0B747F78 8d439c                   lea      eax, [rbx - 0x64]
+0B747F7B 83f808                   cmp      eax, 8
+0B747F7E 774d                     ja       0xb747fcd
+0B747F80 4d8b4268                 mov      r8, qword ptr [r10 + 0x68]
+0B747F84 418b4270                 mov      eax, dword ptr [r10 + 0x70]
+0B747F88 4d8d1c80                 lea      r11, [r8 + rax*4]
+0B747F8C 4d39d8                   cmp      r8, r11
+0B747F8F 742e                     je       0xb747fbf
+0B747F91 418b10                   mov      edx, dword ptr [r8]
+0B747F94 31c9                     xor      ecx, ecx
+0B747F96 4585c9                   test     r9d, r9d
+0B747F99 7432                     je       0xb747fcd
+0B747F9B 4889f8                   mov      rax, rdi
+0B747F9E 6690                     nop      
+0B747FA0 3b10                     cmp      edx, dword ptr [rax]
+0B747FA2 740d                     je       0xb747fb1
+0B747FA4 ffc1                     inc      ecx
+0B747FA6 4883c004                 add      rax, 4
+0B747FAA 4439c9                   cmp      ecx, r9d
+0B747FAD 72f1                     jb       0xb747fa0
+0B747FAF eb1c                     jmp      0xb747fcd
+0B747FB1 83f9ff                   cmp      ecx, -1
+0B747FB4 7417                     je       0xb747fcd
+0B747FB6 4983c004                 add      r8, 4
+0B747FBA 4d39d8                   cmp      r8, r11
+0B747FBD 75d2                     jne      0xb747f91
+0B747FBF 498b4208                 mov      rax, qword ptr [r10 + 8]
+0B747FC3 4839c5                   cmp      rbp, rax
+0B747FC6 7d05                     jge      0xb747fcd
+0B747FC8 4889c5                   mov      rbp, rax
+0B747FCB 89de                     mov      esi, ebx
+0B747FCD 4983c278                 add      r10, 0x78
+0B747FD1 4d39f2                   cmp      r10, r14
+0B747FD4 759a                     jne      0xb747f70
+0B747FD6 488b7c2418               mov      rdi, qword ptr [rsp + 0x18]
+0B747FDB 488b5c2410               mov      rbx, qword ptr [rsp + 0x10]

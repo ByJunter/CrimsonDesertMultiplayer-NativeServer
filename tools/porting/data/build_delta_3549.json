@@ -1,0 +1,146 @@
+{
+  "file_size": 327116696,
+  "sha256": "25f24e06a1f886e9310fd290f9462f66b480a5e7763d1fe156bfddaa8d1992b9",
+  "timestamp": "0x6aeb7d59",
+  "size_of_image": "0x13cff000",
+  "real_code": [
+    ".xtext",
+    "0x1000",
+    "0x5594000"
+  ],
+  "rwx": [
+    ".xpdata",
+    "0x7a41000",
+    "0xbe1fa00"
+  ],
+  "functions": 248726,
+  "vtables": {
+    "compared": 15717,
+    "same_address": 15717,
+    "classes_only_in_3527": 21
+  },
+  "listing_instructions": {
+    "real different": 18,
+    "real same": 19879,
+    "real_bytes different": 90,
+    "real_bytes same": 78193,
+    "rwx different": 1301,
+    "rwx_bytes different": 4955
+  },
+  "real_code_differences": [
+    "0x946330 e9 cb 68 bb 08 -> e9 2b 13 b7 08 (character_post_3527.txt)",
+    "0x2d9fc60 e9 1b 94 88 0b -> e9 fb a9 7c 0b (child_hold_dependencies_3527.txt)",
+    "0x2d9f420 e9 db 5c 88 0b -> e9 db 6d 7c 0b (child_hold_dependencies_3527.txt)",
+    "0x230d130 e9 bb a8 89 0a -> e9 7b c3 83 0a (identity_fields_3527.txt)",
+    "0x1928790 e9 eb f7 b8 09 -> e9 ab 0e c5 09 (payload_actor_fields_3527.txt)",
+    "0x1815120 e9 1b a0 a6 09 -> e9 4b 5d b0 09 (payload_actor_tail_components_3527.txt)",
+    "0x1491240 e9 0b d7 58 09 -> e9 fb 1b 5c 09 (payload_actor_tail_helpers_3527.txt)",
+    "0x172cfa0 e9 3b 55 91 09 -> e9 7b 7c a0 09 (payload_actor_tail_helpers_3527.txt)",
+    "0xde8e60 e9 ab 92 28 09 -> e9 eb df 25 09 (payload_handlers_3527.txt)",
+    "0x22270d0 e9 3b 8e 6a 0a -> e9 1b 7a 66 0a (payload_load_components_3527.txt)",
+    "0x2c47710 e9 5b 40 89 0b -> e9 6b 00 7f 0b (payload_login_tail_3527.txt)",
+    "0x2c06820 e9 eb 8e 8c 0b -> e9 4b b5 81 0b (payload_login_tail_3527.txt)",
+    "0x2c3f060 e9 cb 5f 89 0b -> e9 db 85 7e 0b (payload_login_tail_3527.txt)",
+    "0x1602780 e9 ab bf 5f 09 -> e9 7b 5b 6f 09 (payload_record_3527.txt)",
+    "0x1602920 e9 9b dc 5f 09 -> e9 1b 68 6f 09 (payload_record_3527.txt)",
+    "0x2bafa40 e9 bb 40 8d 0b -> e9 db 7e 81 0b (status_load_3527.txt)",
+    "0x19b2e80 e9 9b 50 d9 09 -> e9 bb 08 e4 09 (title_play_3527.txt)",
+    "0x19b2080 e9 3b 29 d9 09 -> e9 1b 00 e4 09 (title_refresh_3527.txt)"
+  ],
+  "thunks": {
+    "GetOrCreate": {
+      "at": "0x2548e40",
+      "bytes": "e9 4b 2c df 0a",
+      "target": "0xd33ba90",
+      "target_3527": "0xd43ed30"
+    },
+    "SaveMgr refresh": {
+      "at": "0x19b2080",
+      "bytes": "e9 1b 00 e4 09",
+      "target": "0xb7f20a0",
+      "target_3527": "0xb7449c0"
+    },
+    "owner user stub": {
+      "at": "0x22a2880",
+      "bytes": "e9 5b 44 75 0a",
+      "target": "0xc9f6ce0",
+      "target_3527": "0xca26a10"
+    },
+    "ClientVehicle vf53": {
+      "at": "0xb4d8d0",
+      "bytes": "e9 7b 20 d5 08",
+      "target": "0x989f950",
+      "target_3527": "0x997a230"
+    },
+    "CommonVehicle RideOff": {
+      "at": "0x23fdcc0",
+      "bytes": "e9 5b 2a 94 0a",
+      "target": "0xcd40720",
+      "target_3527": "0xcd8d560"
+    },
+    "CameraSelector": {
+      "at": "0x37a0620",
+      "bytes": "e9 cb 11 d1 0c",
+      "target": "0x104b17f0",
+      "target_3527": "0x1068deb0"
+    },
+    "stage processor ctor": {
+      "at": "0x695740",
+      "bytes": "e9 9b 55 72 08",
+      "target": "0x8dbace0",
+      "target_3527": "0x8df2f60"
+    },
+    "stage processor dtor thunk": {
+      "at": "0x6959b0",
+      "bytes": "e9 8b 6f 72 08",
+      "target": "0x8dbc940",
+      "target_3527": "0x8df4480"
+    },
+    "stage processor dtor": {
+      "at": "0x695a10",
+      "bytes": "e9 8b 80 72 08",
+      "target": "0x8dbdaa0",
+      "target_3527": "0x8df44e0"
+    },
+    "manager bind": {
+      "at": "0xb9fd80",
+      "bytes": "e9 3b b0 e1 08",
+      "target": "0x99badc0",
+      "target_3527": "0x9a7f860"
+    },
+    "2215 challenge discover": {
+      "at": "0x2cd6910",
+      "bytes": "e9 db 64 77 0b",
+      "target": "0xe44cdf0",
+      "target_3527": "0xe4fff10"
+    }
+  },
+  "rwx_callers": {
+    "LoadSlot": [
+      {
+        "call": "0xe3ccacf",
+        "ret": "0xe3ccad4",
+        "function": "0xe3cc9d0"
+      }
+    ],
+    "SavePlayerToSlot": [
+      {
+        "call": "0xb7f1385",
+        "ret": "0xb7f138a",
+        "function": "0xb7f1180"
+      },
+      {
+        "call": "0xe37c231",
+        "ret": "0xe37c236",
+        "function": "0xe37c170"
+      }
+    ],
+    "FlushPendingSaveData": [
+      {
+        "call": "0xe6fc3c8",
+        "ret": "0xe6fc3cd",
+        "function": "0xe6fc370"
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "status": "fail",
+  "captured_utc": "2026-11-04T19:39:12.105133+00:00",
+  "access": "PROCESS_VM_READ only",
+  "build": "1.0.0.3527",
+  "host_pid": 54928,
+  "guest_pid": 52160,
+  "requested_samples": 3,
+  "sample_interval_seconds": 1.0,
+  "identities": {},
+  "samples": [],
+  "proof": null,
+  "errors": [
+    "unreadable 0x140000000+0x40"
+  ]
+}

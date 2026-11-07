@@ -1,0 +1,68 @@
+{
+  "timestamp": "0x6aea07a6",
+  "layer_chart_offset": "0x118",
+  "mappings": [
+    {
+      "name": "layer",
+      "old": "0x1f63f70",
+      "new": "0x214ec90",
+      "head": "48 8b c4 57 48 81 ec 80 00 00 00 c5 f8 29 78 d8 c5 78 29 50 a8 c5 c0 57 ff c5 f8 2f fb c5 78 29"
+    },
+    {
+      "name": "layers",
+      "old": "0x2329700",
+      "new": "0x2519e50",
+      "head": "48 8b c4 41 55 41 56 48 83 ec 68 c5 f8 29 70 c8 48 89 58 08 4c 8b f1 48 89 78 e8 32 db 4c 89 60"
+    },
+    {
+      "name": "update",
+      "old": "0x85fba0",
+      "new": "0x944e70",
+      "head": "48 89 5c 24 10 55 56 57 41 54 41 55 41 56 41 57 48 8b ec 48 83 ec 60 c5 f8 29 74 24 50 41 0f b6"
+    },
+    {
+      "name": "post",
+      "old": "0x860d30",
+      "new": "0x946060",
+      "head": "48 89 5c 24 10 48 89 6c 24 18 56 57 41 56 48 83 ec 70 c5 f8 29 74 24 60 c5 f8 29 7c 24 50 48 8b"
+    },
+    {
+      "name": "restore",
+      "old": "0x8646d0",
+      "new": "0x949b40",
+      "head": "48 8b c4 48 89 58 20 48 89 50 10 55 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 a0 48 81 ec 60 01"
+    },
+    {
+      "name": "pending",
+      "old": "0x2329d70",
+      "new": "0x251a650",
+      "head": "48 89 5c 24 10 48 89 6c 24 18 48 89 74 24 20 57 48 81 ec 20 01 00 00 48 8b f9 48 8b 49 08 48 8b"
+    }
+  ],
+  "runtime_validation": {
+    "pid": 56116,
+    "head_matches": {
+      "layer": true,
+      "layers": true,
+      "update": true,
+      "post": true,
+      "restore": true,
+      "pending": true
+    },
+    "local_layers": [
+      {
+        "0x10": "0x568a22c8488",
+        "0x18": "0x568a39dff80",
+        "0x110": "0x3f8000003f800000",
+        "0x118": "0x568a1f0da20"
+      },
+      {
+        "0x10": "0x5689d8a92d3",
+        "0x18": "0x5689d69cc00",
+        "0x110": "0x3f8000003f800000",
+        "0x118": "0x5689d4078a0"
+      }
+    ],
+    "access": "PROCESS_VM_READ only"
+  }
+}

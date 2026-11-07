@@ -5,8 +5,9 @@
 //
 // A Troc packet is what the game's packet functions handle:
 //   u16 opcode | i8 slot | u16 payload_len | payload[payload_len]
-// (troc-sintesis.md). Opcodes change between game builds: they travel as
-// they are, both PCs must run the same build.
+// (troc-sintesis.md). The mod carries logical 2976 opcode IDs, translated only
+// at native boundaries (native_opcode.h). Payloads remain native; both PCs
+// must run the same build and mapping, verified by TrocLink's identity handshake.
 //
 // Packets travel in batches, one batch per reliable message
 // (proto::RelKind::TrocFrame), so delivery is ordered and exactly once, and
@@ -96,6 +97,8 @@ inline constexpr uint8_t kControlEpoch = 14;
 // P8 session 25, the guest's own save (phase B, session2/guest_save_wire.h): states 6 SAVE_OFFER, 7 SAVE_CHUNK,
 // 8 SAVE_ACK, 9 SAVE_RESULT, 10 SAVE_STATUS, 11 SAVE_RESULT_ACK, in both directions as that header says. A peer that
 // does not know them ignores them (guest) or drops them as no server Req (host).
+// Which character a player controls (session2/focus_follow_logic.h): state 16 travels BOTH ways, u8 16 | u8 version |
+// u16 0 | u32 focus | u32 main. Exactly that 12-byte form is taken out; an older peer ignores it or drops it.
 // P8 session 29, the tree bend (session2/tree_bend_logic.h): state 15 travels BOTH ways, u8 15 | u8 version | 50 bytes
 // (57-byte frame), the thrower's own SetBend values. Exactly that form is taken out; an older peer ignores it (guest)
 // or drops it as no server Req (host).

@@ -10,10 +10,12 @@
 #include <mutex>
 
 #include "common/troc_frame.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/identity_probe.h"
 #include "mod/session2/offsets_s2.h"
+#include "mod/session2/profile_s2.h"
 #include "mod/session2/server.h"
 
 namespace cdmp::session2 {
@@ -150,21 +152,29 @@ const char* status_edit_name(StatusEdit e) {
     return "?";
 }
 
-StatusEdit status_normalise(uintptr_t actor, uintptr_t status_vtable, uint64_t assigned, uint64_t& before) {
+StatusEdit status_normalise_at(uintptr_t actor, uintptr_t status_vtable, uint64_t assigned, uint64_t& before,
+                               uint32_t status_number_offset) {
     before = 0;
     if (!identity_number_allowed(assigned)) return StatusEdit::NotAllowed;
+    if (status_number_offset != idf::kStatusNumber && status_number_offset != idf::kStatusNumber3527) {
+        return StatusEdit::Unreadable;
+    }
     const uintptr_t table = peekp(actor + idf::kUserComponents);
     const uintptr_t status = table ? peekp(table + idf::kTableStatus) : 0;
     if (!actor || !status || peekp(status + idf::kStatusActor) != actor) return StatusEdit::Unreadable;
     if (status_vtable && peekp(status) != status_vtable) return StatusEdit::Unreadable;
-    // Status+0x70 is a POINTER to the u64 (0x178F1D0 allocates it; 0x17908C0 packs **).
-    const uintptr_t p = peekp(status + idf::kStatusNumber);
+    // This is a POINTER to the u64. It is +0x70 in 2976 and +0x90 in 3527.
+    const uintptr_t p = peekp(status + status_number_offset);
     if (!p || !peek(p, before)) return StatusEdit::Unreadable;
     if (before == assigned) return StatusEdit::Already;
     if (before != idf::kNative) return StatusEdit::NotNative;
     uint64_t back = 0;
     if (!guarded_store64(p, assigned) || !peek(p, back) || back != assigned) return StatusEdit::Unreadable;
     return StatusEdit::Written;
+}
+
+StatusEdit status_normalise(uintptr_t actor, uintptr_t status_vtable, uint64_t assigned, uint64_t& before) {
+    return status_normalise_at(actor, status_vtable, assigned, before, identity_status_number_offset());
 }
 
 bool identity_invariant(std::optional<uint64_t> lobby, std::optional<uint64_t> status, uint64_t assigned,
@@ -193,10 +203,10 @@ std::optional<uint32_t> actors_with_number(uintptr_t data, uint32_t count, uint6
     uint32_t n = 0;
     for (const uintptr_t a : actors) {
         if (!a || a == except) continue;
-        // As 0x2A84093..0x2A840A9: [[a+0x68]+0x20] = Status (none: no number), *[Status+0x70].
+        // [[a+0x68]+0x20] = Status (none: no number), then the build's number pointer.
         const uintptr_t table = peekp(a + idf::kUserComponents);
         const uintptr_t status = table ? peekp(table + idf::kTableStatus) : 0;
-        const uintptr_t p = status ? peekp(status + idf::kStatusNumber) : 0;
+        const uintptr_t p = status ? peekp(status + identity_status_number_offset()) : 0;
         uint64_t v = 0;
         if (p && peek(p, v) && v == number) ++n;
     }
@@ -239,11 +249,81 @@ constexpr uint8_t kFindByNoScanBytes[] = {0x48, 0x8B, 0x8D, 0xB8, 0x00, 0x00, 0x
                                           0x00, 0x48, 0x8D, 0x14, 0xC1};
 constexpr uintptr_t kFindByNoRead = 0x2A84090;
 constexpr uint8_t kFindByNoReadBytes[] = {0x4C, 0x8B, 0x31, 0x49, 0x8B, 0x46, 0x68, 0x48, 0x8B, 0x40, 0x20};
+// Build 1.0.0.3527. The entries come from named RTTI vtables; the inner
+// checks retain the same constant/add-entry/3093-list semantics.
+constexpr uintptr_t kLobbyLoad3527 = 0x2E1F600;
+constexpr uint8_t kLobbyLoad3527Head[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55, 0x56, 0x57,
+    0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0xF0,
+    0xFD, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0x10, 0x03, 0x00, 0x00, 0x4C, 0x8B, 0xE2};
+constexpr uintptr_t kLobbyVtable3527 = 0x5EF3450;
+constexpr uintptr_t kLobbyConstant3527 = 0x2E1FA1B;
+constexpr uint8_t kLobbyConstant3527Bytes[] = {
+    0x48, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0x48, 0x89, 0x45, 0xC0};
+constexpr uintptr_t kLobbyAddCall3527 = 0x2E1FA7B;
+constexpr uint8_t kLobbyAddCall3527Bytes[] = {0xE8, 0xB0, 0xD6, 0x4E, 0xFF};
+constexpr uintptr_t kClearLobbySite3527 = 0x2EE1E62;
+constexpr uintptr_t kClearListSite3527 = 0x2EE1E89;
+constexpr uintptr_t kStatusVtable3527 = 0x5EE7610;
+constexpr uintptr_t kStatusLoad3527 = 0x2BAFA40;
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). The lobby load and its two inner sites moved by +0xC70 with the
+// 3527 bytes (LoadSaveData 0x2E1F600 -> 0x2E20270, constant 0x2E1FA1B -> 0x2E2068B); the add-entry call 0x2E1FA7B ->
+// 0x2E206EB has a new rel32 (its target 0x230D130 -> 0x230DE80 is still the thunk of the .tls$ add-entry: the same
+// [comp+0x18] list, stride 0xD0, number at +0, at 0xCB4B010). The 3093's sites 0x2EE1E62 / 0x2EE1E89 -> 0x2EE2AD2 /
+// 0x2EE2AF9 (+0xC70, same bytes). Vtables by RTTI (vtable_map_3549_3576.json): lobby 0x5EF3450 -> 0x5EF5638 (slot
+// +0x50 = 0x2E20270), Status 0x5EE7610 -> 0x5EE9828 (slot +0x50 = 0x2BB06B0, the old 0x2BAFA40 + 0xC70, a thunk
+// whose .tls$ body 0xE390C80 still writes the constant through [Status+0x90] at 0xE390CCE). Server realm: TLS +0x1EB,
+// set at 0x29ABB86 (3527 0x29AAF36 + 0xC50, same bytes).
+constexpr uintptr_t kLobbyLoad3576 = 0x2E20270;
+constexpr uintptr_t kLobbyVtable3576 = 0x5EF5638;
+constexpr uintptr_t kLobbyConstant3576 = 0x2E2068B;
+constexpr uintptr_t kLobbyAddCall3576 = 0x2E206EB;
+constexpr uint8_t kLobbyAddCall3576Bytes[] = {0xE8, 0x90, 0xD7, 0x4E, 0xFF};  // 0x2E206EB: call 0x230DE80
+constexpr uintptr_t kClearLobbySite3576 = 0x2EE2AD2;
+constexpr uintptr_t kClearListSite3576 = 0x2EE2AF9;
+constexpr uintptr_t kStatusVtable3576 = 0x5EE9828;
+constexpr uintptr_t kStatusLoad3576 = 0x2BB06B0;
 constexpr uint32_t kLoginMgrActors = 0xB8;
 constexpr uint32_t kLoginMgrCount = 0xC0;
 constexpr uint16_t kOpLoginUser = 2490;
 constexpr uint16_t kOpLoginCharacter = 3093;
 constexpr uint64_t kMaxLogged = 48, kMaxRefusalsLogged = 8;
+
+struct IdentityProfile {
+    uintptr_t lobby_load, lobby_vtable, lobby_constant, lobby_add_call;
+    uintptr_t clear_lobby, clear_list, status_vtable, status_load;
+    uintptr_t login_mgr_site, login_mgr_slot, find_scan, find_read;
+    const uint8_t* lobby_head; size_t lobby_head_size;
+    const uint8_t* constant_bytes; size_t constant_size;
+    const uint8_t* add_call_bytes; size_t add_call_size;
+    uint32_t server_tls_flag;
+};
+
+const IdentityProfile* identity_profile() noexcept {
+    static constexpr IdentityProfile old{
+        kLobbyLoad, kLobbyVtable, kLobbyConstant, kLobbyAddCall, kClearLobbySite, kClearListSite,
+        kStatusVtable, kStatusLoad, kLoginMgrSite, kLoginMgrSlot, kFindByNoScan, kFindByNoRead,
+        kLobbyLoadHead, sizeof kLobbyLoadHead, kLobbyConstantBytes, sizeof kLobbyConstantBytes,
+        kLobbyAddCallBytes, sizeof kLobbyAddCallBytes, 0x1EC};
+    static constexpr IdentityProfile current{
+        kLobbyLoad3527, kLobbyVtable3527, kLobbyConstant3527, kLobbyAddCall3527,
+        kClearLobbySite3527, kClearListSite3527, kStatusVtable3527, kStatusLoad3527,
+        0, 0, 0, 0, kLobbyLoad3527Head, sizeof kLobbyLoad3527Head,
+        kLobbyConstant3527Bytes, sizeof kLobbyConstant3527Bytes,
+        kLobbyAddCall3527Bytes, sizeof kLobbyAddCall3527Bytes, 0x1EB};
+    static constexpr IdentityProfile current3576{
+        kLobbyLoad3576, kLobbyVtable3576, kLobbyConstant3576, kLobbyAddCall3576,
+        kClearLobbySite3576, kClearListSite3576, kStatusVtable3576, kStatusLoad3576,
+        0, 0, 0, 0, kLobbyLoad3527Head, sizeof kLobbyLoad3527Head,
+        kLobbyConstant3527Bytes, sizeof kLobbyConstant3527Bytes,
+        kLobbyAddCall3576Bytes, sizeof kLobbyAddCall3576Bytes, 0x1EB};
+    switch (game::current_build()) {
+        case game::Build::v2976: return &old;
+        case game::Build::v3527: return &current;
+        case game::Build::v3576: return &current3576;
+        default: return nullptr;
+    }
+}
 
 uintptr_t g_base = 0;
 SafetyHookInline g_lobby;
@@ -297,7 +377,8 @@ Whose whose(uintptr_t owner, uintptr_t& user2) {
     if (server_user2(user2) && owner == user2) return Whose::User2;
     uintptr_t host = 0;
     if (server_host_user(host) && owner == host) return Whose::Host;
-    if (peekp(owner) != g_base + off::kServerUserActorVtable) return Whose::Nobody;
+    const uintptr_t user_vtable = profile::rva(off::kServerUserActorVtable);
+    if (!user_vtable || peekp(owner) != g_base + user_vtable) return Whose::Nobody;
     return host ? Whose::Stranger : Whose::Nobody;  // host unknown: no guest can be in yet
 }
 
@@ -309,15 +390,18 @@ bool on_server_thread() {
     const uintptr_t tls_array = static_cast<uintptr_t>(__readgsqword(0x58));
     uintptr_t block = 0;
     uint8_t flag = 0;
-    return game::safe_read(tls_array, &block, sizeof block) && block &&
-           game::safe_read(block + 0x1EC, &flag, sizeof flag) && flag != 0;
+    const auto* p = identity_profile();
+    return p && game::safe_read(tls_array, &block, sizeof block) && block &&
+           game::safe_read(block + p->server_tls_flag, &flag, sizeof flag) && flag != 0;
 }
 
 // Read only, unlocked (no game call may take the manager's lock): a stale
 // entry only fails its safe reads. nullopt = not checked.
 std::optional<uint32_t> number_in_use(uintptr_t except) {
     if (!g_unique_on.load()) return std::nullopt;
-    const uintptr_t holder = peekp(g_base + kLoginMgrSlot);
+    const auto* p = identity_profile();
+    if (!p || !p->login_mgr_slot) return std::nullopt;
+    const uintptr_t holder = peekp(g_base + p->login_mgr_slot);
     const uintptr_t mgr = holder ? peekp(holder) : 0;
     uint32_t count = 0;
     if (!mgr || !peek(mgr + kLoginMgrCount, count)) return std::nullopt;
@@ -335,7 +419,8 @@ void on_lobby(uintptr_t comp, const int* r) {
     g_lobby_loads.fetch_add(1, std::memory_order_relaxed);
     int code = 0;
     if (!g_active.load() || !peek(reinterpret_cast<uintptr_t>(r), code) || code != 0) return;
-    if (peekp(comp) != g_base + kLobbyVtable) return;
+    const auto* profile_cfg = identity_profile();
+    if (!profile_cfg || peekp(comp) != g_base + profile_cfg->lobby_vtable) return;
     const uintptr_t owner = peekp(comp + idf::kLobbyOwner);
     uintptr_t user2 = 0;
     switch (whose(owner, user2)) {
@@ -457,7 +542,9 @@ void after_load(uintptr_t actor, const int* r) noexcept {
         }
         if (!in_use) g_unchecked.fetch_add(1);
         uint64_t before = 0;
-        const StatusEdit e = status_normalise(actor, g_base + kStatusVtable, idf::kUser2, before);
+        const auto* p = identity_profile();
+        if (!p) return;
+        const StatusEdit e = status_normalise(actor, g_base + p->status_vtable, idf::kUser2, before);
         if (e != StatusEdit::Written && e != StatusEdit::Already) {
             g_status_bad.fetch_add(1);
             fail(std::format("user 2's character 0x{:08X} Status: 0x{:X}, {}", key, before, status_edit_name(e)));
@@ -533,24 +620,30 @@ bool identity_fix_wanted() { return g_wanted.load(); }
 bool identity_fix_install() {
     if (g_active.load()) return true;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    uintptr_t lobby_vf = 0, status_vf = 0;
-    if (!code_ok(kLobbyLoad, kLobbyLoadHead, sizeof kLobbyLoadHead, "ServerLobbyActorComponent::LoadSaveData") ||
-        !code_ok(kLobbyConstant, kLobbyConstantBytes, sizeof kLobbyConstantBytes, "its constant") ||
-        !code_ok(kLobbyAddCall, kLobbyAddCallBytes, sizeof kLobbyAddCallBytes, "its add-entry call") ||
-        !code_ok(kClearLobbySite, kClearLobbySiteBytes, sizeof kClearLobbySiteBytes, "the 3093's lobby read") ||
-        !code_ok(kClearListSite, kClearListSiteBytes, sizeof kClearListSiteBytes, "the 3093's lobby list read")) {
+    const auto* p = identity_profile();
+    if (!p) {
+        log::error("Session2 C2 identity: unsupported game build");
         return false;
     }
-    if (!peek(g_base + kLobbyVtable + 0x50, lobby_vf) || lobby_vf != g_base + kLobbyLoad ||
-        !peek(g_base + kStatusVtable + 0x50, status_vf) || status_vf != g_base + kStatusLoad) {
+    uintptr_t lobby_vf = 0, status_vf = 0;
+    if (!code_ok(p->lobby_load, p->lobby_head, p->lobby_head_size, "ServerLobbyActorComponent::LoadSaveData") ||
+        !code_ok(p->lobby_constant, p->constant_bytes, p->constant_size, "its constant") ||
+        !code_ok(p->lobby_add_call, p->add_call_bytes, p->add_call_size, "its add-entry call") ||
+        !code_ok(p->clear_lobby, kClearLobbySiteBytes, sizeof kClearLobbySiteBytes, "the 3093's lobby read") ||
+        !code_ok(p->clear_list, kClearListSiteBytes, sizeof kClearListSiteBytes, "the 3093's lobby list read")) {
+        return false;
+    }
+    if (!peek(g_base + p->lobby_vtable + 0x50, lobby_vf) || lobby_vf != g_base + p->lobby_load ||
+        !peek(g_base + p->status_vtable + 0x50, status_vf) || status_vf != g_base + p->status_load) {
         log::error("Session2 C2 identity: the lobby / Status vtables are not the expected ones");
         return false;
     }
     // Uniqueness of the number among the logged-in actors: only if that list is where 0x2A83F80 reads it.
-    g_unique_on.store(code_ok(kLoginMgrSite, kLoginMgrSiteBytes, sizeof kLoginMgrSiteBytes, "the login manager") &&
-                      code_ok(kFindByNoScan, kFindByNoScanBytes, sizeof kFindByNoScanBytes, "its actor list") &&
-                      code_ok(kFindByNoRead, kFindByNoReadBytes, sizeof kFindByNoReadBytes, "its number read"));
-    g_lobby = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kLobbyLoad),
+    g_unique_on.store(p->login_mgr_site && p->login_mgr_slot && p->find_scan && p->find_read &&
+                      code_ok(p->login_mgr_site, kLoginMgrSiteBytes, sizeof kLoginMgrSiteBytes, "the login manager") &&
+                      code_ok(p->find_scan, kFindByNoScanBytes, sizeof kFindByNoScanBytes, "its actor list") &&
+                      code_ok(p->find_read, kFindByNoReadBytes, sizeof kFindByNoReadBytes, "its number read"));
+    g_lobby = safetyhook::create_inline(reinterpret_cast<void*>(g_base + p->lobby_load),
                                         reinterpret_cast<void*>(&lobby_detour), SafetyHookInline::StartDisabled);
     if (!g_lobby) {
         log::error("Session2 C2 identity: cannot hook the lobby load");
@@ -561,7 +654,8 @@ bool identity_fix_install() {
     calls.before_phases = &before_phases;
     if (!identity_shared_hooks_install(calls)) {
         g_lobby = {};  // never enabled
-        log::error("Session2 C2 identity: the shared hooks 0x20688A0 / 0x2941020 could not be installed");
+        log::error("Session2 C2 identity: the shared component-load / Status login-phases hooks could not be "
+                   "installed");
         return false;
     }
     if (!g_lobby.enable()) {
@@ -571,8 +665,9 @@ bool identity_fix_install() {
     }
     g_active.store(true);
     log::info("Session2 C2 identity fix ON: user 2's characterNo = 0x{:X}, the host keeps 0x{:X} (lobby exe+0x{:X}, "
-              "Status after exe+0x20688A0, invariant at exe+0x2941020); uniqueness check {}",
-              idf::kUser2, idf::kNative, kLobbyLoad, g_unique_on.load() ? "on" : "OFF (its code differs)");
+              "Status after the profiled component load, invariant at the profiled Status login phases); "
+              "uniqueness check {}",
+              idf::kUser2, idf::kNative, p->lobby_load, g_unique_on.load() ? "on" : "OFF (its code differs)");
     return true;
 }
 

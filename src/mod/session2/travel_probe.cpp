@@ -1,4 +1,5 @@
 #include "mod/session2/travel_probe.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -362,7 +363,7 @@ void travel_probe_on_out(uint16_t opcode, size_t size, std::span<const uint8_t> 
     uint64_t v[12] = {g_trip.load(), opcode, size, owner_orig, owner_copy, static_cast<uint64_t>(alias),
                       pushed ? 1u : 0u, index, 0, 0, ~0ull, open ? now - opened : 0};
     if (opcode == tpl::kOpLoadingFieldDataAck) {
-        if (const auto d = tpl::parse_loading_field_data(head, size)) {
+        if (const auto d = tpl::parse_loading_field_data(head, size, game::current_build())) {
             v[8] = d->field_key;
             v[9] = d->actor;
             v[10] = static_cast<uint64_t>(d->records & 0xFFFFFFFF) | (static_cast<uint64_t>(d->append) << 32) |

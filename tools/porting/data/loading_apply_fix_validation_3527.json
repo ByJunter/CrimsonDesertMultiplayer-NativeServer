@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-11-05T00:58:46.9250813+04:00",
+  "build": "1.0.0.3527",
+  "state": "deployed, live verification pending",
+  "asi_sha256": "B5DC5C44C88AA32DE6D1B97B1831ABB1B80F89C9CA9266A31C356950B14BCAEF",
+  "loading_fix": {
+    "native_entry": "2E6B675",
+    "native_emitter": "2C142A0",
+    "runtime_regions_matched": 33,
+    "field_register": "R15",
+    "native_constructor_replay": "passed",
+    "two_trip_regression": "passed",
+    "source_review": "passed",
+    "actor_register": "R14"
+  },
+  "action_apply_fix": {
+    "secondary": "251A1AD",
+    "real_midhook_bytes": 8,
+    "original_native_faults_reproduced": 2,
+    "fault": "25191F4",
+    "source_review": "passed",
+    "both_native_paths_replayed": "passed"
+  },
+  "checks_passed_while_open": 88,
+  "checks_pending_closed_game": [],
+  "original_save_files_unchanged": 14,
+  "live_join_verified": false,
+  "logs": [
+    "build/port-3527-loading-apply-build.log",
+    "build/port-3527-loading-apply-ctest-open.log",
+    "build/port-3527-apply-native-test.log",
+    "build/port-3527-loading-apply-ctest-closed.log"
+  ],
+  "checks_passed_total": 90
+}

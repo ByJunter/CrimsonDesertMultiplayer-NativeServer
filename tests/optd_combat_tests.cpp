@@ -19,6 +19,10 @@
 #include <thread>
 #include <vector>
 
+#include <cstring>
+#include <span>
+#include <vector>
+
 #include "mod/session2/combat_follow_logic.h"
 #include "mod/session2/remote_interp_logic.h"
 
@@ -699,6 +703,36 @@ int main() {
     test_engage_table();
     test_s10_trace();
     test_synthetic_stream();
+    // 1.0.0.3527's MoveActorAck: the writer and the reader agree, and the fields sit where the payload ABI says.
+    {
+        namespace cf = cdmp::session2::cfl;
+        const float pos[3] = {10.f, 20.f, 30.f}, quat[4] = {0.f, 0.f, 0.f, 1.f}, vel[3] = {3.f, 0.f, 4.f};
+        const auto pk = cf::make_move_ack_3527(0xB0100123u, pos, quat, vel, 0x1122334455ull);
+        CHECK(pk.size() == cf::kHeader + cdmp::movement::k3527.move_ack);
+        CHECK(pk[3] == 239 && pk[4] == 0);
+        const std::span<const uint8_t> payload(pk.data() + cf::kHeader, pk.size() - cf::kHeader);
+        const auto seen = cf::read_out(cf::kOpMoveActorAck, payload, 0xA0100066u, cdmp::movement::Build::v3527);
+        CHECK(seen.sample == 0xB0100123u);
+        CHECK(seen.ts == 0x1122334455ull);
+        CHECK(!seen.parent);
+        float back[3] = {};
+        std::memcpy(back, payload.data() + cdmp::movement::k3527.pos, sizeof back);
+        CHECK(back[0] == 10.f && back[1] == 20.f && back[2] == 30.f);
+        std::memcpy(back, payload.data() + cdmp::movement::k3527.local_pos, sizeof back);
+        CHECK(back[0] == 10.f && back[2] == 30.f);
+        float speed = 0.f;
+        std::memcpy(&speed, payload.data() + 235, sizeof speed);
+        CHECK(speed == 5.f);
+        // A 2976-sized packet read as 3527 is not a movement.
+        CHECK(cf::read_out(cf::kOpMoveActorAck, payload.subspan(0, 235), 0xA0100066u, cdmp::movement::Build::v3527).sample == 0);
+        // An attack's target through a 3527 StartActionAck.
+        std::vector<uint8_t> action(cdmp::movement::k3527.action, 0);
+        const uint32_t npc = 0xB0100200u, own = 0xA0100066u;
+        std::memcpy(action.data(), &npc, 4);
+        std::memcpy(action.data() + 143 + cdmp::movement::k3527.action_target, &own, 4);
+        const auto fight = cf::read_out(cf::kOpStartActionAck, action, own, cdmp::movement::Build::v3527);
+        CHECK(fight.engage == npc);
+    }
     if (g_failures) {
         std::printf("optd_combat: %d FAILED\n", g_failures);
         return 1;

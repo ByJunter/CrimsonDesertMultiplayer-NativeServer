@@ -55,6 +55,7 @@ inline constexpr uint32_t kTableLobby = 0x10;     // table -> lobby component (0
 inline constexpr uint32_t kTableStatus = 0x20;    // table -> Status (0x206A894)
 inline constexpr uint32_t kStatusActor = 0x08;    // Status -> its actor
 inline constexpr uint32_t kStatusNumber = 0x70;   // Status -> u64* characterNo (0x206A8A5)
+inline constexpr uint32_t kStatusNumber3527 = 0x90; // build 3527 Status -> u64* characterNo
 inline constexpr uint32_t kActorKey = 0x60;       // u32
 inline constexpr uint32_t kActorUser = 0xA0;      // character -> ServerUserActor (.xtls 0x1042AB16)
 inline constexpr uint32_t kLockObject = 0x08;     // owner -> its lock object (0x2B7F64D); u32 count at +8
@@ -95,9 +96,12 @@ uintptr_t user_lobby(uintptr_t user);
 enum class StatusEdit : uint8_t { Written, Already, NotNative, Unreadable, NotAllowed };
 const char* status_edit_name(StatusEdit e);
 // actor -> [[actor+0x68]+0x20] = Status ([Status+8] == actor, vtable ==
-// status_vtable unless 0) -> u64* [Status+0x70]: the constant becomes
+// status_vtable unless 0) -> u64* [Status+build offset]: the constant becomes
 // `assigned`; anything else is left alone. `before` = the value found.
 StatusEdit status_normalise(uintptr_t actor, uintptr_t status_vtable, uint64_t assigned, uint64_t& before);
+// Pure-layout variant used by the build-profile tests. Only +0x70/+0x90 are accepted.
+StatusEdit status_normalise_at(uintptr_t actor, uintptr_t status_vtable, uint64_t assigned, uint64_t& before,
+                               uint32_t status_number_offset);
 
 // lobby == status == assigned. why = what failed (empty if ok).
 bool identity_invariant(std::optional<uint64_t> lobby, std::optional<uint64_t> status, uint64_t assigned,

@@ -8,6 +8,7 @@
 #include <cstring>
 #include <format>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/server.h"
@@ -31,6 +32,86 @@ constexpr uint8_t kTryAddRefHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 
 constexpr uintptr_t kVecPush = 0x40B5B0;
 constexpr uint8_t kVecPushHead[] = {0x40, 0x53, 0x41, 0x56, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0xD9,
                                     0x4C, 0x8B, 0xF2, 0x8B, 0x49, 0x08, 0x8B, 0x43, 0x0C};
+// 1.0.0.3527 mappings, followed from MoveField 0x2E61990.  Its five-argument
+// call at 0x2E61F53 is AcquireField below; after the native clock and SetField
+// work, its call at 0x2E620EB enters the field and reaches AddActor
+// 0x2D95880 -> .text 0xE616690.
+constexpr uintptr_t kAcquireField3527 = 0x2DA08E0;
+constexpr uint8_t kAcquireFieldHead3527[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C, 0x24,
+    0x20, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8B, 0xEC, 0x48,
+    0x83, 0xEC, 0x70, 0x4D, 0x8B, 0xF9, 0x41, 0x0F, 0xB6, 0xD8, 0x48, 0x8B, 0xFA};
+constexpr uintptr_t kEnterField3527 = 0x2E625B0;
+constexpr uint8_t kEnterFieldHead3527[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x18, 0x48, 0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24,
+    0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D,
+    0xAC, 0x24, 0x70, 0xFF, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0x90, 0x01, 0x00, 0x00, 0x4D, 0x8B, 0xE8};
+constexpr uintptr_t kTryAddRef3527 = 0x1617950;  // direct call in AcquireField at 0x2DA0B2E
+constexpr uint8_t kTryAddRefHead3527[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x18, 0x57, 0x48, 0x83, 0xEC,
+    0x20, 0x48, 0x8B, 0xF9, 0x65, 0x48, 0x8B, 0x04, 0x25, 0x58, 0x00, 0x00, 0x00};
+constexpr uintptr_t kVecPush3527 = 0x4A2500;  // direct 16-byte user-entry push in AddActor at 0xE61678B
+constexpr uint8_t kVecPushHead3527[] = {0x40, 0x53, 0x41, 0x57, 0x48, 0x83, 0xEC, 0x28, 0x48, 0x8B, 0xD9,
+                                        0x4C, 0x8B, 0xFA, 0x8B, 0x49, 0x08, 0x8B, 0x43, 0x0C, 0x3B, 0xC1};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). The four heads are the 3527 bytes, unchanged:
+// - AcquireField 0x2DA08E0 -> 0x2DA1550 and EnterField 0x2E625B0 -> 0x2E63220: moved by +0xC70 with the same bytes
+//   and the same .pdata sizes (0x2BF / 0x534); MoveField's caller sites (0x2E62BC3 / 0x2E62D5B) still call them.
+// - TryAddRef 0x1617950 -> 0x1618170 (+0x820): the target of the call at 0x2DA179E (3527 0x2DA0B2E + 0xC70).
+// - VecPush 0x4A2500 -> 0x4A2890 (+0x390): the target of AddActor's 16-byte {user, 1} push at .tls$ 0xE52C08B
+//   (AddActor thunk 0x2D964F0) and of the 3527 caller 0x2D8EF77 (+0xC70 = 0x2D8FBE7). The other same-head
+//   instances nearby copy 4- or 6-byte elements.
+// AddActor (.tls$ 0xE52BF90, readable) keeps the ServerField tail +2A8/+2B0/+2B8/+2D8, the locks +0x18/[+8] and
+// actor+0xA0; MoveField forms the FieldMover as TS+0x508 (0x2E628C3): kFieldLayout3527 holds on 3576.
+constexpr uintptr_t kAcquireField3576 = 0x2DA1550;
+constexpr uintptr_t kEnterField3576 = 0x2E63220;
+constexpr uintptr_t kTryAddRef3576 = 0x1618170;
+constexpr uintptr_t kVecPush3576 = 0x4A2890;
+
+struct FieldProfile {
+    game::Build build;
+    uintptr_t acquire, enter, try_add_ref, vec_push;
+    const uint8_t* acquire_head;
+    size_t acquire_head_size;
+    const uint8_t* enter_head;
+    size_t enter_head_size;
+    const uint8_t* try_ref_head;
+    size_t try_ref_head_size;
+    const uint8_t* vec_head;
+    size_t vec_head_size;
+};
+
+const FieldProfile* field_profile() {
+    static constexpr FieldProfile old{game::Build::v2976,
+                                      kAcquireField, kEnterField, kTryAddRef, kVecPush,
+                                      kAcquireFieldHead, sizeof kAcquireFieldHead,
+                                      kEnterFieldHead, sizeof kEnterFieldHead,
+                                      kTryAddRefHead, sizeof kTryAddRefHead,
+                                      kVecPushHead, sizeof kVecPushHead};
+    // AddActor in 3527 proves the shifted tail: user vector/count/actor count
+    // at +2A8/+2B0/+2B8 and level entry at +2D8.  MoveField and its actor
+    // paths repeatedly form FieldMover as TS+0x508. Its key/field remain
+    // +8/+10; moving/access flags changed to +48/+4A (RuntimeFieldLayout).
+    // Earlier ServerField/manager/attacher offsets remain unchanged.
+    static constexpr FieldProfile current{game::Build::v3527,
+                                          kAcquireField3527, kEnterField3527, kTryAddRef3527, kVecPush3527,
+                                          kAcquireFieldHead3527, sizeof kAcquireFieldHead3527,
+                                          kEnterFieldHead3527, sizeof kEnterFieldHead3527,
+                                          kTryAddRefHead3527, sizeof kTryAddRefHead3527,
+                                          kVecPushHead3527, sizeof kVecPushHead3527};
+    static constexpr FieldProfile current3576{game::Build::v3576,
+                                              kAcquireField3576, kEnterField3576, kTryAddRef3576, kVecPush3576,
+                                              kAcquireFieldHead3527, sizeof kAcquireFieldHead3527,
+                                              kEnterFieldHead3527, sizeof kEnterFieldHead3527,
+                                              kTryAddRefHead3527, sizeof kTryAddRefHead3527,
+                                              kVecPushHead3527, sizeof kVecPushHead3527};
+    switch (game::current_build()) {
+        case game::Build::v2976: return &old;
+        case game::Build::v3527: return &current;
+        case game::Build::v3576: return &current3576;
+        default: return nullptr;
+    }
+}
+
 // Host character -> TransformSync: [[pj+0x68]+0x1A0] (the probe's chain, live in B3).
 constexpr uint32_t kUserMainCharacter = 0xD0;
 constexpr uint32_t kUserKey = 0x60;
@@ -39,6 +120,7 @@ constexpr uint64_t kMaxLogged = 24;
 
 FieldGame g_game{};
 SafetyHookInline g_h1, g_h2;
+const FieldProfile* g_profile = nullptr;
 std::atomic<bool> g_active{false};
 std::atomic<uint64_t> g_h1_calls{0}, g_h1_shared{0}, g_h1_refused{0}, g_h2_inserted{0}, g_h2_undone{0},
     g_logged{0};
@@ -79,7 +161,10 @@ void unlock_field(uintptr_t field, uintptr_t second) {
 int find_user(uintptr_t field, uintptr_t user, uintptr_t& data, uint32_t& count) {
     data = 0;
     count = 0;
-    if (!peek(field + fld::kUsers, data) || !peek(field + fld::kUserCount, count) || !data) return -1;
+    const auto& layout = runtime_field_layout();
+    const auto users = layout.users;
+    const auto user_count = layout.user_count;
+    if (!peek(field + users, data) || !peek(field + user_count, count) || !data) return -1;
     for (uint32_t i = 0; i < count && i < 64; ++i) {
         uint64_t u = 0;
         if (peek(data + i * sizeof(FieldUserEntry), u) && u == user) return static_cast<int>(i);
@@ -166,8 +251,9 @@ uint32_t* __fastcall enter_detour(void* fm, uint32_t* res, void* field, void* co
                 note("Session2 E3b H2: entering field {} failed (0x{:X}); user 2 taken out of its list", hex(f), code);
             } else {
                 uint32_t users = 0, uactors = 0;
-                peek(f + fld::kUserCount, users);
-                peek(f + fld::kUserActors, uactors);
+                const auto& layout = runtime_field_layout();
+                peek(f + layout.user_count, users);
+                peek(f + layout.user_actors, uactors);
                 note("Session2 E3b H2: user 2 is in field {}: users {} user actors {}", hex(f), users, uactors);
             }
         } catch (...) {
@@ -177,7 +263,7 @@ uint32_t* __fastcall enter_detour(void* fm, uint32_t* res, void* field, void* co
 }
 
 bool head_ok(uintptr_t base, uintptr_t rva, const uint8_t* head, size_t n, const char* what) {
-    uint8_t actual[40] = {};
+    uint8_t actual[64] = {};
     if (n <= sizeof actual && game::safe_read(base + rva, actual, n) && std::memcmp(actual, head, n) == 0) return true;
     log::error("Session2 E3b: {} (exe+0x{:X}) is not the expected code; field sharing stays off", what, rva);
     return false;
@@ -207,7 +293,8 @@ uintptr_t level_entry_for(uintptr_t manager, uint32_t info_key) {
 }
 
 uintptr_t share_candidate(uintptr_t host_ts, uint32_t host_key, uintptr_t level_entry, std::string& why) {
-    const uintptr_t fm = host_ts + fld::kTsFieldMover;
+    const auto& layout = runtime_field_layout();
+    const uintptr_t fm = host_ts + layout.ts_field_mover;
     uintptr_t field = 0, entry = 0;
     uint32_t fm_key = 0, key = 0, owner = 0;
     uint16_t busy = 0;
@@ -216,7 +303,7 @@ uintptr_t share_candidate(uintptr_t host_ts, uint32_t host_key, uintptr_t level_
         why = "the host has no field";
         return 0;
     }
-    if (!peek(fm + fld::kFmFieldKey, fm_key) || !peek(field + fld::kKey, key) || fm_key != key) {
+    if (!peek(fm + fld::kFmFieldKey, fm_key) || !peek(field + layout.key, key) || fm_key != key) {
         why = "the host's field key does not match (being replaced?)";
         return 0;
     }
@@ -228,11 +315,11 @@ uintptr_t share_candidate(uintptr_t host_ts, uint32_t host_key, uintptr_t level_
         why = "the host does not own the field";
         return 0;
     }
-    if (!peek(fm + fld::kFmBusy, busy) || busy != 0) {
+    if (!peek(fm + layout.fm_busy, busy) || busy != 0) {
         why = "the host is moving between fields";
         return 0;
     }
-    if (!peek(field + fld::kLevelEntry, entry) || !entry || entry != level_entry) {
+    if (!peek(field + layout.level_entry, entry) || !entry || entry != level_entry) {
         why = "another level than the host's";
         return 0;
     }
@@ -268,7 +355,7 @@ bool enter_insert(const FieldGame& g, uintptr_t field, uintptr_t user) {
     bool inserted = false;
     if (find_user(field, user, data, count) < 0) {
         const FieldUserEntry e{user, 0, 0};
-        g.vec_push(reinterpret_cast<void*>(field + fld::kUsers), &e);
+        g.vec_push(reinterpret_cast<void*>(field + runtime_field_layout().users), &e);
         inserted = true;
     }
     unlock_field(field, second);
@@ -285,7 +372,7 @@ void enter_undo(uintptr_t field, uintptr_t user) {
         // As RemoveActor: the last entry takes its place.
         auto* entries = reinterpret_cast<FieldUserEntry*>(data);
         entries[i] = entries[count - 1];
-        *reinterpret_cast<uint32_t*>(field + fld::kUserCount) = count - 1;
+        *reinterpret_cast<uint32_t*>(field + runtime_field_layout().user_count) = count - 1;
     }
     unlock_field(field, second);
 }
@@ -293,23 +380,30 @@ void enter_undo(uintptr_t field, uintptr_t user) {
 bool field_share_install() {
     if (g_active.load()) return true;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (!head_ok(base, kAcquireField, kAcquireFieldHead, sizeof kAcquireFieldHead, "FieldManager::AcquireField") ||
-        !head_ok(base, kEnterField, kEnterFieldHead, sizeof kEnterFieldHead, "FieldMover::EnterField") ||
-        !head_ok(base, kTryAddRef, kTryAddRefHead, sizeof kTryAddRefHead, "TryAddRef") ||
-        !head_ok(base, kVecPush, kVecPushHead, sizeof kVecPushHead, "vector push")) {
+    g_profile = field_profile();
+    if (!g_profile) {
+        log::error("Session2 E3b: unsupported executable; field sharing stays off");
         return false;
     }
-    g_game.try_add_ref = reinterpret_cast<decltype(g_game.try_add_ref)>(base + kTryAddRef);
-    g_game.vec_push = reinterpret_cast<decltype(g_game.vec_push)>(base + kVecPush);
+    if (!head_ok(base, g_profile->acquire, g_profile->acquire_head, g_profile->acquire_head_size,
+                 "FieldManager::AcquireField") ||
+        !head_ok(base, g_profile->enter, g_profile->enter_head, g_profile->enter_head_size,
+                 "FieldMover::EnterField") ||
+        !head_ok(base, g_profile->try_add_ref, g_profile->try_ref_head, g_profile->try_ref_head_size, "TryAddRef") ||
+        !head_ok(base, g_profile->vec_push, g_profile->vec_head, g_profile->vec_head_size, "vector push")) {
+        return false;
+    }
+    g_game.try_add_ref = reinterpret_cast<decltype(g_game.try_add_ref)>(base + g_profile->try_add_ref);
+    g_game.vec_push = reinterpret_cast<decltype(g_game.vec_push)>(base + g_profile->vec_push);
     // H2 first: H1 without H2 would send user 2 into a field AddActor refuses.
-    g_h2 = safetyhook::create_inline(reinterpret_cast<void*>(base + kEnterField),
+    g_h2 = safetyhook::create_inline(reinterpret_cast<void*>(base + g_profile->enter),
                                      reinterpret_cast<void*>(&enter_detour), SafetyHookInline::StartDisabled);
     if (!g_h2 || !g_h2.enable()) {
         g_h2 = {};
         log::error("Session2 E3b: cannot hook FieldMover::EnterField; field sharing stays off");
         return false;
     }
-    g_h1 = safetyhook::create_inline(reinterpret_cast<void*>(base + kAcquireField),
+    g_h1 = safetyhook::create_inline(reinterpret_cast<void*>(base + g_profile->acquire),
                                      reinterpret_cast<void*>(&acquire_detour), SafetyHookInline::StartDisabled);
     if (!g_h1 || !g_h1.enable()) {
         g_h1 = {};
@@ -320,7 +414,7 @@ bool field_share_install() {
     g_active.store(true);
     log::info("Session2 E3b ON: user 2 shares the host's field when it travels to the host's level "
               "(hooks exe+0x{:X} AcquireField, exe+0x{:X} EnterField)",
-              kAcquireField, kEnterField);
+              g_profile->acquire, g_profile->enter);
     return true;
 }
 

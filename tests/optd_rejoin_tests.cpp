@@ -144,8 +144,8 @@ void test_local_connection_terminal() {
     g.on_epoch(rjl::Epoch{rjl::HostState::Active, rjl::Reason::StartRejoin, 2, 2}, 6000);
     g.on_ready();
     CHECK(g.phase() == rjl::Phase::Refused && !g.judge(7000).remote);
-    CHECK(g.hud_text().find("Continuar") == std::string::npos);
-    CHECK(g.hud_text().find("cierra el juego") != std::string::npos);
+    CHECK(g.hud_text().find("Continue") == std::string::npos);
+    CHECK(g.hud_text().find("close the game") != std::string::npos);
     // While playing (or before any remote conversation) a local connection is not a refusal.
     rjl::GuestRejoin h(rjl::Mode::On);
     h.on_local_connection();
@@ -270,7 +270,7 @@ void test_guest_full_cycle() {
     g.on_ready();
     v = g.judge(2700);
     CHECK(v.remote && v.would);
-    CHECK(g.hud_text().find("Continuar") != std::string::npos);
+    CHECK(g.hud_text().find("Continue") != std::string::npos);
     // The client's new connection goes remote: conversation 2 plays epoch 2.
     CHECK(g.on_remote_begin(3000) == 2);
     CHECK(g.phase() == rjl::Phase::Playing && g.played_epoch() == 2);

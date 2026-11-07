@@ -1,0 +1,18 @@
+{
+  "pid": 58612,
+  "actor_key": "0xB01001B9",
+  "actor": "0x2C0FD41E700",
+  "lookup": {
+    "bucket_index": 5,
+    "bucket_entry_count": 20,
+    "bucket_entry": 7,
+    "node_index": 184
+  },
+  "cc": "0x2C0FD45E100",
+  "controller": "0x90100000",
+  "selected_layer": 0,
+  "current": "0x2C0ECB4F1EB",
+  "playback": "0x2C0ECB70200",
+  "chart": "0x2C0F1E70460",
+  "restore_byte": 1
+}

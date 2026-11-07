@@ -1,0 +1,51 @@
+{
+  "build": "3527",
+  "scope": "Read-only static audit of recovery while remote character-control phase 94F7F0 is skipped for chart-without-action state",
+  "conclusion": "The known first-action restart and pending-application paths are independent of 94F7F0. A conditional entry return leaves their inputs intact and permits later native recovery; it cannot guarantee that a usable first action will arrive.",
+  "phase": {
+    "entry": "0x94F7F0",
+    "abi": "RCX=character control, XMM1=delta time",
+    "caller": "0x99B380, call at 0x99B40A",
+    "return_use": "Caller does not consume the return value; subsequent component update and actor-reference cleanup continue.",
+    "navigation_component": "[[CC+8]+68]+1A8",
+    "navigation_pending": "+5C8",
+    "pending_drain": ["0x94F878 load", "0x94F883 zero", "0x94F93F submit to 21BFD00"],
+    "entry_skip_effect": "Defers navigation pending-object submission, state cleanup, and movement updates. The pending pointer is left intact, not discarded.",
+    "not_cc_pending": "This field is not CC+80 pending action records or CC+A8 pending flag."
+  },
+  "navigation_identity": {
+    "rtti": "pa::ClientNavigationActorComponent",
+    "vtable": "0x5915DB0",
+    "other_drain": "vtable+160 -> 61DBB0; loads/zeros +5C8 at 61DC4A/61DC55 and also submits to 21BFD00",
+    "producer": "vtable+1C0 -> 633F70 -> call6344C0 at634109; 634B02 reads old +5C8, 634B12/1A compares incoming/old object+60 ordering, 634B2F stores incoming object",
+    "queue": "21BFD00 indexes events by byte [object+8] and actor key, transfers ownership into manager storage; exact event subtype not established."
+  },
+  "pending_action": {
+    "entry": "0x251A650",
+    "state": "Reads CC+A8, copies two 0x78-byte records from CC+80, clears CC+A8 at251A736",
+    "apply": "Calls251B580 at251A7A2 when prior pending flag was set",
+    "independent_callers": [
+      {"site": "0x99A34F", "function": "0x999120", "role": "separate native actor dispatcher"},
+      {"site": "0x943EB5", "function": "0x943C60", "role": "initialization path"},
+      {"site": "0x949F85", "function": "0x949B40", "role": "restore path after successful restart"},
+      {"site": "0x2D07ADB", "function": "0x2D079D0", "role": "separate action setup path"}
+    ]
+  },
+  "restore": {
+    "entry": "0x949B40",
+    "gate": "[[CC+40]+30] checked at949BAF/949BB3; zero returns success without restoring",
+    "restart": "Calls948D10 at949F69; 948D10 calls251A350 at948E6E",
+    "finish": "After success, calls9441D0 and then Pending251A650 at949F85",
+    "independent_wrappers": [
+      {"function": "0x94F30A0", "call": "0x94F31D6"},
+      {"function": "0x9503100", "call": "0x95031D2"}
+    ],
+    "scan_note": "These wrappers are in executable .text and require including that section in direct-call scans. The default ImageScanner excludes writable executable sections."
+  },
+  "limits": [
+    "No runtime recovery claim: actor may remain inert if restore is disabled or no usable action message arrives.",
+    "The exact navigation pending-event subtype and every downstream indirect call were not resolved.",
+    "A whole-phase guard defers unrelated navigation/state work. A narrower movement-call guard would preserve more phase behavior but requires its own selected-action and downstream-consumer audit.",
+    "No game processes, mod files, builds, or UI were changed."
+  ]
+}

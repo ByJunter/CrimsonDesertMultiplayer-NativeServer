@@ -1,0 +1,229 @@
+timestamp 0x6aea07a6 function {'begin': 47803312, 'end': 47804111, 'unwind': 110635636, 'offset': 0}
+02D96BB0  48 89 5c 24 08                   mov qword ptr [rsp + 8], rbx
+02D96BB5  48 89 74 24 10                   mov qword ptr [rsp + 0x10], rsi
+02D96BBA  48 89 7c 24 18                   mov qword ptr [rsp + 0x18], rdi
+02D96BBF  55                               push rbp
+02D96BC0  41 54                            push r12
+02D96BC2  41 55                            push r13
+02D96BC4  41 56                            push r14
+02D96BC6  41 57                            push r15
+02D96BC8  48 8b ec                         mov rbp, rsp
+02D96BCB  48 83 ec 50                      sub rsp, 0x50
+02D96BCF  4d 8b e0                         mov r12, r8
+02D96BD2  4c 8b f2                         mov r14, rdx
+02D96BD5  45 33 ed                         xor r13d, r13d
+02D96BD8  4c 89 6d d0                      mov qword ptr [rbp - 0x30], r13
+02D96BDC  4c 89 6d d8                      mov qword ptr [rbp - 0x28], r13
+02D96BE0  8b 72 08                         mov esi, dword ptr [rdx + 8]
+02D96BE3  bb fe 01 00 00                   mov ebx, 0x1fe
+02D96BE8  41 bf 01 00 00 00                mov r15d, 1
+02D96BEE  8b 55 dc                         mov edx, dword ptr [rbp - 0x24]
+02D96BF1  3b f2                            cmp esi, edx
+02D96BF3  0f 86 c0 00 00 00                jbe 0x2d96cb9
+02D96BF9  e8 12 ef 7b fe                   call 0x1555b10
+02D96BFE  8d 0c f5 00 00 00 00             lea ecx, [rsi*8]
+02D96C05  44 8b fb                         mov r15d, ebx
+02D96C08  65 48 8b 04 25 58 00 00 00       mov rax, qword ptr gs:[0x58]
+02D96C11  4c 03 38                         add r15, qword ptr [rax]
+02D96C14  ba 08 00 00 00                   mov edx, 8
+02D96C19  45 38 2f                         cmp byte ptr [r15], r13b
+02D96C1C  74 07                            je 0x2d96c25
+02D96C1E  e8 45 9f d6 01                   call 0x4b00b68
+02D96C23  eb 05                            jmp 0x2d96c2a
+02D96C25  e8 76 9e d6 01                   call 0x4b00aa0
+02D96C2A  48 8b d8                         mov rbx, rax
+02D96C2D  48 85 c0                         test rax, rax
+02D96C30  75 1b                            jne 0x2d96c4d
+02D96C32  e8 29 1b 76 fe                   call 0x14f8760
+02D96C37  45 33 c9                         xor r9d, r9d
+02D96C3A  45 33 c0                         xor r8d, r8d
+02D96C3D  ba 01 00 00 00                   mov edx, 1
+02D96C42  b9 02 00 00 a0                   mov ecx, 0xa0000002
+02D96C47  ff 15 2b e5 7f 02                call qword ptr [rip + 0x27fe52b]
+02D96C4D  45 8b c5                         mov r8d, r13d
+02D96C50  8b 4d d8                         mov ecx, dword ptr [rbp - 0x28]
+02D96C53  85 c9                            test ecx, ecx
+02D96C55  74 2b                            je 0x2d96c82
+02D96C57  66 0f 1f 84 00 00 00 00 00       nop word ptr [rax + rax]
+02D96C60  41 8b c0                         mov eax, r8d
+02D96C63  48 8d 14 c5 00 00 00 00          lea rdx, [rax*8]
+02D96C6B  48 8b 45 d0                      mov rax, qword ptr [rbp - 0x30]
+02D96C6F  48 8b 0c 02                      mov rcx, qword ptr [rdx + rax]
+02D96C73  48 89 0c 1a                      mov qword ptr [rdx + rbx], rcx
+02D96C77  41 ff c0                         inc r8d
+02D96C7A  8b 4d d8                         mov ecx, dword ptr [rbp - 0x28]
+02D96C7D  44 3b c1                         cmp r8d, ecx
+02D96C80  72 de                            jb 0x2d96c60
+02D96C82  48 8b 7d d0                      mov rdi, qword ptr [rbp - 0x30]
+02D96C86  48 85 ff                         test rdi, rdi
+02D96C89  74 1d                            je 0x2d96ca8
+02D96C8B  e8 80 ee 7b fe                   call 0x1555b10
+02D96C90  48 8b cf                         mov rcx, rdi
+02D96C93  41 80 3f 00                      cmp byte ptr [r15], 0
+02D96C97  74 07                            je 0x2d96ca0
+02D96C99  e8 0e a8 d6 01                   call 0x4b014ac
+02D96C9E  eb 05                            jmp 0x2d96ca5
+02D96CA0  e8 07 a7 d6 01                   call 0x4b013ac
+02D96CA5  8b 4d d8                         mov ecx, dword ptr [rbp - 0x28]
+02D96CA8  48 89 5d d0                      mov qword ptr [rbp - 0x30], rbx
+02D96CAC  8b d6                            mov edx, esi
+02D96CAE  89 55 dc                         mov dword ptr [rbp - 0x24], edx
+02D96CB1  41 bf 01 00 00 00                mov r15d, 1
+02D96CB7  eb 03                            jmp 0x2d96cbc
+02D96CB9  8b 4d d8                         mov ecx, dword ptr [rbp - 0x28]
+02D96CBC  49 8b 1e                         mov rbx, qword ptr [r14]
+02D96CBF  41 8b 46 08                      mov eax, dword ptr [r14 + 8]
+02D96CC3  48 8d 34 c3                      lea rsi, [rbx + rax*8]
+02D96CC7  48 3b de                         cmp rbx, rsi
+02D96CCA  74 4b                            je 0x2d96d17
+02D96CCC  0f 1f 40 00                      nop dword ptr [rax]
+02D96CD0  48 8b 3b                         mov rdi, qword ptr [rbx]
+02D96CD3  48 85 ff                         test rdi, rdi
+02D96CD6  74 36                            je 0x2d96d0e
+02D96CD8  3b d1                            cmp edx, ecx
+02D96CDA  77 1f                            ja 0x2d96cfb
+02D96CDC  8d 14 52                         lea edx, [rdx + rdx*2]
+02D96CDF  ff c2                            inc edx
+02D96CE1  d1 ea                            shr edx, 1
+02D96CE3  83 fa 01                         cmp edx, 1
+02D96CE6  41 0f 42 d7                      cmovb edx, r15d
+02D96CEA  3b ca                            cmp ecx, edx
+02D96CEC  0f 47 d1                         cmova edx, ecx
+02D96CEF  48 8d 4d d0                      lea rcx, [rbp - 0x30]
+02D96CF3  e8 08 12 61 fd                   call 0x3a7f00
+02D96CF8  8b 4d d8                         mov ecx, dword ptr [rbp - 0x28]
+02D96CFB  48 8b 45 d0                      mov rax, qword ptr [rbp - 0x30]
+02D96CFF  48 89 3c c8                      mov qword ptr [rax + rcx*8], rdi
+02D96D03  8b 4d d8                         mov ecx, dword ptr [rbp - 0x28]
+02D96D06  ff c1                            inc ecx
+02D96D08  89 4d d8                         mov dword ptr [rbp - 0x28], ecx
+02D96D0B  8b 55 dc                         mov edx, dword ptr [rbp - 0x24]
+02D96D0E  48 83 c3 08                      add rbx, 8
+02D96D12  48 3b de                         cmp rbx, rsi
+02D96D15  75 b9                            jne 0x2d96cd0
+02D96D17  85 c9                            test ecx, ecx
+02D96D19  0f 84 51 01 00 00                je 0x2d96e70
+02D96D1F  4c 89 6d e0                      mov qword ptr [rbp - 0x20], r13
+02D96D23  4c 89 6d e8                      mov qword ptr [rbp - 0x18], r13
+02D96D27  49 8b 04 24                      mov rax, qword ptr [r12]
+02D96D2B  48 89 45 f0                      mov qword ptr [rbp - 0x10], rax
+02D96D2F  41 8b 44 24 08                   mov eax, dword ptr [r12 + 8]
+02D96D34  89 45 f8                         mov dword ptr [rbp - 8], eax
+02D96D37  4c 8d 45 e0                      lea r8, [rbp - 0x20]
+02D96D3B  48 8d 55 f0                      lea rdx, [rbp - 0x10]
+02D96D3F  e8 8c 84 00 00                   call 0x2d9f1d0
+02D96D44  8b 45 e8                         mov eax, dword ptr [rbp - 0x18]
+02D96D47  85 c0                            test eax, eax
+02D96D49  0f 84 b6 00 00 00                je 0x2d96e05
+02D96D4F  4c 89 6d f0                      mov qword ptr [rbp - 0x10], r13
+02D96D53  4c 89 6d f8                      mov qword ptr [rbp - 8], r13
+02D96D57  48 8d 55 e0                      lea rdx, [rbp - 0x20]
+02D96D5B  48 8d 4d f0                      lea rcx, [rbp - 0x10]
+02D96D5F  e8 fc 8e 00 00                   call 0x2d9fc60
+02D96D64  8b 7d f8                         mov edi, dword ptr [rbp - 8]
+02D96D67  85 ff                            test edi, edi
+02D96D69  74 0e                            je 0x2d96d79
+02D96D6B  48 8d 55 f0                      lea rdx, [rbp - 0x10]
+02D96D6F  48 8d 4d d0                      lea rcx, [rbp - 0x30]
+02D96D73  e8 a8 86 00 00                   call 0x2d9f420
+02D96D78  90                               nop 
+02D96D79  48 8b 75 f0                      mov rsi, qword ptr [rbp - 0x10]
+02D96D7D  48 85 f6                         test rsi, rsi
+02D96D80  74 70                            je 0x2d96df2
+02D96D82  85 ff                            test edi, edi
+02D96D84  74 27                            je 0x2d96dad
+02D96D86  48 8b de                         mov rbx, rsi
+02D96D89  0f 1f 80 00 00 00 00             nop dword ptr [rax]
+02D96D90  48 8b 0b                         mov rcx, qword ptr [rbx]
+02D96D93  48 85 c9                         test rcx, rcx
+02D96D96  74 0b                            je 0x2d96da3
+02D96D98  48 8b 01                         mov rax, qword ptr [rcx]
+02D96D9B  41 8b d7                         mov edx, r15d
+02D96D9E  ff 10                            call qword ptr [rax]
+02D96DA0  4c 89 2b                         mov qword ptr [rbx], r13
+02D96DA3  48 83 c3 08                      add rbx, 8
+02D96DA7  48 83 ef 01                      sub rdi, 1
+02D96DAB  75 e3                            jne 0x2d96d90
+02D96DAD  e8 5e ed 7b fe                   call 0x1555b10
+02D96DB2  41 be fe 01 00 00                mov r14d, 0x1fe
+02D96DB8  65 48 8b 04 25 58 00 00 00       mov rax, qword ptr gs:[0x58]
+02D96DC1  48 8b 10                         mov rdx, qword ptr [rax]
+02D96DC4  48 8b ce                         mov rcx, rsi
+02D96DC7  41 80 3c 16 00                   cmp byte ptr [r14 + rdx], 0
+02D96DCC  74 12                            je 0x2d96de0
+02D96DCE  e8 d9 a6 d6 01                   call 0x4b014ac
+02D96DD3  4c 89 6d f0                      mov qword ptr [rbp - 0x10], r13
+02D96DD7  4c 89 6d f8                      mov qword ptr [rbp - 8], r13
+02D96DDB  8b 45 e8                         mov eax, dword ptr [rbp - 0x18]
+02D96DDE  eb 2b                            jmp 0x2d96e0b
+02D96DE0  e8 c7 a5 d6 01                   call 0x4b013ac
+02D96DE5  4c 89 6d f0                      mov qword ptr [rbp - 0x10], r13
+02D96DE9  4c 89 6d f8                      mov qword ptr [rbp - 8], r13
+02D96DED  8b 45 e8                         mov eax, dword ptr [rbp - 0x18]
+02D96DF0  eb 19                            jmp 0x2d96e0b
+02D96DF2  41 be fe 01 00 00                mov r14d, 0x1fe
+02D96DF8  4c 89 6d f0                      mov qword ptr [rbp - 0x10], r13
+02D96DFC  4c 89 6d f8                      mov qword ptr [rbp - 8], r13
+02D96E00  8b 45 e8                         mov eax, dword ptr [rbp - 0x18]
+02D96E03  eb 06                            jmp 0x2d96e0b
+02D96E05  41 be fe 01 00 00                mov r14d, 0x1fe
+02D96E0B  48 8b 75 e0                      mov rsi, qword ptr [rbp - 0x20]
+02D96E0F  48 85 f6                         test rsi, rsi
+02D96E12  74 52                            je 0x2d96e66
+02D96E14  85 c0                            test eax, eax
+02D96E16  74 1c                            je 0x2d96e34
+02D96E18  48 8b de                         mov rbx, rsi
+02D96E1B  8b f8                            mov edi, eax
+02D96E1D  0f 1f 00                         nop dword ptr [rax]
+02D96E20  48 8b 03                         mov rax, qword ptr [rbx]
+02D96E23  33 d2                            xor edx, edx
+02D96E25  48 8b cb                         mov rcx, rbx
+02D96E28  ff 10                            call qword ptr [rax]
+02D96E2A  48 83 c3 20                      add rbx, 0x20
+02D96E2E  48 83 ef 01                      sub rdi, 1
+02D96E32  75 ec                            jne 0x2d96e20
+02D96E34  e8 d7 ec 7b fe                   call 0x1555b10
+02D96E39  45 8b c6                         mov r8d, r14d
+02D96E3C  65 48 8b 04 25 58 00 00 00       mov rax, qword ptr gs:[0x58]
+02D96E45  48 8b 10                         mov rdx, qword ptr [rax]
+02D96E48  48 8b ce                         mov rcx, rsi
+02D96E4B  41 80 3c 10 00                   cmp byte ptr [r8 + rdx], 0
+02D96E50  74 0f                            je 0x2d96e61
+02D96E52  e8 55 a6 d6 01                   call 0x4b014ac
+02D96E57  4c 89 6d e0                      mov qword ptr [rbp - 0x20], r13
+02D96E5B  4c 89 6d e8                      mov qword ptr [rbp - 0x18], r13
+02D96E5F  eb 15                            jmp 0x2d96e76
+02D96E61  e8 46 a5 d6 01                   call 0x4b013ac
+02D96E66  4c 89 6d e0                      mov qword ptr [rbp - 0x20], r13
+02D96E6A  4c 89 6d e8                      mov qword ptr [rbp - 0x18], r13
+02D96E6E  eb 06                            jmp 0x2d96e76
+02D96E70  41 be fe 01 00 00                mov r14d, 0x1fe
+02D96E76  48 8b 5d d0                      mov rbx, qword ptr [rbp - 0x30]
+02D96E7A  48 85 db                         test rbx, rbx
+02D96E7D  74 2a                            je 0x2d96ea9
+02D96E7F  e8 8c ec 7b fe                   call 0x1555b10
+02D96E84  45 8b c6                         mov r8d, r14d
+02D96E87  65 48 8b 04 25 58 00 00 00       mov rax, qword ptr gs:[0x58]
+02D96E90  48 8b 10                         mov rdx, qword ptr [rax]
+02D96E93  48 8b cb                         mov rcx, rbx
+02D96E96  41 80 3c 10 00                   cmp byte ptr [r8 + rdx], 0
+02D96E9B  74 07                            je 0x2d96ea4
+02D96E9D  e8 0a a6 d6 01                   call 0x4b014ac
+02D96EA2  eb 05                            jmp 0x2d96ea9
+02D96EA4  e8 03 a5 d6 01                   call 0x4b013ac
+02D96EA9  4c 89 6d d0                      mov qword ptr [rbp - 0x30], r13
+02D96EAD  4c 89 6d d8                      mov qword ptr [rbp - 0x28], r13
+02D96EB1  4c 8d 5c 24 50                   lea r11, [rsp + 0x50]
+02D96EB6  49 8b 5b 30                      mov rbx, qword ptr [r11 + 0x30]
+02D96EBA  49 8b 73 38                      mov rsi, qword ptr [r11 + 0x38]
+02D96EBE  49 8b 7b 40                      mov rdi, qword ptr [r11 + 0x40]
+02D96EC2  49 8b e3                         mov rsp, r11
+02D96EC5  41 5f                            pop r15
+02D96EC7  41 5e                            pop r14
+02D96EC9  41 5d                            pop r13
+02D96ECB  41 5c                            pop r12
+02D96ECD  5d                               pop rbp
+02D96ECE  c3                               ret 
+02D96ECF  cc                               int3 
+CALLER 0x2d8f38b function {'begin': 47771024, 'end': 47775101, 'unwind': 110631688, 'offset': 1531}
+CALLER 0x2d8f58c function {'begin': 47771024, 'end': 47775101, 'unwind': 110631688, 'offset': 2044}

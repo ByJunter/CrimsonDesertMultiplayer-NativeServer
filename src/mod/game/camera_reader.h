@@ -13,6 +13,8 @@
 
 namespace cdmp::game {
 
+struct ReaderProfile;
+
 struct CameraData {
     proto::Vec3 position;  // as stored by the game (space decided by caller)
     proto::Vec3 forward;
@@ -32,6 +34,7 @@ private:
     std::nullopt_t fail(const char* why);
     bool enabled_ = false;
     uintptr_t base_ = 0;
+    const ReaderProfile* profile_ = nullptr;
     std::string last_failure_;
 };
 

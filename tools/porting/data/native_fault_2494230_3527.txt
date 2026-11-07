@@ -1,0 +1,65 @@
+timestamp 0x6aea07a6 function {'begin': 38355504, 'end': 38355678, 'unwind': 105425216, 'offset': 0}
+02494230  48 89 5c 24 18                   mov qword ptr [rsp + 0x18], rbx
+02494235  57                               push rdi
+02494236  48 83 ec 20                      sub rsp, 0x20
+0249423A  48 83 39 00                      cmp qword ptr [rcx], 0
+0249423E  48 8b da                         mov rbx, rdx
+02494241  48 8b 02                         mov rax, qword ptr [rdx]
+02494244  48 8b f9                         mov rdi, rcx
+02494247  41 b8 01 00 00 00                mov r8d, 1
+0249424D  48 8d 54 24 30                   lea rdx, [rsp + 0x30]
+02494252  48 8b cb                         mov rcx, rbx
+02494255  0f 95 44 24 30                   setne byte ptr [rsp + 0x30]
+0249425A  ff 50 08                         call qword ptr [rax + 8]
+0249425D  80 7c 24 30 00                   cmp byte ptr [rsp + 0x30], 0
+02494262  74 6f                            je 0x24942d3
+02494264  48 8b 0f                         mov rcx, qword ptr [rdi]
+02494267  48 8b d3                         mov rdx, rbx
+0249426A  48 8b 01                         mov rax, qword ptr [rcx]
+0249426D  ff 50 60                         call qword ptr [rax + 0x60]
+02494270  48 8b 0f                         mov rcx, qword ptr [rdi]
+02494273  48 8b 01                         mov rax, qword ptr [rcx]
+02494276  ff 50 38                         call qword ptr [rax + 0x38]
+02494279  88 44 24 38                      mov byte ptr [rsp + 0x38], al
+0249427D  41 b8 01 00 00 00                mov r8d, 1
+02494283  48 8b 03                         mov rax, qword ptr [rbx]
+02494286  48 8d 54 24 38                   lea rdx, [rsp + 0x38]
+0249428B  48 8b cb                         mov rcx, rbx
+0249428E  ff 50 08                         call qword ptr [rax + 8]
+02494291  48 8b 0f                         mov rcx, qword ptr [rdi]
+02494294  48 8b 01                         mov rax, qword ptr [rcx]
+02494297  ff 50 30                         call qword ptr [rax + 0x30]
+0249429A  88 44 24 38                      mov byte ptr [rsp + 0x38], al
+0249429E  41 b8 01 00 00 00                mov r8d, 1
+024942A4  48 8b 03                         mov rax, qword ptr [rbx]
+024942A7  48 8d 54 24 38                   lea rdx, [rsp + 0x38]
+024942AC  48 8b cb                         mov rcx, rbx
+024942AF  ff 50 08                         call qword ptr [rax + 8]
+024942B2  48 8b 0f                         mov rcx, qword ptr [rdi]
+024942B5  48 8b 01                         mov rax, qword ptr [rcx]
+024942B8  ff 50 28                         call qword ptr [rax + 0x28]
+024942BB  88 44 24 38                      mov byte ptr [rsp + 0x38], al
+024942BF  41 b8 01 00 00 00                mov r8d, 1
+024942C5  48 8b 03                         mov rax, qword ptr [rbx]
+024942C8  48 8d 54 24 38                   lea rdx, [rsp + 0x38]
+024942CD  48 8b cb                         mov rcx, rbx
+024942D0  ff 50 08                         call qword ptr [rax + 8]
+024942D3  48 8b 5c 24 40                   mov rbx, qword ptr [rsp + 0x40]
+024942D8  48 83 c4 20                      add rsp, 0x20
+024942DC  5f                               pop rdi
+024942DD  c3                               ret 
+CALLER 0x16f3c09 function {'begin': 24067024, 'end': 24067375, 'unwind': 105424140, 'offset': 57}
+CALLER 0x16f3f5d function {'begin': 24067872, 'end': 24068430, 'unwind': 107955260, 'offset': 61}
+CALLER 0x16f4013 function {'begin': 24067872, 'end': 24068430, 'unwind': 107955260, 'offset': 243}
+CALLER 0x16f40d4 function {'begin': 24067872, 'end': 24068430, 'unwind': 107955260, 'offset': 436}
+CALLER 0x16f4449 function {'begin': 24069136, 'end': 24069557, 'unwind': 105424140, 'offset': 57}
+CALLER 0x16f4b82 function {'begin': 24070848, 'end': 24072466, 'unwind': 107955560, 'offset': 194}
+CALLER 0x22e2657 function {'begin': 36578800, 'end': 36579297, 'unwind': 105488592, 'offset': 103}
+CALLER 0x2494148 function {'begin': 38355216, 'end': 38355489, 'unwind': 109547592, 'offset': 56}
+CALLER 0x24ff3d1 function {'begin': 38794096, 'end': 38794624, 'unwind': 105846132, 'offset': 97}
+CALLER 0x24ff42a function {'begin': 38794096, 'end': 38794624, 'unwind': 105846132, 'offset': 186}
+CALLER 0x24ff483 function {'begin': 38794096, 'end': 38794624, 'unwind': 105846132, 'offset': 275}
+CALLER 0x2539919 function {'begin': 39033040, 'end': 39033482, 'unwind': 106853360, 'offset': 73}
+CALLER 0x2553f75 function {'begin': 39141104, 'end': 39141253, 'unwind': 105424140, 'offset': 133}
+CALLER 0x25dbd78 function {'begin': 39697712, 'end': 39697823, 'unwind': 105424140, 'offset': 72}
+CALLER 0x25f3ca7 function {'begin': 39795728, 'end': 39795895, 'unwind': 105425216, 'offset': 151}

@@ -1,0 +1,182 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "title_play": {
+    "old_function": "0x65DB90",
+    "function": "0x72B350",
+    "old_read": "0x65DC3E",
+    "read": "0x72B3F8",
+    "signature": "48 8b 0d f1 2a a9 06 48 8b 89 88 00 00 00",
+    "world_system_slot": "0x71BDEF0",
+    "save_manager_offset": "0x88",
+    "latest_slot_helper": "0x19B2E80->0xB747F20",
+    "no_valid_slots_predicate": "0x8F494B0"
+  },
+  "refresh": {
+    "old_entry": "0x1870C20",
+    "entry": "0x19B2080",
+    "body": "0xB7449C0",
+    "head": "e9 3b 29 d9 09",
+    "abi": "void __fastcall(void* save_manager), sole argument in RCX",
+    "native_sequence": "0x2CABDBB",
+    "native_sequence_bytes": "48 8b 05 36 26 51 04 4c 8b 78 48 4c 89 7d 07 45 32 f6 44 88 75 0f 49 8b 1f 48 89 5d 77 48 8b 03 48 8b cb ff 50 08 90 45 38 77 60 75 0c 41 c6 47 60 01 41 b6 01 44 88 75 0f 48 8b 03 48 8b cb ff 50 10 90 45 84 f6 75 05 e9 91 00 00 00 48 8b 0d e9 25 51 04 48 8b 49 48 e8 68 62 d0 fe 90 49 8b 1f 48 89 5d 77 48 8b 03 48 8b cb ff 50 08 90 41 c6 47 60 00 48 8b 03 48 8b cb ff 50 10",
+    "sequence": "Lock vf1; if manager+0x60 nonzero, skip; else set1; unlock vf2; refresh(manager); lock vf1; set0; unlock vf2.",
+    "lock_pointer_offset": 0,
+    "busy_offset": "0x60",
+    "storage_offset": "0x50",
+    "folder_pointer_offset": "0x38",
+    "folder_count_offset": "0x40",
+    "table_pointer_offset": "0x40",
+    "table_count_offset": "0x48",
+    "behavior": "Clear current table, iterate slot-prefixed folders, load lobby via0x19B3470 or fallback0x19B3DD0, finalize table via0xB754CA0."
+  },
+  "entries": {
+    "old_stride": 104,
+    "stride": 120,
+    "slot_offset": 0,
+    "timestamp_offset": 8,
+    "timestamp_type": "signed i64",
+    "eligible_slot_ranges": [
+      [
+        0,
+        2
+      ],
+      [
+        100,
+        108
+      ]
+    ],
+    "appended_vector": {
+      "pointer_offset": "0x68",
+      "count_offset": "0x70",
+      "entry_width": 4,
+      "semantics": "Latest-slot helper additionally requires every appended ID to appear in a current global list; identifier meaning unproven."
+    },
+    "recommendation": "Build-aware diagnostic parser uses120-byte stride; preserve full native entries and leave selection to game."
+  },
+  "assertions": [
+    {
+      "rva": "0x72b3f8",
+      "bytes": "488b0df12aa906488b8988000000",
+      "meaning": "Play loads WorldSystem then save manager at+0x88 into RCX"
+    },
+    {
+      "rva": "0x72b406",
+      "bytes": "e8757a2801",
+      "meaning": "Play calls latest-slot helper0x19B2E80"
+    },
+    {
+      "rva": "0x72b40e",
+      "bytes": "48b9ffffffffffffff7f",
+      "meaning": "Play uses character number0x7FFFFFFFFFFFFFFF"
+    },
+    {
+      "rva": "0x72b42e",
+      "bytes": "488b89d0000000e8f6742800",
+      "meaning": "Play sends character login using WorldSystem+0xD0"
+    },
+    {
+      "rva": "0x19b2080",
+      "bytes": "e93b29d909",
+      "meaning": "Refresh entry thunk jumps to0xB7449C0"
+    },
+    {
+      "rva": "0xb7449db",
+      "bytes": "4889ce488b59504883c140",
+      "meaning": "Refresh takes manager as sole RCX argument, reads storage+0x50 and clears table+0x40"
+    },
+    {
+      "rva": "0xb744a24",
+      "bytes": "488b7b388b4340488d2cc7",
+      "meaning": "Refresh reads storage folders pointer+0x38,count+0x40, pointer stride8"
+    },
+    {
+      "rva": "0xb7509c2",
+      "bytes": "486bc878",
+      "meaning": "Native table clearing uses entry stride0x78"
+    },
+    {
+      "rva": "0x8f494ba",
+      "bytes": "488b8888000000488b51408b41484c6bc878",
+      "meaning": "Title availability predicate reads manager+0x40 slots,+0x48 count, stride0x78"
+    },
+    {
+      "rva": "0xb747fbf",
+      "bytes": "498b42084839c5",
+      "meaning": "Latest-slot selection reads signed timestamp atentry+8"
+    },
+    {
+      "rva": "0xb747fcd",
+      "bytes": "4983c278",
+      "meaning": "Latest-slot selection advances0x78 bytes"
+    },
+    {
+      "rva": "0xb747f80",
+      "bytes": "4d8b4268418b4270",
+      "meaning": "Latest-slot selection checks appended u32 vector atentry+0x68 pointer,+0x70 count"
+    },
+    {
+      "rva": "0x2cabdbb",
+      "bytes": "488b05362651044c8b7848",
+      "meaning": "Native refresh request uses ServerActorLookup0x71BE3F8+0x48"
+    },
+    {
+      "rva": "0x2cabdde",
+      "bytes": "ff5008",
+      "meaning": "Lock vf1 before busy check"
+    },
+    {
+      "rva": "0x2cabde2",
+      "bytes": "45387760750c41c6476001",
+      "meaning": "Busy byte atmanager+0x60; set only if clear"
+    },
+    {
+      "rva": "0x2cabdfa",
+      "bytes": "ff5010",
+      "meaning": "Unlock vf2 before refresh"
+    },
+    {
+      "rva": "0x2cabe0f",
+      "bytes": "488b4948e86862d0fe",
+      "meaning": "Refresh sole RCX argument is save manager"
+    },
+    {
+      "rva": "0x2cabe26",
+      "bytes": "ff50089041c6476000",
+      "meaning": "Relock then clear busy byte"
+    },
+    {
+      "rva": "0x2cabe35",
+      "bytes": "ff5010",
+      "meaning": "Unlock after clearing busy"
+    }
+  ],
+  "limitations": [
+    "Static ABI proof and parent-provided live table snapshot do not establish complete save-file compatibility.",
+    "No refresh was called, no live process memory was modified, no runtime sources edited."
+  ],
+  "parent_live_evidence": [
+    {
+      "pid": 42600,
+      "controlled_actor": "0x0",
+      "save_manager": "0x2d886f02b00",
+      "slots": "0x2d878a53800",
+      "count": 5,
+      "slot_ids_stride_78": [
+        0,
+        1,
+        2,
+        100,
+        101
+      ]
+    },
+    {
+      "pid": 66412,
+      "controlled_actor": "0x0",
+      "save_manager": "0x3af14f02b00",
+      "slots": "0x3af06a53800",
+      "count": 0,
+      "slot_ids_stride_78": []
+    }
+  ]
+}

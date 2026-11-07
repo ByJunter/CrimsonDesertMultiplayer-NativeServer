@@ -45,12 +45,17 @@ namespace cdmp::session2 {
 
 // From guest_start (worker thread). Starts its own install thread (it waits
 // for the game's code, up to 2 minutes). No-op when all are false.
-// remote_update_guard ([session2] guest_remote_update_guard, S34): once the
-// local user key is known, net::horse_diag_install_remote (CharacterControl
-// Update 0x85FBA0 / PostUpdate 0x860D30 skipped for an actor another user
-// controls while a layer has a chart and no action); its first 32 keys are
+// remote_update_guard: installs the complete build-specific character guard
+// set before admission, then arms ownership filtering when the local key is
+// known. This includes the independent 3527 movement/query phases. Its first 32 keys are
 // logged from this thread, its counters go into guest_actor_diag_describe.
 void guest_actor_diag_start(bool diag, bool layer_guard, bool remote_update_guard = false);
+// True only after both checked layer hooks are installed.  Callers that
+// require guest_layer_guard must treat false (including pending/failure) as
+// fail-closed before admitting a remote session.
+bool guest_layer_guard_ready() noexcept;
+// Includes all requested character phases; false also covers install failure.
+bool guest_remote_update_guard_ready() noexcept;
 // Every 5 s from the guest's diagnostics thread (guest_diag_worker.h; never
 // the network thread, never the game's): the restore lines and, with the
 // diagnostic, the loading state and its wait list (SEH-guarded reads, no

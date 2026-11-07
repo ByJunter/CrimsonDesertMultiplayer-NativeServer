@@ -1,0 +1,363 @@
+{
+  "capture": "..\\bin64\\cdmp_packets.guest_20261104-232217.bin",
+  "parsed_bytes": 9785312,
+  "pending_tail_bytes": 0,
+  "sizes": {
+    "unknown_1001": {
+      "202": 1
+    },
+    "ConnectToServerAck": {
+      "6": 1
+    },
+    "ConnectCryptogramToServerReq": {
+      "286": 1
+    },
+    "ConnectCryptogramToServerAck": {
+      "325": 1
+    },
+    "LoginUserToFieldServerReq": {
+      "19": 1
+    },
+    "ServerTimeInfoAck": {
+      "20": 1
+    },
+    "MainUserDataStartAck": {
+      "8": 1
+    },
+    "CharacterLobbyDataAck": {
+      "165": 1
+    },
+    "MainUserDataEndAck": {
+      "4": 1
+    },
+    "LoginCharacterToFieldServerReq": {
+      "23": 1
+    },
+    "ClearCharacterLobbyDataForSinglePlayAck": {
+      "4": 1
+    },
+    "ApplyBuffAck": {
+      "77": 68
+    },
+    "DataDefinedRegenerateValueAck": {
+      "90": 5
+    },
+    "UnapplyBuffAck": {
+      "77": 10
+    },
+    "VaryHPAck": {
+      "92": 1
+    },
+    "FactionManagementUpdateAck": {
+      "7029": 2
+    },
+    "FactionManagementBuffUpdateAck": {
+      "158": 2
+    },
+    "VaryDataDefinedStaticStatAck": {
+      "41": 27
+    },
+    "UpdateChangeBuffLevelAck": {
+      "42": 18
+    },
+    "UpdateFactionConquerDataAck": {
+      "1396": 1,
+      "12606": 1
+    },
+    "MainPlayerDataStartAck": {
+      "25": 1
+    },
+    "CharacterStatAck": {
+      "60": 1
+    },
+    "CharacterDataDefinedRegenerateStatAck": {
+      "1605": 1
+    },
+    "CharacterDataDefinedStatAck": {
+      "1707": 1
+    },
+    "CharacterCustomizationAck": {
+      "279": 1
+    },
+    "SetFieldNPCSaveDataKeyAck": {
+      "12": 1
+    },
+    "SubLevelInfoListAck": {
+      "731": 1
+    },
+    "AddDonationItemCountToCampListAck": {
+      "65": 1
+    },
+    "EquipmentListOnLoginAck": {
+      "7389": 1
+    },
+    "ChangeUseItemReserveSlotAck": {
+      "436": 13
+    },
+    "RoyalSupplyDataListAck": {
+      "93": 1
+    },
+    "UpdateDiscoveredLevelGimmickSceneObjectDataAck": {
+      "32677": 17,
+      "25252": 1
+    },
+    "EntitlementDataListAck": {
+      "14": 1
+    },
+    "UpdateFieldGimmickSaveDescListAck": {
+      "32532": 8,
+      "14601": 1
+    },
+    "ActivateContentsPhaseGamePlayTriggerInfoListAck": {
+      "21": 1
+    },
+    "SyncPlayerHouseDataListAck": {
+      "25": 1
+    },
+    "VaryExpandedInventorySlotAck": {
+      "18": 1
+    },
+    "AddItemToInventoryAck": {
+      "32484": 25,
+      "30639": 1
+    },
+    "ItemChangedInventoryDataListAck": {
+      "1983": 1
+    },
+    "UpdateItemSharedCoolTimeAck": {
+      "201": 1
+    },
+    "AddHousingGimmickAck": {
+      "25": 1
+    },
+    "ToggleFoldItemGroupAck": {
+      "48": 1
+    },
+    "ChangeInventoryItemListSortTypeAck": {
+      "8": 3
+    },
+    "ChangeBankInformationAck": {
+      "23": 2
+    },
+    "BankHistoryListAck": {
+      "337": 1,
+      "40": 1
+    },
+    "StoreDataListAck": {
+      "6535": 4,
+      "6209": 3,
+      "7024": 4,
+      "8328": 1,
+      "6372": 2,
+      "4090": 6,
+      "3438": 7,
+      "5231": 7,
+      "3927": 3,
+      "993": 35,
+      "5394": 4,
+      "5557": 4,
+      "1319": 43,
+      "1156": 70,
+      "5883": 1,
+      "5720": 3,
+      "2949": 6,
+      "3275": 3,
+      "2623": 21,
+      "2786": 14,
+      "1482": 16,
+      "2297": 10,
+      "2134": 6,
+      "32615": 6,
+      "4253": 4,
+      "4416": 2,
+      "4905": 3,
+      "4742": 3,
+      "2460": 11,
+      "3601": 5,
+      "1971": 8,
+      "1645": 10,
+      "667": 15,
+      "15": 37,
+      "504": 30,
+      "3112": 8,
+      "5068": 3,
+      "341": 23,
+      "3764": 1,
+      "830": 17,
+      "1808": 3,
+      "178": 4,
+      "13381": 1,
+      "18434": 1,
+      "8002": 1,
+      "20390": 1
+    },
+    "VaryExpandedFarmSlotAck": {
+      "5": 1
+    },
+    "UpdateMercenaryExpandedSlotListAck": {
+      "77": 1
+    },
+    "ShipCrewStationChangeAck": {
+      "36": 12
+    },
+    "ChangeMercenaryFactionInfoAck": {
+      "12": 1
+    },
+    "MercenaryDataListAck": {
+      "23269": 135,
+      "11637": 1
+    },
+    "MercenaryEquipmentListAck": {
+      "6655": 1
+    },
+    "UpdateStageListAck": {
+      "32655": 27,
+      "16975": 1
+    },
+    "UpdateMissionListAck": {
+      "32677": 12,
+      "9412": 1
+    },
+    "UpdateQuestListAck": {
+      "32681": 1,
+      "5073": 1
+    },
+    "UpdateQuestGaugeListAck": {
+      "11438": 1
+    },
+    "FriendlyDataListAck": {
+      "32646": 2,
+      "17987": 1
+    },
+    "JournalDataListAck": {
+      "6": 1
+    },
+    "LearnKnowledgeListAck": {
+      "32696": 3,
+      "8756": 1
+    },
+    "SendSkillPointDataListAck": {
+      "1084": 1
+    },
+    "FollowLearnedKnowledgeDataListAck": {
+      "20991": 1
+    },
+    "RefreshSkillPointAck": {
+      "20": 1
+    },
+    "UpdateKnowledgeLearnDelayStackCountListAck": {
+      "31": 1
+    },
+    "SetTimeWrapCoolEndTimeAck": {
+      "12": 1
+    },
+    "FogDataAck": {
+      "32705": 46,
+      "16573": 1
+    },
+    "MiniGameRecordListAck": {
+      "77": 1
+    },
+    "ExecutedGameAdviceInfoKeyListAck": {
+      "1009": 1
+    },
+    "AlertHistoryListAck": {
+      "32493": 15,
+      "8685": 1
+    },
+    "UpdateGamePlayVariableDataListAck": {
+      "311": 1
+    },
+    "UpdateSelfDestinationAck": {
+      "16": 1
+    },
+    "UpdateMiniGameLeaderboardDataAck": {
+      "561": 1,
+      "2777": 1
+    },
+    "AddHousingPlacedFieldGimmickSaveKeyListAck": {
+      "1241": 1,
+      "145": 1,
+      "29": 1
+    },
+    "SetLoadedHousingObjectSyncDataIdMaxAck": {
+      "8": 1
+    },
+    "SyncHousingPlacedSceneObjectListAck": {
+      "32649": 1,
+      "13449": 1
+    },
+    "SyncHousingPlacedPathDataListAck": {
+      "3209": 1,
+      "6409": 1
+    },
+    "ShareKnowledgeSeedAck": {
+      "16": 1
+    },
+    "PendGameEventListRefreshAck": {
+      "5": 1
+    },
+    "SetExecuteTimeQuestDialogAck": {
+      "113": 1
+    },
+    "UpdateFactionLeaderDataAck": {
+      "1174": 1
+    },
+    "UpdateFactionRelationDataAck": {
+      "305": 1
+    },
+    "UpdateFactionOwnedItemDataAck": {
+      "85": 1
+    },
+    "UpdateFactionBlockDataAck": {
+      "32676": 1,
+      "24036": 1
+    },
+    "UpdateFactionDataAck": {
+      "26466": 1
+    },
+    "UpdateFactionSubInnerGimmickAck": {
+      "216": 1
+    },
+    "UpdateFactionEnableSubInnerAck": {
+      "108": 1
+    },
+    "UpdateFactionNodeEnableAck": {
+      "21": 1
+    },
+    "ManagementSetWorkerAck": {
+      "179": 1
+    },
+    "RefreshEnableItemAck": {
+      "14": 4
+    },
+    "ManagementRewardedLevelUpdateAck": {
+      "15": 1
+    },
+    "PrivateActorMoveAck": {
+      "60": 1
+    },
+    "SetMoveFieldAck": {
+      "5": 2
+    },
+    "MainPlayerDataEndAck": {
+      "4": 1
+    },
+    "MoveFieldAck": {
+      "73": 1
+    },
+    "ClearAllyGroupDataAck": {
+      "12": 1
+    },
+    "SyncStageOceanLevelCandidatePostionReq": {
+      "45": 148
+    },
+    "MoveFieldCompleteReq": {
+      "1": 1
+    }
+  },
+  "errors": [],
+  "movement_samples": [],
+  "player_movement": {},
+  "actor_tail_candidates": []
+}

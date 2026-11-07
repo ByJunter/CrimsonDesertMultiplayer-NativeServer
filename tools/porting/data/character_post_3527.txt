@@ -1,0 +1,194 @@
+timestamp 0x6aea07a6 function {'begin': 9724000, 'end': 9724713, 'unwind': 106332184, 'offset': 0}
+00946060  48 89 5c 24 10                   mov qword ptr [rsp + 0x10], rbx
+00946065  48 89 6c 24 18                   mov qword ptr [rsp + 0x18], rbp
+0094606A  56                               push rsi
+0094606B  57                               push rdi
+0094606C  41 56                            push r14
+0094606E  48 83 ec 70                      sub rsp, 0x70
+00946072  c5 f8 29 74 24 60                vmovaps xmmword ptr [rsp + 0x60], xmm6
+00946078  c5 f8 29 7c 24 50                vmovaps xmmword ptr [rsp + 0x50], xmm7
+0094607E  48 8b f1                         mov rsi, rcx
+00946081  48 8b 59 08                      mov rbx, qword ptr [rcx + 8]
+00946085  48 8b 43 68                      mov rax, qword ptr [rbx + 0x68]
+00946089  48 8b 48 58                      mov rcx, qword ptr [rax + 0x58]
+0094608D  48 8b 89 98 07 00 00             mov rcx, qword ptr [rcx + 0x798]
+00946094  83 be fc 01 00 00 01             cmp dword ptr [rsi + 0x1fc], 1
+0094609B  75 0a                            jne 0x9460a7
+0094609D  e8 ce c5 0c 00                   call 0xa12670
+009460A2  e9 61 02 00 00                   jmp 0x946308
+009460A7  e8 c4 c5 0c 00                   call 0xa12670
+009460AC  4c 8d 73 08                      lea r14, [rbx + 8]
+009460B0  33 ed                            xor ebp, ebp
+009460B2  48 85 db                         test rbx, rbx
+009460B5  4c 0f 44 f5                      cmove r14, rbp
+009460B9  41 b0 01                         mov r8b, 1
+009460BC  49 8b 16                         mov rdx, qword ptr [r14]
+009460BF  48 8d 4c 24 20                   lea rcx, [rsp + 0x20]
+009460C4  e8 67 d8 a9 ff                   call 0x3e3930
+009460C9  90                               nop 
+009460CA  c5 c0 57 ff                      vxorps xmm7, xmm7, xmm7
+009460CE  40 38 ab 18 01 00 00             cmp byte ptr [rbx + 0x118], bpl
+009460D5  0f 85 b3 00 00 00                jne 0x94618e
+009460DB  48 8b 43 68                      mov rax, qword ptr [rbx + 0x68]
+009460DF  4c 8b 40 40                      mov r8, qword ptr [rax + 0x40]
+009460E3  49 8b 40 30                      mov rax, qword ptr [r8 + 0x30]
+009460E7  0f b6 48 1b                      movzx ecx, byte ptr [rax + 0x1b]
+009460EB  49 8b 84 c8 88 00 00 00          mov rax, qword ptr [r8 + rcx*8 + 0x88]
+009460F3  c5 fa 10 b0 f0 00 00 00          vmovss xmm6, dword ptr [rax + 0xf0]
+009460FB  49 8b 80 c8 00 00 00             mov rax, qword ptr [r8 + 0xc8]
+00946102  0f b6 48 70                      movzx ecx, byte ptr [rax + 0x70]
+00946106  80 f9 01                         cmp cl, 1
+00946109  74 0d                            je 0x946118
+0094610B  80 e9 02                         sub cl, 2
+0094610E  80 f9 01                         cmp cl, 1
+00946111  76 05                            jbe 0x946118
+00946113  40 32 ff                         xor dil, dil
+00946116  eb 03                            jmp 0x94611b
+00946118  40 b7 01                         mov dil, 1
+0094611B  c5 f8 2f f7                      vcomiss xmm6, xmm7
+0094611F  76 6d                            jbe 0x94618e
+00946121  48 8d 54 24 30                   lea rdx, [rsp + 0x30]
+00946126  49 8b c8                         mov rcx, r8
+00946129  e8 12 68 c6 ff                   call 0x5ac940
+0094612E  48 83 38 00                      cmp qword ptr [rax], 0
+00946132  74 5a                            je 0x94618e
+00946134  48 83 78 08 00                   cmp qword ptr [rax + 8], 0
+00946139  74 53                            je 0x94618e
+0094613B  48 8b 48 10                      mov rcx, qword ptr [rax + 0x10]
+0094613F  48 85 c9                         test rcx, rcx
+00946142  74 4a                            je 0x94618e
+00946144  80 b9 11 01 00 00 00             cmp byte ptr [rcx + 0x111], 0
+0094614B  74 41                            je 0x94618e
+0094614D  48 8b 43 68                      mov rax, qword ptr [rbx + 0x68]
+00946151  48 8b 48 70                      mov rcx, qword ptr [rax + 0x70]
+00946155  83 79 40 00                      cmp dword ptr [rcx + 0x40], 0
+00946159  75 33                            jne 0x94618e
+0094615B  80 79 63 01                      cmp byte ptr [rcx + 0x63], 1
+0094615F  74 2d                            je 0x94618e
+00946161  40 84 ff                         test dil, dil
+00946164  75 28                            jne 0x94618e
+00946166  c5 fa 10 83 08 01 00 00          vmovss xmm0, dword ptr [rbx + 0x108]
+0094616E  c5 fa 5c ce                      vsubss xmm1, xmm0, xmm6
+00946172  c5 fa 11 8b 08 01 00 00          vmovss dword ptr [rbx + 0x108], xmm1
+0094617A  c5 f8 2f f9                      vcomiss xmm7, xmm1
+0094617E  76 06                            jbe 0x946186
+00946180  89 ab 08 01 00 00                mov dword ptr [rbx + 0x108], ebp
+00946186  c5 fa 11 b3 1c 01 00 00          vmovss dword ptr [rbx + 0x11c], xmm6
+0094618E  48 8b 7c 24 20                   mov rdi, qword ptr [rsp + 0x20]
+00946193  48 8b 07                         mov rax, qword ptr [rdi]
+00946196  33 d2                            xor edx, edx
+00946198  48 8b cf                         mov rcx, rdi
+0094619B  ff 50 20                         call qword ptr [rax + 0x20]
+0094619E  bd ff ff ff ff                   mov ebp, 0xffffffff
+009461A3  80 7c 24 28 01                   cmp byte ptr [rsp + 0x28], 1
+009461A8  75 2b                            jne 0x9461d5
+009461AA  8b c5                            mov eax, ebp
+009461AC  f0 0f c1 47 08                   lock xadd dword ptr [rdi + 8], eax
+009461B1  83 f8 01                         cmp eax, 1
+009461B4  75 12                            jne 0x9461c8
+009461B6  f7 47 0c 00 00 00 40             test dword ptr [rdi + 0xc], 0x40000000
+009461BD  74 16                            je 0x9461d5
+009461BF  48 8b 07                         mov rax, qword ptr [rdi]
+009461C2  48 8b cf                         mov rcx, rdi
+009461C5  ff 50 40                         call qword ptr [rax + 0x40]
+009461C8  f7 47 0c 00 00 00 40             test dword ptr [rdi + 0xc], 0x40000000
+009461CF  74 04                            je 0x9461d5
+009461D1  f0 ff 4f 0c                      lock dec dword ptr [rdi + 0xc]
+009461D5  c5 fa 10 b3 08 01 00 00          vmovss xmm6, dword ptr [rbx + 0x108]
+009461DD  c5 f8 2f fe                      vcomiss xmm7, xmm6
+009461E1  0f 83 21 01 00 00                jae 0x946308
+009461E7  c5 f8 28 ce                      vmovaps xmm1, xmm6
+009461EB  48 8b 8e c8 00 00 00             mov rcx, qword ptr [rsi + 0xc8]
+009461F2  e8 09 06 03 00                   call 0x976800
+009461F7  48 8b 4b 68                      mov rcx, qword ptr [rbx + 0x68]
+009461FB  48 8b 89 a0 01 00 00             mov rcx, qword ptr [rcx + 0x1a0]
+00946202  e8 09 9e a2 01                   call 0x2370010
+00946207  80 be e9 01 00 00 00             cmp byte ptr [rsi + 0x1e9], 0
+0094620E  0f 84 8f 00 00 00                je 0x9462a3
+00946214  41 b0 01                         mov r8b, 1
+00946217  49 8b 16                         mov rdx, qword ptr [r14]
+0094621A  48 8d 4c 24 20                   lea rcx, [rsp + 0x20]
+0094621F  e8 0c d7 a9 ff                   call 0x3e3930
+00946224  90                               nop 
+00946225  48 8b 86 e0 00 00 00             mov rax, qword ptr [rsi + 0xe0]
+0094622C  80 48 4c 40                      or byte ptr [rax + 0x4c], 0x40
+00946230  48 8b 40 18                      mov rax, qword ptr [rax + 0x18]
+00946234  48 8b 48 08                      mov rcx, qword ptr [rax + 8]
+00946238  48 8b 01                         mov rax, qword ptr [rcx]
+0094623B  41 b0 01                         mov r8b, 1
+0094623E  b2 07                            mov dl, 7
+00946240  ff 90 b0 01 00 00                call qword ptr [rax + 0x1b0]
+00946246  90                               nop 
+00946247  48 8b 7c 24 20                   mov rdi, qword ptr [rsp + 0x20]
+0094624C  48 8b 07                         mov rax, qword ptr [rdi]
+0094624F  33 d2                            xor edx, edx
+00946251  48 8b cf                         mov rcx, rdi
+00946254  ff 50 20                         call qword ptr [rax + 0x20]
+00946257  80 7c 24 28 01                   cmp byte ptr [rsp + 0x28], 1
+0094625C  75 29                            jne 0x946287
+0094625E  f0 0f c1 6f 08                   lock xadd dword ptr [rdi + 8], ebp
+00946263  83 fd 01                         cmp ebp, 1
+00946266  75 12                            jne 0x94627a
+00946268  f7 47 0c 00 00 00 40             test dword ptr [rdi + 0xc], 0x40000000
+0094626F  74 16                            je 0x946287
+00946271  48 8b 07                         mov rax, qword ptr [rdi]
+00946274  48 8b cf                         mov rcx, rdi
+00946277  ff 50 40                         call qword ptr [rax + 0x40]
+0094627A  f7 47 0c 00 00 00 40             test dword ptr [rdi + 0xc], 0x40000000
+00946281  74 04                            je 0x946287
+00946283  f0 ff 4f 0c                      lock dec dword ptr [rdi + 0xc]
+00946287  c5 f8 28 ce                      vmovaps xmm1, xmm6
+0094628B  48 8b 8e 20 01 00 00             mov rcx, qword ptr [rsi + 0x120]
+00946292  e8 09 c9 bd ff                   call 0x522ba0
+00946297  48 8b 8e 20 01 00 00             mov rcx, qword ptr [rsi + 0x120]
+0094629E  e8 0d d4 bd ff                   call 0x5236b0
+009462A3  80 be e8 01 00 00 00             cmp byte ptr [rsi + 0x1e8], 0
+009462AA  74 1c                            je 0x9462c8
+009462AC  80 be e9 01 00 00 00             cmp byte ptr [rsi + 0x1e9], 0
+009462B3  74 13                            je 0x9462c8
+009462B5  48 8b d3                         mov rdx, rbx
+009462B8  48 8b 0d 31 7c 87 06             mov rcx, qword ptr [rip + 0x6877c31]
+009462BF  48 8b 49 20                      mov rcx, qword ptr [rcx + 0x20]
+009462C3  e8 c8 08 0f 00                   call 0xa36b90
+009462C8  48 8b 5e 08                      mov rbx, qword ptr [rsi + 8]
+009462CC  48 8b cb                         mov rcx, rbx
+009462CF  e8 5c fc c6 ff                   call 0x5b5f30
+009462D4  48 85 c0                         test rax, rax
+009462D7  74 2f                            je 0x946308
+009462D9  48 8b 88 08 01 00 00             mov rcx, qword ptr [rax + 0x108]
+009462E0  48 85 c9                         test rcx, rcx
+009462E3  74 23                            je 0x946308
+009462E5  48 8b 01                         mov rax, qword ptr [rcx]
+009462E8  ff 90 58 03 00 00                call qword ptr [rax + 0x358]
+009462EE  48 85 c0                         test rax, rax
+009462F1  74 15                            je 0x946308
+009462F3  48 8b 88 88 00 00 00             mov rcx, qword ptr [rax + 0x88]
+009462FA  48 85 c9                         test rcx, rcx
+009462FD  74 09                            je 0x946308
+009462FF  48 8b 01                         mov rax, qword ptr [rcx]
+00946302  48 8b d3                         mov rdx, rbx
+00946305  ff 50 08                         call qword ptr [rax + 8]
+00946308  4c 8d 5c 24 70                   lea r11, [rsp + 0x70]
+0094630D  49 8b 5b 28                      mov rbx, qword ptr [r11 + 0x28]
+00946311  49 8b 6b 30                      mov rbp, qword ptr [r11 + 0x30]
+00946315  c5 f8 28 74 24 60                vmovaps xmm6, xmmword ptr [rsp + 0x60]
+0094631B  c5 f8 28 7c 24 50                vmovaps xmm7, xmmword ptr [rsp + 0x50]
+00946321  49 8b e3                         mov rsp, r11
+00946324  41 5e                            pop r14
+00946326  5f                               pop rdi
+00946327  5e                               pop rsi
+00946328  c3                               ret 
+00946329  cc                               int3 
+0094632A  cc                               int3 
+0094632B  cc                               int3 
+0094632C  cc                               int3 
+0094632D  cc                               int3 
+0094632E  cc                               int3 
+0094632F  cc                               int3 
+00946330  e9 cb 68 bb 08                   jmp 0x94fcc00
+00946335  ff 5e 93                         call ptr [rsi - 0x6d]
+00946338  e9 22 3f 03 00                   jmp 0x97a25f
+0094633D  33 e4                            xor esp, esp
+CALLER 0x99f61e function {'begin': 10089856, 'end': 10090095, 'unwind': 106405360, 'offset': 158}
+CALLER 0x99f88a function {'begin': 10090096, 'end': 10090902, 'unwind': 106405408, 'offset': 538}
+CALLER 0x99f922 function {'begin': 10090096, 'end': 10090902, 'unwind': 106405408, 'offset': 690}

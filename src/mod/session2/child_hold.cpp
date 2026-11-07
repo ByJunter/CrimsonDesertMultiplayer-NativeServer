@@ -13,6 +13,7 @@
 #include <iterator>
 #include <mutex>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/child_settle_logic.h"
@@ -22,6 +23,7 @@
 #include "mod/session2/offsets_s2.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/publication_gate_logic.h"
+#include "mod/session2/profile_s2.h"
 #include "mod/session2/server.h"
 #include "mod/session2/user2_stages.h"
 
@@ -105,7 +107,12 @@ std::optional<uintptr_t> sector_with(const M& m, uintptr_t actor) {
     const auto ts = comps ? m.ptr(*comps + hold::kComponentsTs) : std::nullopt;
     const auto back = ts ? m.template rd<uintptr_t>(*ts + hold::kTsActor) : std::nullopt;
     if (!back || *back != actor) return std::nullopt;
-    return m.template rd<uintptr_t>(*ts + hold::kTsSector);
+    // 3527's +0x548 on 3527/3549 and on 3576 (static, 2026-11-06: ToNearExceptOneControl 0x2D05490 and
+    // ToNearExceptOneSelf 0x2D05360 read it with the same bytes, 3527's sites + 0xC70).
+    const game::Build build = game::current_build();
+    const uint32_t sector_offset = build == game::Build::v3527 || build == game::Build::v3576
+                                       ? hold::kTsSector3527 : hold::kTsSector;
+    return m.template rd<uintptr_t>(*ts + sector_offset);
 }
 
 template <class M>
@@ -127,6 +134,9 @@ std::optional<bool> observed_by_with(const M& m, uintptr_t sector, uintptr_t use
 
 template <class M>
 std::optional<uintptr_t> find_actor_with(const M& m, uintptr_t sam, uint32_t key) {
+    // 3527 SAM vf4 (0x2D10C10, vtable 0x5EECE88): 0x2D10CCD..0x2D10D64
+    // confirms the helper's index mask, +98/+9C/+A8/+B0 map and holder +4/+8. 3576 (static): the same reads in vf4
+    // 0x2D11880 (vtable 0x5EEF0A8), 0x2D1193D..0x2D11994.
     auto actor = sam_find_actor_with(m, sam, key);
     if (!actor) actor = sam_find_actor_with(m, sam, key);  // the map has no lock here: ask twice
     return actor;
@@ -498,7 +508,9 @@ bool plan_split(std::span<const uintptr_t> sessions, std::span<const uintptr_t> 
     return withheld;
 }
 
-std::optional<uint32_t> piece_parent_key(uintptr_t actor) { return piece_parent_with(game::FastReads{}, actor); }
+std::optional<uint32_t> piece_parent_key(uintptr_t actor) {
+    return piece_parent_with(game::FastReads{}, actor);
+}
 
 const char* family_why_name(FamilyWhy w) {
     switch (w) {
@@ -863,6 +875,98 @@ constexpr uint8_t kRestoreWriteBytes[] = {0x49, 0x8B, 0x46, 0x40, 0xC6, 0x40, 0x
 constexpr uintptr_t kServerRealmSet = 0x27733A6;  // mov eax,0x1EC ; mov byte [rax+rbx],1
 constexpr uint8_t kServerRealmSetBytes[] = {0xB8, 0xEC, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01};
 constexpr uint32_t kTlsServerRealm = 0x1EC;
+
+// Build 3527: verified native callers, RTTI vf2, restore writer and TLS realm
+// are recorded in tools/porting/data/child_hold_3527.json. These are function
+// entry hooks; the remaining sites below are read-only semantic checks.
+constexpr uint8_t kNotifyAppearHead3527[] = {
+    0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74,0x24,0x10,0x48,0x89,0x7C,0x24,
+    0x18,0x55,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8B,0xEC,0x48,
+    0x83,0xEC,0x50,0x4D,0x8B,0xE0,0x4C,0x8B,0xF2,0x45,0x33,0xED};
+constexpr uint8_t kStartActionHead3527[] = {
+    0x48,0x89,0x5C,0x24,0x08,0x55,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,
+    0x41,0x57,0x48,0x8D,0xAC,0x24,0xD0,0xFC,0xFF,0xFF,0x48,0x81,0xEC,0x40,
+    0x04,0x00,0x00,0x4D,0x8B,0xE0,0x4C,0x8B,0xF2,0x4C,0x8B,0xF9};
+constexpr uint8_t kNotifyReadSessionsBytes3527[] = {0x49,0x8B,0x1E,0x41,0x8B,0x46,0x08};
+constexpr uint8_t kNotifyReadKeysBytes3527[] = {
+    0x49,0x8B,0x04,0x24,0x48,0x89,0x45,0xF0,0x41,0x8B,0x44,0x24,0x08};
+constexpr uint8_t kNotifyFindCallBytes3527[] = {0xE8,0x8C,0x84,0x00,0x00};
+constexpr uint8_t kCallerNewObserversBytes3527[] = {0xE8,0x20,0x78,0x00,0x00};
+constexpr uint8_t kCallerMovingUserBytes3527[] = {0xE8,0x1F,0x76,0x00,0x00};
+constexpr uint8_t kRestoreWriteBytes3527[] = {0x49,0x8B,0x47,0x40,0xC6,0x40,0x30,0x01};
+constexpr uint8_t kServerRealmSetBytes3527[] = {0xB8,0xEB,0x01,0x00,0x00,0xC6,0x04,0x18,0x01};
+
+struct HoldCodeCheck {
+    uintptr_t rva;
+    std::span<const uint8_t> bytes;
+    const char* what;
+};
+constexpr HoldCodeCheck kHoldChecks2976[] = {
+    {kNotifyAppear, kNotifyAppearHead, "NotifyAppear"},
+    {kNotifyReadSessions, kNotifyReadSessionsBytes, "NotifyAppear's session vector"},
+    {kNotifyReadKeys, kNotifyReadKeysBytes, "NotifyAppear's key vector"},
+    {kNotifyFindCall, kNotifyFindCallBytes, "NotifyAppear's key lookup"},
+    {kCallerNewObservers, kCallerNewObserversBytes, "OnActorSectorChanged's first call"},
+    {kCallerMovingUser, kCallerMovingUserBytes, "OnActorSectorChanged's second call"},
+    {kStartAction, kStartActionHead, "StartActionReq::vf2"},
+    {kRestoreWrite, kRestoreWriteBytes, "the restore byte's writer"},
+    {kServerRealmSet, kServerRealmSetBytes, "ServerRunThread's realm mark"}};
+constexpr HoldCodeCheck kHoldChecks3527[] = {
+    {0x2D96BB0, kNotifyAppearHead3527, "NotifyAppear"},
+    {0x2D96CBC, kNotifyReadSessionsBytes3527, "NotifyAppear's session vector"},
+    {0x2D96D27, kNotifyReadKeysBytes3527, "NotifyAppear's key vector"},
+    {0x2D96D3F, kNotifyFindCallBytes3527, "NotifyAppear's key lookup"},
+    {0x2D8F38B, kCallerNewObserversBytes3527, "OnActorSectorChanged's first call"},
+    {0x2D8F58C, kCallerMovingUserBytes3527, "OnActorSectorChanged's second call"},
+    {0x2BE08C0, kStartActionHead3527, "StartActionReq::vf2"},
+    {0x251905A, kRestoreWriteBytes3527, "the restore byte's writer"},
+    {0x29AAF36, kServerRealmSetBytes3527, "ServerRunThread's realm mark"}};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). Every site moved with its whole function (.pdata begins at old +
+// shift with 3527's size) and keeps 3527's bytes, so the 3527 arrays check it as they are (their rel32 are internal or
+// to functions that moved by the same shift):
+//   NotifyAppear 0x2D96BB0 -> 0x2D97820 (+0xC70, 0x31F bytes), its key finder 0x2D9F1D0 -> 0x2D9FE40 (+0xC70, the call
+//     at 0x2D979AF keeps E8 8C 84 00 00, the finder still takes TLS block 0 +0x1EB at 0x2D9FE7B);
+//   OnActorSectorChanged 0x2D8ED90 -> 0x2D8FA00 (+0xC70, 0xFED bytes): the exe's only rel32 calls to 0x2D97820 are its
+//     0x2D8FFFB and 0x2D901FC (3527's two + 0xC70, same bytes); sector observers +0x68/+0x70/16 and owner +0xA0 read
+//     with 3527's bytes at 0x2D8FBAF / 0x2D8FBCB / 0x2D90345;
+//   StartActionReq::vf2 0x2BE08C0 -> 0x2BE1530 (+0xC70, 0x6D8 bytes) = slot 2 of .?AVTrocTrStartActionReq@pa@@'s
+//     vtable 0x5EEE318 (3527's 0x5EEC638, RTTI / vtable_map_3549_3576.json); its info +0x88/+1, components +0x68 and
+//     CC +0x40 reads and the action logic's CC +8 / controller +0x90 (0x2D081C2 / 0x2D081EF) have 3527's bytes;
+//   the restore writer 0x251905A -> 0x2519E2A (+0xDD0; function 0x2518850, 0x1E33 bytes);
+//   ServerRunThread's realm mark 0x29AAF36 -> 0x29ABB86 (+0xC50; function 0x29ABB70, 0x5C bytes): gs:[0x58] -> [rax]
+//     -> +0x1EB = 1, the same TLS byte as 3527;
+//   the ServerActorManager's vf4 (vtable 0x5EEF0A8) 0x2D11880 keeps the map at +0x98/+0x9C/+0xA8/+0xB0, holder +4/+8.
+constexpr HoldCodeCheck kHoldChecks3576[] = {
+    {0x2D97820, kNotifyAppearHead3527, "NotifyAppear"},
+    {0x2D9792C, kNotifyReadSessionsBytes3527, "NotifyAppear's session vector"},
+    {0x2D97997, kNotifyReadKeysBytes3527, "NotifyAppear's key vector"},
+    {0x2D979AF, kNotifyFindCallBytes3527, "NotifyAppear's key lookup"},
+    {0x2D8FFFB, kCallerNewObserversBytes3527, "OnActorSectorChanged's first call"},
+    {0x2D901FC, kCallerMovingUserBytes3527, "OnActorSectorChanged's second call"},
+    {0x2BE1530, kStartActionHead3527, "StartActionReq::vf2"},
+    {0x2519E2A, kRestoreWriteBytes3527, "the restore byte's writer"},
+    {0x29ABB86, kServerRealmSetBytes3527, "ServerRunThread's realm mark"}};
+struct ChildHoldProfile {
+    uintptr_t notify, action, action_vtable, caller_new, caller_moving;
+    uint32_t tls_realm;
+    std::span<const HoldCodeCheck> checks;
+};
+const ChildHoldProfile* child_hold_profile() noexcept {
+    static constexpr ChildHoldProfile old{kNotifyAppear, kStartAction, kStartActionVtable,
+        kCallerNewObservers, kCallerMovingUser, kTlsServerRealm, kHoldChecks2976};
+    static constexpr ChildHoldProfile current{0x2D96BB0, 0x2BE08C0, 0x5EEC638,
+        0x2D8F38B, 0x2D8F58C, 0x1EB, kHoldChecks3527};
+    // 3576 (static, 2026-11-06; not yet run): kHoldChecks3576 above.
+    static constexpr ChildHoldProfile current3576{0x2D97820, 0x2BE1530, 0x5EEE318,
+        0x2D8FFFB, 0x2D901FC, 0x1EB, kHoldChecks3576};
+    switch (game::current_build()) {
+        case game::Build::v2976: return &old;
+        case game::Build::v3527: return &current;
+        case game::Build::v3576: return &current3576;
+        default: return nullptr;
+    }
+}
+const ChildHoldProfile* g_profile = nullptr;
 
 constexpr uint32_t kMaxKeys = 0x4000;      // larger lists go unchanged
 constexpr uint32_t kMaxSessions = 64;
@@ -1508,9 +1612,10 @@ void drain_notes() {
 // TLS block: SEH reads are enough).
 bool server_realm() {
     if (g_seams) return g_seams->realm;
+    if (!g_profile) return false;
     const uintptr_t tls_array = static_cast<uintptr_t>(__readgsqword(0x58));
     const auto block = game::fast<uintptr_t>(tls_array);
-    const auto flag = block && *block ? game::fast<uint8_t>(*block + kTlsServerRealm) : std::nullopt;
+    const auto flag = block && *block ? game::fast<uint8_t>(*block + g_profile->tls_realm) : std::nullopt;
     return flag && *flag != 0;
 }
 
@@ -1546,10 +1651,10 @@ void note_native_caller(uintptr_t ret) {
     uintptr_t site = 0;
     if (g_seams) {
         site = 1;  // the tests' notify() stands for the engine's own call
-    } else if (ret == g_base + kCallerNewObservers + 5) {
-        site = kCallerNewObservers;
-    } else if (ret == g_base + kCallerMovingUser + 5) {
-        site = kCallerMovingUser;
+    } else if (g_profile && ret == g_base + g_profile->caller_new + 5) {
+        site = g_profile->caller_new;
+    } else if (g_profile && ret == g_base + g_profile->caller_moving + 5) {
+        site = g_profile->caller_moving;
     }
     if (!site) {
         g_notify_foreign.fetch_add(1, std::memory_order_relaxed);
@@ -1574,7 +1679,14 @@ void note_native_caller(uintptr_t ret) {
 // The ServerActorManager (fast: observer_hold's reads).
 std::optional<uintptr_t> sam_now(bool fast) {
     if (g_seams) return g_seams->sam ? std::optional<uintptr_t>(g_seams->sam) : std::nullopt;
-    return fast ? game::fast_ptr(g_base + off::kSamSlot) : read_ptr(g_base + off::kSamSlot);
+    return profile::sam_ptr(g_base, [fast](uintptr_t a) { return fast ? game::fast_ptr(a) : read_ptr(a); });
+}
+
+uintptr_t user_vtable_now() {
+    // The fake-memory tests deliberately retain their legacy vtable sentinel.
+    if (g_seams) return g_seams->base + off::kServerUserActorVtable;
+    const uintptr_t vt = profile::rva(off::kServerUserActorVtable);
+    return vt ? g_base + vt : 0;
 }
 
 // The host's user now (0 = unreadable) and its key (the last one read if unreadable now).
@@ -2003,7 +2115,7 @@ bool prepare(const CallView& c, SplitPlan& plan, NpcReservation& reservation) {
         pub_unchecked(0, c.keys.size());  // S35 review 11: unchanged, so unchecked
         return false;
     }
-    const uintptr_t user_vt = (g_seams ? g_seams->base : g_base) + off::kServerUserActorVtable;
+    const uintptr_t user_vt = user_vtable_now();
     std::vector<HoldVerdict> verdicts(c.keys.size());
     ObserverHoldUsers ou;
     // observer_load_defer: only when user 2 is a recipient of this call.
@@ -2777,7 +2889,7 @@ bool d53_waits_settle(uintptr_t sam, const HoldEntry& e, uint64_t now, uintptr_t
                       uint32_t host_key) {
     const uint32_t ms = g_settle_ms.load(std::memory_order_relaxed);
     if (!ms) return false;
-    const uintptr_t user_vt = (g_seams ? g_seams->base : g_base) + off::kServerUserActorVtable;
+    const uintptr_t user_vt = user_vtable_now();
     const SettleCandidate sc = settle_candidate(sam, e.key, user2, host, host_key, user_vt);
     if (!sc.ok) return false;
     bool held = false;
@@ -4379,33 +4491,27 @@ bool child_hold_install(bool children, bool observers, bool characters) {
     const uint32_t settle_ms = g_settle_ms.load();
     if (!children && !observers && !characters && !settle_ms) return false;
     if (g_active.load()) return true;
+    g_profile = child_hold_profile();
+    if (!g_profile || !game::validate_native_catalog()) {
+        log::error("Session2 child hold: unsupported build or native message catalogue; no hold");
+        return false;
+    }
     // Before the hooks go in (the detours read them).
     g_children.store(children);
     g_observers.store(observers);
     g_characters.store(characters);
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (!code_ok(kNotifyAppear, kNotifyAppearHead, sizeof kNotifyAppearHead, "NotifyAppear") ||
-        !code_ok(kNotifyReadSessions, kNotifyReadSessionsBytes, sizeof kNotifyReadSessionsBytes,
-                 "NotifyAppear's read of the sessions") ||
-        !code_ok(kNotifyReadKeys, kNotifyReadKeysBytes, sizeof kNotifyReadKeysBytes, "NotifyAppear's read of the keys") ||
-        !code_ok(kNotifyFindCall, kNotifyFindCallBytes, sizeof kNotifyFindCallBytes, "NotifyAppear's key lookup call") ||
-        !code_ok(kCallerNewObservers, kCallerNewObserversBytes, sizeof kCallerNewObserversBytes,
-                 "OnActorSectorChanged's first call") ||
-        !code_ok(kCallerMovingUser, kCallerMovingUserBytes, sizeof kCallerMovingUserBytes,
-                 "OnActorSectorChanged's second call") ||
-        !code_ok(kStartAction, kStartActionHead, sizeof kStartActionHead, "StartActionReq::vf2") ||
-        !code_ok(kRestoreWrite, kRestoreWriteBytes, sizeof kRestoreWriteBytes, "the restore byte's writer") ||
-        !code_ok(kServerRealmSet, kServerRealmSetBytes, sizeof kServerRealmSetBytes, "ServerRunThread's realm mark")) {
-        return false;
+    for (const auto& check : g_profile->checks) {
+        if (!code_ok(check.rva, check.bytes.data(), check.bytes.size(), check.what)) return false;
     }
     uintptr_t slot = 0;
-    if (!peek(g_base + kStartActionVtable + 0x10, slot) || slot != g_base + kStartAction) {
-        log::error("Session2 child hold: TrocTrStartActionReq's vf2 is not exe+0x{:X}; no hold", kStartAction);
+    if (!peek(g_base + g_profile->action_vtable + 0x10, slot) || slot != g_base + g_profile->action) {
+        log::error("Session2 child hold: TrocTrStartActionReq's vf2 is not exe+0x{:X}; no hold", g_profile->action);
         return false;
     }
-    g_notify = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kNotifyAppear),
+    g_notify = safetyhook::create_inline(reinterpret_cast<void*>(g_base + g_profile->notify),
                                          reinterpret_cast<void*>(&notify_detour), SafetyHookInline::StartDisabled);
-    g_action = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kStartAction),
+    g_action = safetyhook::create_inline(reinterpret_cast<void*>(g_base + g_profile->action),
                                          reinterpret_cast<void*>(&start_action_detour), SafetyHookInline::StartDisabled);
     // The release side first: inert while nothing is held.
     if (!g_notify || !g_action || !g_action.enable()) {
@@ -4424,7 +4530,7 @@ bool child_hold_install(bool children, bool observers, bool characters) {
         log::info("Session2 child hold ON (D-53, any owner): a user's child (the host's or user 2's) with restore 0 "
                   "goes only to its owner's session; every other recipient gets it once its first action is accepted "
                   "(hooks exe+0x{:X} NotifyAppear, exe+0x{:X} StartActionReq::vf2; table of {})",
-                  kNotifyAppear, kStartAction, hold::kTableCapacity);
+                  g_profile->notify, g_profile->action, hold::kTableCapacity);
     }
     if (observers) {
         log::info("Session2 observer hold ON (S3): an NPC (no owner) whose controller [actor+0x90] is the host's or "
@@ -4434,7 +4540,7 @@ bool child_hold_install(bool children, bool observers, bool characters) {
                   "announced natively instead of dropped while still in range. Same hooks (exe+0x{:X}, exe+0x{:X}); "
                   "table of {} (room reserved in the split); passes: the Req's key after each StartActionReq plus "
                   "{} entries every {} ms (also after NotifyAppear), SEH reads, decided outside the lock{}",
-                  hold::kNpcTimeoutMs, kNotifyAppear, kStartAction, hold::kNpcTableCapacity, hold::kNpcPassBudget,
+                  hold::kNpcTimeoutMs, g_profile->notify, g_profile->action, hold::kNpcTableCapacity, hold::kNpcPassBudget,
                   hold::kNpcPassMs, children ? "" : " | child_hold=0: users' children are NOT held");
     }
     if (characters) {
@@ -4445,7 +4551,7 @@ bool child_hold_install(bool children, bool observers, bool characters) {
                   "gone/out of range (field change)/epoch; announced natively instead of dropped while still in range. "
                   "Same hooks (exe+0x{:X}, exe+0x{:X}); table of {} (room reserved in the split); pieces without CC are "
                   "not held{}",
-                  hold::kUserCharacter, hold::kCharTimeoutMs, kNotifyAppear, kStartAction, hold::kCharTableCapacity,
+                  hold::kUserCharacter, hold::kCharTimeoutMs, g_profile->notify, g_profile->action, hold::kCharTableCapacity,
                   children ? "" : " | child_hold=0: users' children are NOT held");
     }
     if (settle_ms) {
@@ -4462,7 +4568,7 @@ bool child_hold_install(bool children, bool observers, bool characters) {
         log::info("Session2 child hold: notify_thread_rule=1: the holds call NotifyAppear only on a thread the game "
                   "itself used for it (seen from exe+0x{:X} / exe+0x{:X}); after a StartActionReq elsewhere the "
                   "release waits for the tail of the next native NotifyAppear (WRN past {} ms)",
-                  kCallerNewObservers, kCallerMovingUser, hold::kDeferWarnMs);
+                  g_profile->caller_new, g_profile->caller_moving, hold::kDeferWarnMs);
     } else {
         log::info("Session2 child hold: notify_thread_rule=0 (default): releases on the StartActionReq handler's "
                   "thread, as before the rule (a due release waiting longer than {} ms for a thread that may call "
@@ -4474,13 +4580,33 @@ bool child_hold_install(bool children, bool observers, bool characters) {
 
 void child_hold_set_thread_rule(bool on) { g_thread_rule.store(on); }
 bool child_hold_thread_rule() { return g_thread_rule.load(); }
-void child_hold_set_settle_ms(uint32_t ms) { g_settle_ms.store(std::min<uint32_t>(ms, 60000)); }
+namespace {
+// Not verified on 3527/3549 nor on 3576: the publication gate and the key retirement (its hook at a 2976 address).
+// Only 2976 (and the tests' seams): a build other than 3527 must not fall through to them (3576 did, with != v3527).
+bool legacy_hold_policies_supported() noexcept {
+    return g_seams || game::current_build() == game::Build::v2976;
+}
+void note_unported_policy(const char* name) {
+    log::warn("Session2 child hold: {} is not ported to this build (only 2976) and stays off", name);
+}
+}  // namespace
+void child_hold_set_settle_ms(uint32_t ms) {
+    g_settle_ms.store(std::min<uint32_t>(ms, 60000));
+}
 
-void child_hold_set_load_defer(uint8_t mode) { g_load_defer.store(std::min<uint8_t>(mode, 2)); }
+void child_hold_set_load_defer(uint8_t mode) {
+    g_load_defer.store(std::min<uint8_t>(mode, 2));
+}
 uint8_t child_hold_load_defer() { return g_load_defer.load(); }
-void child_hold_set_family(uint8_t mode) { g_family.store(std::min<uint8_t>(mode, 2)); }
+void child_hold_set_family(uint8_t mode) {
+    g_family.store(std::min<uint8_t>(mode, 2));
+}
 uint8_t child_hold_family() { return g_family.load(); }
 void child_hold_set_publication_gate(uint8_t mode, uint32_t retain_max_ms) {
+    if (mode && !legacy_hold_policies_supported()) {
+        note_unported_policy("publication_gate");
+        mode = 0;
+    }
     g_pub_gate.store(std::min<uint8_t>(mode, 2));
     // Experimental bound (publication_retain_max_ms): 5 s .. 10 min; the default 60 s.
     g_pub_retain_ms.store(std::clamp<uint64_t>(retain_max_ms, 5000, 600000));
@@ -4615,7 +4741,7 @@ Reannounce child_settle_reannounce(uint32_t key, uint32_t delay_ms, bool dry_run
     const uint32_t host_key = host_key_now(host);
     const auto sam = sam_now(true);
     if (!sam) return Reannounce::Unreadable;
-    const uintptr_t user_vt = (g_seams ? g_seams->base : g_base) + off::kServerUserActorVtable;
+    const uintptr_t user_vt = user_vtable_now();
     const SettleCandidate sc = settle_candidate(*sam, key, user2, host, host_key, user_vt);
     if (!sc.ok) return Reannounce::NotCandidate;
     if (sc.owner_who != OwnerWho::Host) return Reannounce::NotHosts;
@@ -4670,8 +4796,12 @@ void child_hold_settle_births() noexcept {
         child_hold_actor_created(static_cast<uint32_t>(e.v[0]), e.v[1], static_cast<uint32_t>(e.v[2]));
     }
 }
-void child_hold_set_retirement(bool on) noexcept { observer_hold_acks_set_retirement(on); }
-void child_hold_set_npc_family_observe(bool on) noexcept { g_npc_family_observe.store(on, std::memory_order_relaxed); }
+void child_hold_set_retirement(bool on) noexcept {
+    observer_hold_acks_set_retirement(on && legacy_hold_policies_supported());
+}
+void child_hold_set_npc_family_observe(bool on) noexcept {
+    g_npc_family_observe.store(on && legacy_hold_policies_supported(), std::memory_order_relaxed);
+}
 bool child_hold_retired(uint32_t key) noexcept { return observer_hold_acks_retired(key); }
 void child_hold_actor_created(uint32_t epoch, uint64_t generation, uint32_t key) noexcept {
     auto publication = observer_hold_acks_publication_guard();

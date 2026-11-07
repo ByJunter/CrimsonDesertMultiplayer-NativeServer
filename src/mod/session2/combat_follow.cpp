@@ -1,3 +1,4 @@
+#include "mod/game/build_profile.h"
 #include "mod/session2/combat_follow.h"
 
 #include <windows.h>
@@ -31,9 +32,12 @@ using cfl::Skip;
 
 // The host client's game clock as its threads read it (remote_motion.cpp, divergence_probe): frame ms + us/1000
 // + the client->server bias. Only differences of it are used (the anchor), so the bias cancels out.
-constexpr uintptr_t kClockBase = 0x6C8CD68;
-constexpr uintptr_t kClockFrac = 0x6C8CD70;
-constexpr uintptr_t kClockBias = 0x6D69438;
+// 3527 [V capstone 0x15F9B20, 0x1386C1C]: 0x70D9E60, 0x70D9E70, 0x71BE198.
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the frame clock 0x15FA340 reads 0x70DBF68 / 0x70DBF78 (0x15FA360,
+// 0x15FA36C), setInterpolatePositionData 0x13873B0 the bias 0x71C03A8 (0x13873CC): 3527's + 0x2108 / + 0x2210.
+uintptr_t kClockBase = 0x6C8CD68;
+uintptr_t kClockFrac = 0x6C8CD70;
+uintptr_t kClockBias = 0x6D69438;
 // Client actor -> components (+0x68) -> TransformSync (+0x1A0): quat +0xA4, pos +0xB4 (sector-local), sector
 // i16 x/z +0xC0 (actor_lookup.cpp); the control state byte [actor+0xC8] (mirror-ack-formats.md §5: 1/2 =
 // simulated by this client, 0 = remote).
@@ -179,8 +183,11 @@ void decide_one(const cfl::Enemy& e, const float (&rpos)[3], const float (&rquat
     if (keepalive && pol.keepalive_same_pose) st.keepalives.fetch_add(1, std::memory_order_relaxed);
     st.last_key.store(e.key, std::memory_order_relaxed);
     if (send) {
-        const auto pk = cfl::make_move_ack(e.key, pos, quat, vel, ts);
-        if (!server_push_extra(pk)) {
+        // 3576's MoveActorAck is 3527's (game::wire_build()).
+        const bool sent = game::wire_build() == game::Build::v3527
+                              ? server_push_extra(cfl::make_move_ack_3527(e.key, pos, quat, vel, ts))
+                              : server_push_extra(cfl::make_move_ack(e.key, pos, quat, vel, ts));
+        if (!sent) {
             st.refused.fetch_add(1, std::memory_order_relaxed);
             return;  // not noted as sent: the next tick tries again
         }
@@ -284,8 +291,10 @@ struct ActorTable {
 // The client actor manager (its vtable checked) and its hash table, once per tick.
 bool actor_table(ActorTable& t) noexcept {
     uintptr_t world = 0, mgr = 0, vt = 0, table = 0;
-    return fp(g_base + g2976::kWorldSystemSlot, world) && fp(world + g2976::kWorldSystem_ActorManager, mgr) &&
-           fr(mgr, vt) && vt == g_base + g2976::kVtClientActorManager && fp(mgr + kMgrTable, table) &&
+    const auto* profile = game::reader_profile();
+    if (!profile) return false;
+    return fp(g_base + profile->world_system, world) && fp(world + g2976::kWorldSystem_ActorManager, mgr) &&
+           fr(mgr, vt) && vt == g_base + profile->vt_actor_manager && fp(mgr + kMgrTable, table) &&
            fr(table + kTableBucketCount, t.buckets) && t.buckets && t.buckets <= (1u << 24) &&
            fp(table + kTableBuckets, t.bucket_base) && fp(table + kTableNodes, t.nodes);
 }
@@ -538,9 +547,18 @@ bool combat_follow_start(const std::string& raw, const std::string& raw_v2) {
     }
     if (g_started.exchange(true)) return false;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (g_base != g2976::kImageBase) {
-        log::warn("CombatFollow: unexpected image base; off");
+    if (g_base != g2976::kImageBase || (!game::legacy_layout() && game::current_build() != game::Build::v3576)) {
+        log::warn("CombatFollow: unexpected image base or build; off");
         return false;
+    }
+    if (game::current_build() == game::Build::v3527) {
+        kClockBase = 0x70D9E60;
+        kClockFrac = 0x70D9E70;
+        kClockBias = 0x71BE198;
+    } else if (game::current_build() == game::Build::v3576) {
+        kClockBase = 0x70DBF68;
+        kClockFrac = 0x70DBF78;
+        kClockBias = 0x71C03A8;
     }
     if (pv2.mode != Mode::Off) {
         LARGE_INTEGER f;
@@ -598,7 +616,7 @@ void combat_follow_on_out(uint16_t opcode, std::span<const uint8_t> payload) noe
         return;
     }
     const auto v2 = static_cast<Mode>(g_v2.load(std::memory_order_acquire));
-    const cfl::Seen s = cfl::read_out(opcode, payload, server_user2_player_key());
+    const cfl::Seen s = cfl::read_out(opcode, payload, server_user2_player_key(), game::wire_build());
     // v2 (probe or 1), in its own table: an enemy fighting any character is a candidate too (the tick checks how
     // near user 2 it is). v1's table never sees a fight.
     const uint32_t fight = v2 != Mode::Off ? s.fight : 0;

@@ -7,6 +7,7 @@
 #include <format>
 
 #include "mod/config.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/clock_gate.h"
@@ -43,6 +44,20 @@ std::atomic<uint64_t> c_lines{0};
 constexpr uint64_t kMaxLines = 128;
 
 u2f::Mode mode() { return static_cast<u2f::Mode>(g_mode.load(std::memory_order_acquire)); }
+
+// The server's world clock. 3527: the same global clock_gate watches (kWorldTime3527), with the same 32-byte layout;
+// SetFieldTimeAck's handler (exe+0xC9DC80) reads the same u32 key + FieldTime.
+// 3576 (static, 2026-11-06; not yet run): 0x6EAD9B8, the server-realm FieldTime GetCurrentFieldTime 0x22A9BB0 (3527's
+// 0x22A8F70 +0xC40, same head) loads at 0x22A9C20 when the TLS realm byte +0x1EB is set (0x6EAD998, the client's,
+// otherwise): the Troc block's +0x2000. 0 (off) on a build without a known address.
+uintptr_t server_clock_rva() noexcept {
+    switch (game::current_build()) {
+        case game::Build::v2976: return ckp::kServerClock;
+        case game::Build::v3527: return 0x6EAB9B8;
+        case game::Build::v3576: return 0x6EAD9B8;
+        default: return 0;
+    }
+}
 
 template <class... Args>
 void line(std::format_string<Args...> fmt, Args&&... args) {
@@ -100,6 +115,11 @@ bool clock_push_configure(const std::string& raw, bool create_session) {
                   raw);
         return false;
     }
+    if (!server_clock_rva()) {
+        log::warn("Session2: user2_clock_push='{}': the server's world clock has no address for this build; it stays off",
+                  raw);
+        return false;
+    }
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     g_mode.store(static_cast<uint8_t>(p.mode), std::memory_order_release);
     log::info("Session2 clock push {} (user2_clock_push={}): T1 right after every LoadingCompleteAck 2762 queued for "
@@ -107,10 +127,10 @@ bool clock_push_configure(const std::string& raw, bool create_session) {
               "{} ms, never during its loads): a native SetFieldTimeAck 2816 (00 0B FF 23 00 | user 2's character | "
               "FieldTime 31 B) with the server's world clock exe+0x{:X} (two equal reads) {}; world clock now {}",
               p.mode == u2f::Mode::On ? "ON" : "PROBE", u2f::mode_name(p.mode), g_watch.config().settle_ms,
-              g_watch.config().min_gap_ms, ckp::kServerClock,
+              g_watch.config().min_gap_ms, server_clock_rva(),
               p.mode == u2f::Mode::On ? "queued for user 2" : "logged only (WOULD queue), nothing sent", [] {
                   uint8_t mem[ckp::kFieldTimeMem] = {};
-                  return read_clock(g_base + ckp::kServerClock, mem, false) ? show(mem) : std::string("unreadable");
+                  return read_clock(g_base + server_clock_rva(), mem, false) ? show(mem) : std::string("unreadable");
               }());
     return true;
 }
@@ -145,11 +165,11 @@ void clock_push_on_2762(std::span<const uint8_t> payload, uint32_t player_key, C
             return;
         }
         uint8_t mem[ckp::kFieldTimeMem] = {};
-        if (!read_clock(g_base + ckp::kServerClock, mem, /*fast=*/true)) {
+        if (!read_clock(g_base + server_clock_rva(), mem, /*fast=*/true)) {
             c_t1_unreadable.fetch_add(1, std::memory_order_relaxed);
             line("Session2 clock push [{}] T1: user 2's 2762 ({}) queued; NO 2816: the world clock exe+0x{:X} is "
                  "unreadable or changed under three double reads (T2 tries again)",
-                 u2f::mode_name(m), what, ckp::kServerClock);
+                 u2f::mode_name(m), what, server_clock_rva());
             return;
         }
         const ckp::FieldTime ft = ckp::decode(mem);
@@ -197,7 +217,7 @@ void clock_push_tick(uint64_t now_ms) noexcept {
             return;
         }
         uint8_t mem[ckp::kFieldTimeMem] = {};
-        if (!read_clock(g_base + ckp::kServerClock, mem, /*fast=*/false)) {
+        if (!read_clock(g_base + server_clock_rva(), mem, /*fast=*/false)) {
             c_t2_unreadable.fetch_add(1, std::memory_order_relaxed);
             return;
         }

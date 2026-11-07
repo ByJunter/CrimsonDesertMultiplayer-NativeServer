@@ -1,0 +1,2265 @@
+[
+  {
+    "index": 0,
+    "captured_utc": "2026-11-04T19:51:19.548352+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 606,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 25,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 21,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 1,
+    "captured_utc": "2026-11-04T19:51:20.551347+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 606,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 25,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 21,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 2,
+    "captured_utc": "2026-11-04T19:51:21.553321+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 594,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 25,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 21,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 3,
+    "captured_utc": "2026-11-04T19:51:22.555303+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 611,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 26,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 22,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 4,
+    "captured_utc": "2026-11-04T19:51:23.560171+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 611,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 26,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 22,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 5,
+    "captured_utc": "2026-11-04T19:51:24.562891+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 611,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 26,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 23,
+            "bucket_entry": 22,
+            "node_index": 420
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DC99BF49C0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DC9F6F1C00",
+            "transform": {
+              "address": "0x5DDC5AA6E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDC5A92300",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 6,
+    "captured_utc": "2026-11-04T19:51:25.567433+00:00",
+    "host_server": {
+      "server_net": "0x5DD06571400",
+      "host_session": "0x5DCE7C6EC40",
+      "server_actor_manager": "0x5DD2761DF00",
+      "server_actor_count": 611,
+      "field": {
+        "address": "0x5DD26CCD510",
+        "vtable_rva": "0x5EF0908",
+        "open": 1,
+        "owner": "0x90100000",
+        "key": "0x81020001",
+        "level_entry": "0x5DD36563960",
+        "user_list": "0x5DDB23E9680",
+        "user_count": 2,
+        "user_actor_count": 10,
+        "listed_actor_sum": 10,
+        "listed_actor_sum_matches": true,
+        "users": [
+          {
+            "index": 0,
+            "user": "0x5DD461A0000",
+            "key": "0x90100000",
+            "actors": 9,
+            "pad": 0
+          },
+          {
+            "index": 1,
+            "user": "0x5DDB26B8980",
+            "key": "0x90100251",
+            "actors": 1,
+            "pad": 0
+          }
+        ]
+      },
+      "users": [
+        {
+          "role": "host",
+          "address": "0x5DD461A0000",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100000",
+          "session": "0x5DCE7C6EC40",
+          "main_character": "0x5DD460F0200",
+          "current_character": "0x5DD460F0200",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DD460F0200",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DD461B0400",
+            "transform": {
+              "address": "0x5DD461EF500",
+              "local_position": [
+                -99.46826171875,
+                403.5384216308594,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46826171875,
+                403.5384216308594,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DD4623F600",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DD4604B820",
+              "character_number": "0x7FFFFFFFFFFFFFFF"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        },
+        {
+          "role": "guest",
+          "address": "0x5DDB26B8980",
+          "vtable_rva": "0x5EECCA8",
+          "key": "0x90100251",
+          "session": "0x5DD440C00E0",
+          "main_character": "0x5DDB1144280",
+          "current_character": "0x5DDB1144280",
+          "main_is_current": true,
+          "main": {
+            "address": "0x5DDB1144280",
+            "vtable_rva": "0x5EE4DA8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DDB26C2C00",
+            "transform": {
+              "address": "0x5DDB12B7E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDB18D9000",
+              "vtable_rva": "0x5EE7610",
+              "actor_back_pointer_matches": true,
+              "character_number_pointer": "0x5DDB0D219A0",
+              "character_number": "0x7FFFFFFFFFFFF002"
+            }
+          },
+          "field": "0x5DD26CCD510"
+        }
+      ]
+    },
+    "host_client": {
+      "world": "0x5DC8BD9C180",
+      "manager": "0x5DC98746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x5DCC58DC800",
+      "local_key": "0xA0100001",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 26,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DCC58DC800",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100001",
+            "controller": "0x90100000",
+            "components": "0x5DC9B6C1A00",
+            "transform": {
+              "address": "0x5DC7CEA8C00",
+              "local_position": [
+                -99.46875,
+                403.5379943847656,
+                -720.2412109375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5099.46875,
+                403.5379943847656,
+                -4720.2412109375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DCC58C4B00",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 23,
+            "bucket_entry": 22,
+            "node_index": 420
+          },
+          "present": true,
+          "actor": {
+            "address": "0x5DC99BF49C0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x5DC9F6F1C00",
+            "transform": {
+              "address": "0x5DDC5AA6E00",
+              "local_position": [
+                -89.48388671875,
+                404.027099609375,
+                -711.26318359375
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.48388671875,
+                404.027099609375,
+                -4711.26318359375
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x5DDC5A92300",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    },
+    "guest_client": {
+      "world": "0x48B2641CC00",
+      "manager": "0x48B26746E00",
+      "manager_vtable_rva": "0x5944B38",
+      "bucket_count": 19,
+      "local_actor": "0x48C06033FC0",
+      "local_key": "0xA0100252",
+      "actors": {
+        "0xA0100001": {
+          "lookup": {
+            "bucket_index": 4,
+            "bucket_entry_count": 0,
+            "bucket_entry": null,
+            "node_index": null
+          },
+          "present": false,
+          "actor": null
+        },
+        "0xA0100252": {
+          "lookup": {
+            "bucket_index": 8,
+            "bucket_entry_count": 1,
+            "bucket_entry": 0,
+            "node_index": 1
+          },
+          "present": true,
+          "actor": {
+            "address": "0x48C06033FC0",
+            "vtable_rva": "0x59127C8",
+            "key": "0xA0100252",
+            "controller": "0x90100251",
+            "components": "0x48B6F93BA00",
+            "transform": {
+              "address": "0x48B1916A000",
+              "local_position": [
+                -89.51099395751953,
+                404.027099609375,
+                -711.418212890625
+              ],
+              "sector": [
+                -5,
+                -4
+              ],
+              "world_position": [
+                -5089.5109939575195,
+                404.027099609375,
+                -4711.418212890625
+              ],
+              "parent_identity": true,
+              "parent_translation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "parent_sector": [
+                0,
+                0
+              ]
+            },
+            "status": {
+              "address": "0x48B6FF70000",
+              "vtable_rva": "0x591A710",
+              "actor_back_pointer_matches": true
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "index": 7,
+    "time": "2026-11-04T23:51:26.570130",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 8,
+    "time": "2026-11-04T23:51:27.572513",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 9,
+    "time": "2026-11-04T23:51:28.575196",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 10,
+    "time": "2026-11-04T23:51:29.577653",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 11,
+    "time": "2026-11-04T23:51:30.581199",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 12,
+    "time": "2026-11-04T23:51:31.583802",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 13,
+    "time": "2026-11-04T23:51:32.586207",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 14,
+    "time": "2026-11-04T23:51:33.588972",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 15,
+    "time": "2026-11-04T23:51:34.591417",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 16,
+    "time": "2026-11-04T23:51:35.594114",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 17,
+    "time": "2026-11-04T23:51:36.597716",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 18,
+    "time": "2026-11-04T23:51:37.600754",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 19,
+    "time": "2026-11-04T23:51:38.603967",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 20,
+    "time": "2026-11-04T23:51:39.606233",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 21,
+    "time": "2026-11-04T23:51:40.609450",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 22,
+    "time": "2026-11-04T23:51:41.612713",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 23,
+    "time": "2026-11-04T23:51:42.615022",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 24,
+    "time": "2026-11-04T23:51:43.617039",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 25,
+    "time": "2026-11-04T23:51:44.619790",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 26,
+    "time": "2026-11-04T23:51:45.622028",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 27,
+    "time": "2026-11-04T23:51:46.624870",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 28,
+    "time": "2026-11-04T23:51:47.627177",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 29,
+    "time": "2026-11-04T23:51:48.629570",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 30,
+    "time": "2026-11-04T23:51:49.632001",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 31,
+    "time": "2026-11-04T23:51:50.634723",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 32,
+    "time": "2026-11-04T23:51:51.637687",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 33,
+    "time": "2026-11-04T23:51:52.640556",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 34,
+    "time": "2026-11-04T23:51:53.643893",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 35,
+    "time": "2026-11-04T23:51:54.646376",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 36,
+    "time": "2026-11-04T23:51:55.648510",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 37,
+    "time": "2026-11-04T23:51:56.651556",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 38,
+    "time": "2026-11-04T23:51:57.653898",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 39,
+    "time": "2026-11-04T23:51:58.655972",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 40,
+    "time": "2026-11-04T23:51:59.659970",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 41,
+    "time": "2026-11-04T23:52:00.662641",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 42,
+    "time": "2026-11-04T23:52:01.664742",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 43,
+    "time": "2026-11-04T23:52:02.666968",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 44,
+    "time": "2026-11-04T23:52:03.670101",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 45,
+    "time": "2026-11-04T23:52:04.673098",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 46,
+    "time": "2026-11-04T23:52:05.675716",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 47,
+    "time": "2026-11-04T23:52:06.678319",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 48,
+    "time": "2026-11-04T23:52:07.680653",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 49,
+    "time": "2026-11-04T23:52:08.682875",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  },
+  {
+    "index": 50,
+    "time": "2026-11-04T23:52:09.684827",
+    "error": "unreadable 0x1471BE3E0+0x8"
+  }
+]

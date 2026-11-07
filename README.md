@@ -1,19 +1,27 @@
 # Crimson Desert Multiplayer: Native Server Version (cdmp)
 
-An experimental co-op mod for **Crimson Desert** (PC, Steam build 1.0.0.2976), written from scratch in
+An experimental co-op mod for **Crimson Desert** (PC, Steam), written from scratch in
 C++20. It is loaded into the game as `cdmp.asi` by Ultimate ASI Loader.
 
 This is the successor to [CrimsonDesertMultiplayer](https://github.com/ByJunter/CrimsonDesertMultiplayer).
 Instead of copying characters between two separate games, the guest joins the host's world through the
 game's own internal server.
 
-> **Status: alpha, not maintained.** This is a research project published as-is. It only works with game
-> build 1.0.0.2976 (PE timestamp `0x6AB28F00`); every address and signature in the code is specific to that
-> build. Expect crashes, and back up your saves before trying it.
+> **Status: experimental.** The original implementation targets build **1.0.0.2976** (PE timestamp
+> `0x6AB28F00`). The local **1.0.0.3527** port (timestamp `0x6AEA07A6`) was playable with two game copies on
+> one PC: join, shared clock, movement, mounts and fast travel in both directions, and hitting NPCs were
+> verified live. The game has since updated to **1.0.0.3549** (timestamp `0x6AEB7D59`). On 3549 join, movement and
+> mounts are verified live with two copies on one PC, and a first real session over Steam connected two PCs. Open
+> problems from that session are in [docs/ESTADO-3527.md](docs/ESTADO-3527.md): a guest crash around switching
+> character, and the host's town NPCs vanishing when the guest leaves.
+> See [docs/ESTADO-3527.md](docs/ESTADO-3527.md) for what is proven, what is implemented but unproven, and what
+> is not ported. Use the [3527 host](tools/porting/configs/cdmp.3527-2inst-host.ini) and
+> [3527 guest](tools/porting/configs/cdmp.3527-2inst-guest.ini) profiles; the legacy gameplay presets contain
+> hooks that have not been ported. Keep save backups.
 
 ## Requirements
 
-- A legitimately purchased copy of **Crimson Desert** on Steam, build 1.0.0.2976. The mod does not work
+- A legitimately purchased copy of **Crimson Desert** on Steam, with a supported build and its matching profile. The mod does not work
   without the original game, and this repository contains **no game code, assets or data**.
 - Windows 10/11 x64.
 - Visual Studio 2022 or the VS 2022 Build Tools with the "Desktop development with C++" workload (MSVC
@@ -28,7 +36,7 @@ server through ~1,100 internal "Troc" messages. The current approach ("option D"
 internal server accept a second player**: the guest's game client connects to the host's server through a
 Steam (or UDP) tunnel.
 
-Validated live (two game copies on one PC, and partly between two PCs over Steam):
+Validated live on the original 2976 build (two game copies on one PC, and partly between two PCs over Steam):
 
 - the guest logs in to the host's world and plays alongside the host's character;
 - movement, actions, climbing, gliding, mounts (mount, ride and dismount in both directions), pets;

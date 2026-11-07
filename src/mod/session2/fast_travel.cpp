@@ -13,12 +13,14 @@
 #include <format>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/render/hud.h"
 #include "mod/session2/fast_travel_logic.h"
+#include "mod/session2/field_share.h"
 #include "mod/session2/guest.h"
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/p8_probe_logic.h"
@@ -38,7 +40,6 @@ constexpr uint32_t kUserKey = 0x60;
 constexpr uint32_t kUserMainCharacter = 0xD0;
 constexpr uint32_t kActorComponents = 0x68;
 constexpr uint32_t kComponentsTransformSync = 0x1A0;
-constexpr uint32_t kTsFieldMoverField = 0x4F0 + 0x10;  // field_share.h kTsFieldMover + kFmField
 constexpr uint32_t kFieldOwner = 0x180;
 constexpr uintptr_t kVtServerSequencerStageManager = 0x5B17A58;
 constexpr uint64_t kDropLines = 16;
@@ -77,11 +78,18 @@ Reading read_user2() {
     if (!m.ptr(u2 + kUserMainCharacter, pj) || !pj) return r;
     m.u32(pj + kUserKey, r.char_key);
     const bool owner_ok = m.ptr(pj + kActorComponents, comps) && comps &&
-                          m.ptr(comps + kComponentsTransformSync, ts) && ts && m.ptr(ts + kTsFieldMoverField, field) &&
+                          m.ptr(comps + kComponentsTransformSync, ts) && ts && m.ptr(ts + runtime_field_layout().ts_field_mover + fld::kFmField, field) &&
                           field && m.u32(field + kFieldOwner, r.owner);
     r.where = ftl::where_is(owner_ok, r.owner, r.host_key, r.user2_key);
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    r.mgr_ok = ftl::seq_manager_of(m, pj, base + kVtServerSequencerStageManager, &r.why).has_value();
+    // pa::ServerSequencerStageManager by RTTI; 3576 (static, 2026-11-06; not yet run): vtable_map_3549_3576.json.
+    const auto build = game::current_build();
+    const uintptr_t seq_vt = build == game::Build::v3576   ? uintptr_t{0x5EE0B88}
+                             : build == game::Build::v3527 ? uintptr_t{0x5EDE980}
+                             : build == game::Build::v2976 ? kVtServerSequencerStageManager
+                                                           : 0;
+    r.mgr_ok = seq_vt && ftl::seq_manager_of(m, pj, base + seq_vt, &r.why).has_value();
+    if (!seq_vt) r.why = ftl::MgrFail::ManagerClass;
     r.subject_ok = user2_funnels_subject_ready(pj);
     return r;
 }

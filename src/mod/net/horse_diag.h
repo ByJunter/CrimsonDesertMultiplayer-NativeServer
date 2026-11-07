@@ -9,7 +9,10 @@
 // logs every change of the CC's action state, straight to the log file so the
 // last lines survive a crash. Containment (optional): the copy's CC update
 // (0x85FBA0 and the following 0x860D30) is skipped while its main layer has a
-// chart but no current action. Build 1.0.0.2976.
+// chart but no current action. Build 1.0.0.2976; 3527 uses verified profiles
+// and also guards the independent movement phase 0x94F7F0 and action query
+// 0xB0B230. Those consumers require the selected layer's current action (and
+// playback for movement), independently of whether a chart is present.
 
 #include <cstdint>
 #include <string>

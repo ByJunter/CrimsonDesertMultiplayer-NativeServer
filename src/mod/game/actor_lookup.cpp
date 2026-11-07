@@ -4,6 +4,7 @@
 
 #include <cmath>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 
@@ -31,11 +32,12 @@ constexpr float kSectorSize = 1000.0f;
 
 std::optional<uintptr_t> find_actor(uint32_t key) {
     static const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (base != off::kImageBase) return std::nullopt;
-    auto world = read_ptr(base + off::kWorldSystemSlot);
+    const auto* profile = reader_profile();
+    if (!profile) return std::nullopt;
+    auto world = read_ptr(base + profile->world_system);
     if (!world) return std::nullopt;
     auto manager = read_ptr(*world + off::kWorldSystem_ActorManager);
-    if (!manager) return std::nullopt;
+    if (!manager || !has_vtable(*manager, base + profile->vt_actor_manager)) return std::nullopt;
     auto table = read_ptr(*manager + kManager_Table);
     if (!table) return std::nullopt;
     auto buckets = read<uint32_t>(*table + kTable_BucketCount);

@@ -68,14 +68,23 @@ void ReliableChannel::flush(uint32_t now_ms) {
         queued_.pop_front();
         send_(d);
         const uint64_t key = frag_key(d.msg_id, d.index);
-        outgoing_[key] = {std::move(d), now_ms};
+        Outgoing o{std::move(d), now_ms};
+        o.seq = ++send_seq_;
+        outgoing_[key] = std::move(o);
     }
+}
+
+bool ReliableChannel::fast_due(const Outgoing& out, uint32_t now_ms) const {
+    if (out.fast >= kMaxFast || acked_seq_ < out.seq + kFastAfter) return false;
+    const uint32_t wait = std::max(kFastMinMs, static_cast<uint32_t>(std::min(rtt_ms_, static_cast<float>(kMaxResendMs))));
+    return now_ms - out.last_sent_ms >= wait;
 }
 
 void ReliableChannel::tick(uint32_t now_ms) {
     size_t n = 0;
     for (auto& [key, out] : outgoing_) {
-        if (now_ms - out.last_sent_ms < resend_timeout_ms(rtt_ms_, out.resends)) continue;
+        const bool fast = fast_due(out, now_ms);
+        if (!fast && now_ms - out.last_sent_ms < resend_timeout_ms(rtt_ms_, out.resends)) continue;
         // The link is full: what is in flight is probably only queued, not
         // lost. Resend on a later tick, when the queue has drained.
         if (!can_send()) {
@@ -84,7 +93,13 @@ void ReliableChannel::tick(uint32_t now_ms) {
         }
         send_(out.data);
         out.last_sent_ms = now_ms;
-        ++out.resends;
+        out.seq = ++send_seq_;
+        if (fast) {
+            ++out.fast;  // the timeout's backoff counts only the slow ones
+            ++fast_resent_;
+        } else {
+            ++out.resends;
+        }
         ++resent_;
         if (++n >= kMaxResendPerTick) break;
     }
@@ -92,7 +107,10 @@ void ReliableChannel::tick(uint32_t now_ms) {
 }
 
 void ReliableChannel::on_ack(const proto::RelAck& ack) {
-    outgoing_.erase(frag_key(ack.msg_id, ack.index));
+    const auto it = outgoing_.find(frag_key(ack.msg_id, ack.index));
+    if (it == outgoing_.end()) return;
+    acked_seq_ = std::max(acked_seq_, it->second.seq);
+    outgoing_.erase(it);
 }
 
 std::vector<ReliableChannel::Message> ReliableChannel::on_data(const proto::RelData& data) {
@@ -161,6 +179,7 @@ std::vector<ReliableChannel::Message> ReliableChannel::on_data(const proto::RelD
 void ReliableChannel::reset() {
     queued_.clear();
     outgoing_.clear();
+    send_seq_ = acked_seq_ = 0;
     incoming_.clear();
     ready_.clear();
     if (rx_stream_) old_streams_.insert(rx_stream_);

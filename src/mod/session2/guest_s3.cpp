@@ -17,6 +17,7 @@
 #include <string_view>
 #include <vector>
 
+#include "mod/game/character_profile.h"
 #include "mod/game/fault_line.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
@@ -52,6 +53,11 @@ constexpr uint8_t kNullConsumerBytes[] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x4C, 0x
                                           0x24, 0x18, 0x88, 0x54, 0x24, 0x10, 0x48, 0x89};
 // 0x232D5FB mov rax,[r8+0x10] ; 0x232D5FF movzx eax,word [rax+0xE4]: the read.
 constexpr uint8_t kNullReadBytes[] = {0x49, 0x8B, 0x40, 0x10, 0x0F, 0xB7, 0x80, 0xE4, 0x00, 0x00, 0x00};
+// Build 3527 preserved the consumer ABI and entry instructions.  The first
+// dereference is still snapshot+0x10, while the action field it verifies moved
+// from +0xE4 to +0xE8.
+constexpr uint8_t kNullRead3527Bytes[] = {0x49, 0x8B, 0x40, 0x10, 0x0F, 0xB7,
+                                          0x80, 0xE8, 0x00, 0x00, 0x00};
 // 0x85FBA0 CharacterControl::Update (rcx = CC). mov [rsp+0x10],rbx (5).
 constexpr uint8_t kUpdateBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x55, 0x56, 0x57,
                                     0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
@@ -79,10 +85,36 @@ constexpr Site kStart{0x863530, kStartBytes, 5, "StartAction 0x863530"};
 constexpr uintptr_t kNullRead = 0x232D5FB;
 constexpr uintptr_t kSpawnCall = 0x48B18F;
 
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the consumer moved whole by +0xDD0 to 0x251ED90 (.pdata begins
+// there); the only place within +0x3000 of 3527's where kNullConsumerBytes is followed at +0x3B by kNullRead3527Bytes
+// (0x251EDCB, the same +0xE8 read). Its first 0x3B bytes save r8 and do not change it.
+constexpr uintptr_t kNullConsumer3576 = 0x251ED90, kNullRead3576 = 0x251EDCB;
+
+Site null_consumer_site() noexcept {
+    if (game::current_build() == game::Build::v3576) {
+        return {kNullConsumer3576, kNullConsumerBytes, 5, "null-action consumer"};
+    }
+    if (game::current_build() == game::Build::v3527) {
+        return {0x251DFC0, kNullConsumerBytes, 5, "null-action consumer"};
+    }
+    return kNullConsumer;
+}
+
+uintptr_t null_read_rva() noexcept {
+    const game::Build b = game::current_build();
+    return b == game::Build::v3576 ? kNullRead3576 : b == game::Build::v3527 ? 0x251DFFB : kNullRead;
+}
+
+std::span<const uint8_t> null_read_bytes() noexcept {
+    const game::Build b = game::current_build();
+    return b == game::Build::v3527 || b == game::Build::v3576 ? std::span<const uint8_t>{kNullRead3527Bytes}
+                                                                : std::span<const uint8_t>{kNullReadBytes};
+}
+
 // Offsets (build 2976; p8-raiz-invitado.md §5, companeros.md).
 constexpr uint32_t kCc_Actor = 0x08, kCc_Ack60 = 0x60, kCc_Default0 = 0x70, kCc_Default1 = 0x78, kCc_Layer0 = 0x88,
                    kCc_Layer1 = 0x90, kCc_Pending = 0xA8;
-constexpr uint32_t kLayer_Cur = 0x10, kLayer_Play = 0x18, kLayer_Chart = 0x110, kLayer_Hash = 0x3C;
+constexpr uint32_t kLayer_Cur = 0x10, kLayer_Play = 0x18, kLayer_Hash = 0x3C;
 constexpr uint32_t kActor_State = 0x5E, kActor_C1 = 0xC1, kActor_C2 = 0xC2, kActor_CF = 0xCF, kActor_C8 = 0xC8;
 constexpr uint32_t kAck60_Flags = 0x10;
 
@@ -171,10 +203,11 @@ uint32_t actor_flags(uintptr_t actor) {
 // bit0 L0 chart, bit1 L0 cur, bit2 L0 play, bit3 L1 chart, bit4 L1 cur, bit5 L1 play
 uint8_t layer_bits(uintptr_t cc) {
     uint8_t bits = 0;
+    const uint32_t chart = game::character_profile::layer_chart_offset();
     for (uint32_t i = 0; i < 2; ++i) {
         const uintptr_t l = fpp(cc + kCc_Layer0 + 8 * i);
         if (!l) continue;
-        if (fpp(l + kLayer_Chart)) bits |= static_cast<uint8_t>(1u << (3 * i));
+        if (fpp(l + chart)) bits |= static_cast<uint8_t>(1u << (3 * i));
         if (fpp(l + kLayer_Cur)) bits |= static_cast<uint8_t>(2u << (3 * i));
         if (fpp(l + kLayer_Play)) bits |= static_cast<uint8_t>(4u << (3 * i));
     }
@@ -242,10 +275,11 @@ void on_null_consumer(safetyhook::Context& ctx) noexcept {
         r.a = static_cast<uint8_t>(ctx.rdx);
         const uintptr_t cc = ctx.rcx;
         const uintptr_t l0 = fpp(cc + kCc_Layer0), l1 = fpp(cc + kCc_Layer1);
+        const uint32_t chart = game::character_profile::layer_chart_offset();
         if (l0) {
             r.v[0] = fpp(l0 + kLayer_Cur);
             r.v[1] = fpp(l0 + kLayer_Play);
-            r.v[2] = fpp(l0 + kLayer_Chart);
+            r.v[2] = fpp(l0 + chart);
             r.v[8] = fpp(l0);
             r.v[9] = fpp(l0 + 8);
             fp(l0 + kLayer_Hash, r.b);
@@ -253,7 +287,7 @@ void on_null_consumer(safetyhook::Context& ctx) noexcept {
         if (l1) {
             r.v[3] = fpp(l1 + kLayer_Cur);
             r.v[4] = fpp(l1 + kLayer_Play);
-            r.v[5] = fpp(l1 + kLayer_Chart);
+            r.v[5] = fpp(l1 + chart);
             fp(l1 + kLayer_Hash, r.c);
             if (fpp(l1)) r.flags |= 4;
             if (fpp(l1 + 8)) r.flags |= 8;
@@ -393,9 +427,21 @@ void guard_conversation_check() noexcept {
 void refresh_local() noexcept {
     guard_conversation_check();
     try {
-        const auto ws = game::read_ptr(g_base + g2976::kWorldSystemSlot);
+        // Build 1.0.0.3576 (static, 2026-11-06; not yet run): no reader profile yet; world slot 0x71C0100
+        // (core_globals_3576.json), ClientActorManager vtable 0x5946C40 (RTTI).
+        uintptr_t world_slot = 0, vt_mgr = 0;
+        if (game::current_build() == game::Build::v3576) {
+            world_slot = 0x71C0100;
+            vt_mgr = 0x5946C40;
+        } else if (const auto* profile = game::reader_profile()) {
+            world_slot = profile->world_system;
+            vt_mgr = profile->vt_actor_manager;
+        } else {
+            return;
+        }
+        const auto ws = game::read_ptr(g_base + world_slot);
         const auto mgr = ws ? game::read_ptr(*ws + g2976::kWorldSystem_ActorManager) : std::nullopt;
-        if (!mgr || !game::has_vtable(*mgr, g_base + g2976::kVtClientActorManager)) return;
+        if (!mgr || !game::has_vtable(*mgr, g_base + vt_mgr)) return;
         const auto ctrl = game::read_ptr(*mgr + g2976::kActorManager_ControlledActor);
         const auto key = ctrl ? game::read<uint32_t>(*ctrl + g2976::kActor_OwnerUser) : std::nullopt;
         if (!key || (*key >> 28) != 0x9) return;  // not a user key yet (title, loading)
@@ -422,7 +468,8 @@ bool read_rsrc() {
     for (WORD i = 0; i < nt.FileHeader.NumberOfSections && i < 64; ++i) {
         IMAGE_SECTION_HEADER h{};
         if (!game::safe_read(first + i * sizeof h, &h, sizeof h)) return false;
-        if (std::memcmp(h.Name, ".rsrc\0\0\0", 8) == 0) {
+        // By its flags: the protector renames the sections on every build (gad::is_real_code).
+        if ((h.Characteristics & IMAGE_SCN_MEM_EXECUTE) && !(h.Characteristics & IMAGE_SCN_MEM_WRITE)) {
             g_rsrc_va = h.VirtualAddress;
             g_rsrc_size = h.Misc.VirtualSize;
             return true;
@@ -501,9 +548,11 @@ bool make_start() {
 }
 
 bool code_ready() {
+    if (!game::validate_native_catalog()) return false;
     // The crash capture waits for the same marker (the game's code decrypted in place).
     if (g_guard.load() || g_diag.load() || g_crash.load()) {
-        if (!bytes_match(kNullConsumer.rva, kNullConsumer.bytes) || !bytes_match(kNullRead, kNullReadBytes)) return false;
+        const Site consumer = null_consumer_site();
+        if (!bytes_match(consumer.rva, consumer.bytes) || !bytes_match(null_read_rva(), null_read_bytes())) return false;
     }
     if (g_diag.load()) {
         // With guest_remote_update_guard, 0x85FBA0 is horse_diag's (its bytes change once hooked).
@@ -521,12 +570,15 @@ void rearm_crash_filter();
 
 DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    const game::Build build = game::current_build();
+    if (build == game::Build::unsupported || !(game::legacy_layout() || build == game::Build::v3576)) {
         log::error("GuestS3: unsupported game build; guest_s3_diag / guest_crash_dump / guest_update_guard stay off");
         return 0;
+    }
+    if ((build == game::Build::v3527 || build == game::Build::v3576) && g_diag.exchange(false)) {
+        log::warn("GuestS3: optional guest_s3_diag probes are not ported to build {} and stay off; the required "
+                  "guest update guard remains enabled",
+                  build == game::Build::v3576 ? 3576 : 3527);
     }
     if (!read_rsrc()) {
         log::error("GuestS3: the game's section table has no .rsrc; nothing is installed");
@@ -550,6 +602,9 @@ DWORD WINAPI install_thread(LPVOID) {
     if (!ready) log::warn("GuestS3: the game's code is not the expected one after 2 minutes; installing what matches");
     if (g_crash.load()) install_crash();
     if (g_guard.load() || g_diag.load()) {
+        const Site consumer = null_consumer_site();
+        const uintptr_t read_rva = null_read_rva();
+        const auto read_bytes = null_read_bytes();
         g_ret = static_cast<uint8_t*>(VirtualAlloc(nullptr, 16, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
         if (g_ret) {
             g_ret[0] = 0xC3;
@@ -560,10 +615,11 @@ DWORD WINAPI install_thread(LPVOID) {
         if (!g_ret) {
             log::error("GuestS3: no memory for the return stub; nothing hooked");
         } else {
-            if (!bytes_match(kNullRead, kNullReadBytes)) {
-                log::error("GuestS3: 0x232D5FB is not the expected read of the current action; 0x232D5C0 REFUSED");
+            if (!bytes_match(read_rva, read_bytes)) {
+                log::error("GuestS3: exe+0x{:X} is not the expected read of the current action; exe+0x{:X} REFUSED",
+                           read_rva, consumer.rva);
             } else {
-                g_null_on = make_mid(kNullConsumer, g_h_null, on_null_consumer);
+                g_null_on = make_mid(consumer, g_h_null, on_null_consumer);
             }
             if (g_diag.load()) {
                 // One owner per entry: with guest_remote_update_guard=1, horse_diag hooks 0x85FBA0.
@@ -579,14 +635,14 @@ DWORD WINAPI install_thread(LPVOID) {
                 g_start_on = make_start();
             }
         }
-        log::info("GuestS3 ON: {}{} | sites: 0x232D5C0 {} | Update 0x85FBA0 {} | 2723 0x48B120 {} / 0x48B197 {} | "
+        log::info("GuestS3 ON: {}{} | sites: exe+0x{:X} {} | Update 0x85FBA0 {} | 2723 0x48B120 {} / 0x48B197 {} | "
                   "2991 0x48AD40 {} | StartAction 0x863530 {} | crash capture {} | patched bytes checked inside .rsrc "
                   "[exe+0x{:X}, exe+0x{:X})",
                   g_diag.load() ? "probe (read only)" : "no probe",
                   g_guard.load() ? ", UPDATE GUARD (contention, not a fix): 0x232D5C0 returns at once for an actor "
                                    "not controlled locally whose current action is null"
                                  : "",
-                  g_null_on ? "on" : "OFF",
+                  consumer.rva, g_null_on ? "on" : "OFF",
                   g_update_on ? "on" : (g_update_taken.load() && g_diag.load()) ? "left to guest_remote_update_guard"
                                                                                   : "-",
                   g_spawn_on ? "on" : "-",
@@ -595,7 +651,7 @@ DWORD WINAPI install_thread(LPVOID) {
                   static_cast<uint64_t>(g_rsrc_va) + g_rsrc_size);
         if (g_guard.load() && !g_null_on) {
             log::error("GuestS3: the update guard could NOT be installed; actors without an action stay unguarded at "
-                       "0x232D5C0");
+                       "exe+0x{:X}", consumer.rva);
         }
     } else {
         log::info("GuestS3 ON: crash capture {} only", g_crash_on ? "on" : "OFF");
@@ -869,12 +925,12 @@ void tick_once() {
 // VirtualQuery, no wait), at most kMaxCrashRecords of them. The capture
 // itself (log lines, the last records, the minidump) runs from the top-level
 // filter (chained to the previous one) and, in the vectored handler, ONLY at
-// the guest's known crash site exe+0x232D5FF (movzx eax,word [rax+0xE4] with a
-// null current action, p8-raiz-invitado.md §5): the P8 crash, which the game
+// the build-profiled current-action dereference (movzx eax,word [rax+field]
+// with a null current action, p8-raiz-invitado.md §5): the P8 crash, which the game
 // does not handle and ends the process; its reporter (Sentry) may replace our
 // top-level filter, so there the vectored handler is the only place sure to run.
 
-constexpr uintptr_t kKnownCrashSite = 0x232D5FF;
+uintptr_t known_crash_site_rva() noexcept { return null_read_rva() + 4; }
 constexpr uint32_t kMaxCrashRecords = 64;
 constexpr size_t kKeepDumps = 2;  // cdmp_crash_*.dmp kept next to cdmp.asi (the newest)
 
@@ -1033,7 +1089,7 @@ void flush_records() {
     }
 }
 
-// The capture: never from the vectored handler except at kKnownCrashSite.
+// The capture: never from the vectored handler except at the profiled known site.
 // One thread at a time, never twice for one address, at most
 // kMaxCrashEvents (g_crash_gate); a concurrent crash goes on at once.
 void capture(EXCEPTION_POINTERS* ep, const char* how) {
@@ -1103,7 +1159,7 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
     c_crash_events.fetch_add(1, std::memory_order_relaxed);
     const uint64_t kind = er->NumberParameters >= 2 ? er->ExceptionInformation[0] : ~0ull;
     const uint64_t addr = er->NumberParameters >= 2 ? er->ExceptionInformation[1] : 0;
-    const bool known = at - g_base == kKnownCrashSite;
+    const bool known = at - g_base == known_crash_site_rva();
     if (c_crash_recorded.fetch_add(1, std::memory_order_relaxed) < kMaxCrashRecords) {
         Record r = rec(Ev::Crash, 0, 0);
         r.a = static_cast<uint32_t>(er->ExceptionCode);
@@ -1126,7 +1182,7 @@ LONG CALLBACK crash_veh(EXCEPTION_POINTERS* ep) {
     }
     if (known && kind == 0 && addr < 0x10000 && !t_in_crash) {
         t_in_crash = true;
-        capture(ep, "first chance at the known site exe+0x232D5FF, vectored; the game does not handle it");
+        capture(ep, "first chance at the profiled null-action fault, vectored; the game does not handle it");
         t_in_crash = false;
     }
     return EXCEPTION_CONTINUE_SEARCH;  // never handled here
@@ -1273,7 +1329,7 @@ void install_crash() {
               "(top-level filter, chained; stack overflows passed straight on) and the known site exe+0x{:X} write "
               "the last {} S3 records to this log and a minidump (at most {}; the newest {} kept, {} older removed) "
               "to {}; never handled here (previous top-level filter {})",
-              veh ? "ON" : "OFF (top-level filter only)", kMaxCrashRecords, kKnownCrashSite, kCrashFlush, kMaxDumps,
+              veh ? "ON" : "OFF (top-level filter only)", kMaxCrashRecords, known_crash_site_rva(), kCrashFlush, kMaxDumps,
               kKeepDumps, old_dumps, narrow(g_dump_dir),
               g_prev_uef.load() ? where_is(reinterpret_cast<const void*>(g_prev_uef.load())) + ", chained" : "none");
     // pendientes/p8-salida-invitado.md §3: read once here (P8 review M9: not inside the filter any more).
@@ -1299,6 +1355,8 @@ void guest_s3_start(bool diag, bool crash_dump, bool update_guard, bool actor_di
     g_guard = update_guard;
     CloseHandle(CreateThread(nullptr, 0, install_thread, nullptr, 0, nullptr));
 }
+
+bool guest_update_guard_ready() noexcept { return g_null_on.load(std::memory_order_acquire); }
 
 bool guest_s3_wanted() { return g_started.load(); }
 

@@ -1,6 +1,7 @@
 #include "mod/session2/docked_gimmicks.h"
 
 #include <windows.h>
+#include <intrin.h>
 
 #include <safetyhook.hpp>
 
@@ -18,6 +19,7 @@
 #include <vector>
 
 #include "mod/game/actor_lookup.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/offsets.h"
 #include "mod/game/player_reader.h"
@@ -25,6 +27,7 @@
 #include "mod/log.h"
 #include "mod/session2/docked_gimmicks_logic.h"
 #include "mod/session2/gimmick_event_dedup_logic.h"
+#include "mod/session2/gimmick_interact_logic.h"
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/p8_probes.h"
@@ -37,7 +40,47 @@ namespace {
 
 namespace g2976 = game::build_2976;
 
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+constexpr uintptr_t kCodeBegin = 0x1000;
+// Where everything is, per build (docked_gimmicks_logic.h). The struct offsets the hooks read are the same in both. Log
+// lines keep 2976's names for the functions (the research is written against that build) and print the RVA they use.
+struct Addrs {
+    uintptr_t client_request, client_request2, client_vtbl, client_slot, err_global;
+    std::span<const uint8_t> client_request2_head;
+    uintptr_t dock_equip, dock_other, dock_call_site;
+    std::span<const uint8_t> dock_call;
+    uintptr_t ctl_write, ctl_block, owner_read;
+    std::span<const uint8_t> ctl_block_bytes;
+    uintptr_t server_execute, server_update;
+    std::span<const uint8_t> server_update_head;
+    uintptr_t code_end;
+    dgl::RecLayout rec;
+};
+const Addrs kAddrs2976{dgl::kClientRequest, dgl::kClientRequest2, dgl::kClientGimmickVtbl, dgl::kClientGimmickRequestSlot,
+                       dgl::kErrNotControllerGlobal, dgl::kClientRequest2Head, dgl::kDockEquip, dgl::kDockOther,
+                       dgl::kDockEquipCallSite, dgl::kDockEquipCall, dgl::kControllerWrite, dgl::kControllerBlock,
+                       dgl::kFieldOwnerRead, dgl::kControllerBlockBytes, dgl::kServerExecute, dgl::kServerUpdate,
+                       dgl::kServerUpdateHead, 0x51EB000, dgl::kRecLayout2976};
+const Addrs kAddrs3527{dgl::kClientRequest3527, dgl::kClientRequest23527, dgl::kClientGimmickVtbl3527,
+                       dgl::kClientGimmickRequestSlot3527, dgl::kErrNotControllerGlobal3527, dgl::kClientRequest2Head3527,
+                       dgl::kDockEquip3527, dgl::kDockOther3527, dgl::kDockEquipCallSite3527, dgl::kDockEquipCall3527,
+                       dgl::kControllerWrite3527, dgl::kControllerBlock3527, dgl::kFieldOwnerRead3527,
+                       dgl::kControllerBlockBytes3527, dgl::kServerExecute3527, dgl::kServerUpdate3527,
+                       dgl::kServerUpdateHead3527, 0x5595000, dgl::kRecLayout3527};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): docked_gimmicks_logic.h's 3576 table with 3527's bytes, the code
+// section's end 0x5597000 (its flags: R-X, 0x1000 + 0x5596000), the 2005 record layout of 3527 (the Troc catalogue and
+// message sizes did not change, troc_mapping_3549_3576.json).
+const Addrs kAddrs3576{dgl::kClientRequest3576, dgl::kClientRequest23576, dgl::kClientGimmickVtbl3576,
+                       dgl::kClientGimmickRequestSlot3576, dgl::kErrNotControllerGlobal3576, dgl::kClientRequest2Head3527,
+                       dgl::kDockEquip3576, dgl::kDockOther3576, dgl::kDockEquipCallSite3576, dgl::kDockEquipCall3576,
+                       dgl::kControllerWrite3576, dgl::kControllerBlock3576, dgl::kFieldOwnerRead3576,
+                       dgl::kControllerBlockBytes3527, dgl::kServerExecute3576, dgl::kServerUpdate3576,
+                       dgl::kServerUpdateHead3527, 0x5597000, dgl::kRecLayout3527};
+const Addrs& addrs() noexcept {
+    static const Addrs& a = game::current_build() == game::Build::v3576   ? kAddrs3576
+                            : game::current_build() == game::Build::v3527 ? kAddrs3527
+                                                                          : kAddrs2976;
+    return a;
+}
 constexpr uint32_t kTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;
 constexpr uint64_t kMinuteMs = 60000;
@@ -66,8 +109,10 @@ enum EventKind : uint16_t {
     kEvDedupGuest = 14,   // gimmick_event_dedup, guest: an outgoing 2779 (v0 key|controller, v1 own user|verdict, v2 action)
     kEvDedupCreated = 15, // gimmick_event_dedup, host: a 2250 index > 1 (v0 key|index, v1 kind|trigger, v2 gap,
                           // v3 counts)
-    kEvUser2Host = 16     // host (review M1): a Req of user 2 naming the host's device / character (v0 op|which|at,
+    kEvUser2Host = 16,    // host (review M1): a Req of user 2 naming the host's device / character (v0 op|which|at,
                           // v1 key, v2 n)
+    kEvGiTrace = 17       // guest_gimmick_interact: a refused (or let through) request (v0 key|fn<<32|let<<33, v1 hash|
+                          // caller rva<<32, v2 actor, v3 controller)
 };
 
 std::atomic<bool> g_started{false}, g_guest{false};
@@ -88,6 +133,19 @@ dgl::Mode other_mode() {
 std::atomic<uint8_t> g_dedup_mode{0};
 dgl::Mode dedup_mode() { return static_cast<dgl::Mode>(g_dedup_mode.load(std::memory_order_relaxed)); }
 bool any_mode() { return mode() != dgl::Mode::Off || dedup_mode() != dgl::Mode::Off; }
+// [session2] guest_gimmick_interact (gimmick_interact_logic.h): guest only, needs docked_gimmicks' client hooks. The list
+// is written once before the hooks go in and only read after.
+std::atomic<uint8_t> g_gi_mode{0};  // gil::Mode
+gil::Events g_gi_events;
+gil::Mode gi_mode() { return static_cast<gil::Mode>(g_gi_mode.load(std::memory_order_relaxed)); }
+std::atomic<bool> g_gi_hooks{false};
+std::atomic<uint64_t> g_gi_let{0}, g_gi_refused{0}, g_gi_lines_dropped{0};
+// This thread's request call (the compares run inside it, on the same thread): may it pass, and did it.
+struct GiCall {
+    bool allow = false;
+    bool let = false;
+};
+thread_local GiCall t_gi;
 constexpr uint32_t kDedupGuestLines = 200;
 constexpr uint32_t kDedupHostLines = 100;
 
@@ -317,6 +375,18 @@ ClientPre client_pre(Arg comp, Arg ev) noexcept {
     (void)seh_copy(ev, &p.hash, sizeof p.hash);
     return p;
 }
+void gi_trace(int fn, const ClientPre& p, Arg comp, uintptr_t ret, bool refused, bool let) noexcept {
+    if (gi_mode() == gil::Mode::Off || !(refused || let)) return;
+    (refused ? g_gi_refused : g_gi_let).fetch_add(1, std::memory_order_relaxed);
+    uint64_t actor = 0;
+    uint32_t ctl = 0;
+    if (const auto a = game::fast_ptr(comp + dgl::kComp_Actor)) {
+        actor = *a;
+        if (const auto c = game::fast<uint32_t>(actor + dgl::kActor_Controller)) ctl = *c;
+    }
+    const uint64_t caller = ret >= g_base && ret - g_base < 0xFFFFFFFFull ? ret - g_base : 0;
+    push(kEvGiTrace, p.key | (uint64_t(fn & 1) << 32) | (uint64_t(let) << 33), p.hash | (caller << 32), actor, ctl);
+}
 void client_post(int fn, const ClientPre& p, Arg err) noexcept {
     uint32_t code = 0;
     const bool refused = seh_copy(err, &code, sizeof code) && code == g_err_code.load(std::memory_order_relaxed);
@@ -342,18 +412,48 @@ void client_post(int fn, const ClientPre& p, Arg err) noexcept {
         push(kEvClientFirst, p.key | (uint64_t{p.parent} << 32), p.hash | (uint64_t(fn) << 32), refused);
     }
 }
+bool refused_now(Arg err) noexcept {
+    uint32_t code = 0;
+    return seh_copy(err, &code, sizeof code) && code == g_err_code.load(std::memory_order_relaxed);
+}
+// guest_gimmick_interact: the decision for this call (its compare reads t_gi). Saved and put back around the call: a
+// request may run another one inside it.
 Arg req_detour(Arg comp, Arg err, Arg ev, Arg p4) {
+    const uintptr_t ret = reinterpret_cast<uintptr_t>(_ReturnAddress());
     const ClientPre p = client_pre(comp, ev);
+    const GiCall saved = t_gi;
+    t_gi = GiCall{g_gi_hooks.load(std::memory_order_relaxed) && gil::allow(gi_mode(), g_gi_events, p.hash), false};
     const Arg r = g_req_hook.unsafe_call<Arg>(comp, err, ev, p4);
+    const bool let = t_gi.let;
+    t_gi = saved;
     client_post(0, p, err);
+    gi_trace(0, p, comp, ret, refused_now(err), let);
     return r;
 }
 Arg req2_detour(Arg comp, Arg err, Arg ev, Arg p4, Arg p5) {
+    const uintptr_t ret = reinterpret_cast<uintptr_t>(_ReturnAddress());
     const ClientPre p = client_pre(comp, ev);
+    const GiCall saved = t_gi;
+    t_gi = GiCall{g_gi_hooks.load(std::memory_order_relaxed) && gil::allow(gi_mode(), g_gi_events, p.hash), false};
     const Arg r = g_req2_hook.unsafe_call<Arg>(comp, err, ev, p4, p5);
+    const bool let = t_gi.let;
+    t_gi = saved;
     client_post(1, p, err);
+    gi_trace(1, p, comp, ret, refused_now(err), let);
     return r;
 }
+// The compares 0x9D0641 (actor in rsi) / 0x9D0B6F (r13): eax = this client's user. For a call t_gi allows, eax := the
+// gimmick's controller, so the je takes the accepted path (which overwrites rax at once).
+void gi_compare(safetyhook::Context& ctx, uintptr_t actor) noexcept {
+    if (!t_gi.allow) return;
+    const auto c = game::fast<uint32_t>(actor + dgl::kActor_Controller);
+    if (!c || *c == static_cast<uint32_t>(ctx.rax)) return;
+    ctx.rax = *c;
+    t_gi.let = true;
+}
+void gi_compare_mid(safetyhook::Context& ctx) { gi_compare(ctx, ctx.rsi); }
+void gi_compare2_mid(safetyhook::Context& ctx) { gi_compare(ctx, ctx.r13); }
+SafetyHookMid g_gi_mid, g_gi_mid2;
 
 // ---------------------------------------------------------------- server (host): docking context (log only)
 
@@ -545,10 +645,11 @@ struct Check {
 };
 bool checks_ok(std::span<const gad::Section> secs, std::span<const Check> checks) {
     for (const Check& c : checks) {
-        const bool in_code = c.rva >= kCodeBegin && c.rva + c.bytes.size() <= kCodeEnd &&
+        const bool in_code = c.rva >= kCodeBegin && c.rva + c.bytes.size() <= addrs().code_end &&
                              gad::in_real_code(secs, static_cast<uint32_t>(c.rva), static_cast<uint32_t>(c.bytes.size()));
         if (!in_code || !bytes_at(c.rva, c.bytes)) {
-            log::error("DockedGimmicks: {} (exe+0x{:X}, {} bytes) is not build 2976's; REFUSED, nothing written",
+            log::error("DockedGimmicks: {} (exe+0x{:X}, {} bytes) is not this build's expected code; REFUSED, nothing "
+                       "written",
                        c.what, c.rva, c.bytes.size());
             return false;
         }
@@ -556,31 +657,68 @@ bool checks_ok(std::span<const gad::Section> secs, std::span<const Check> checks
     return true;
 }
 
+void install_interact(std::span<const gad::Section> secs);
 void install_client(std::span<const gad::Section> secs) {
+    const Addrs& ad = addrs();
     const Check checks[] = {
-        {dgl::kClientRequest, dgl::kClientRequestHead, "the client's gimmick event request 0x8E59D0's entry"},
-        {dgl::kClientRequest2, dgl::kClientRequest2Head, "the client's second gimmick request 0x8E5F60's entry"},
+        {ad.client_request, dgl::kClientRequestHead, "the client's gimmick event request's entry"},
+        {ad.client_request2, ad.client_request2_head, "the client's second gimmick request's entry"},
     };
     if (!checks_ok(secs, checks)) return;
     uint64_t slot = 0;
-    if (!game::safe_read(g_base + dgl::kClientGimmickRequestSlot, &slot, sizeof slot) ||
-        slot != g_base + dgl::kClientRequest) {
-        log::error("DockedGimmicks: pa::ClientGimmickActorComponent's vtable slot +0x740 (exe+0x{:X}) does not hold "
-                   "0x8E59D0; REFUSED, nothing written",
-                   dgl::kClientGimmickRequestSlot);
+    if (!game::safe_read(g_base + ad.client_slot, &slot, sizeof slot) || slot != g_base + ad.client_request) {
+        log::error("DockedGimmicks: pa::ClientGimmickActorComponent's vtable slot (exe+0x{:X}) does not hold exe+0x{:X}; "
+                   "REFUSED, nothing written",
+                   ad.client_slot, ad.client_request);
         return;
     }
     std::vector<Prepared> ready;
-    if (!prepare(dgl::kClientRequest, reinterpret_cast<void*>(&req_detour), dgl::kClientRequestHead,
-                 "the gimmick event request 0x8E59D0", g_req_hook, ready) ||
-        !prepare(dgl::kClientRequest2, reinterpret_cast<void*>(&req2_detour), dgl::kClientRequest2Head,
-                 "the gimmick request 0x8E5F60", g_req2_hook, ready) ||
+    if (!prepare(ad.client_request, reinterpret_cast<void*>(&req_detour), dgl::kClientRequestHead,
+                 "the gimmick event request", g_req_hook, ready) ||
+        !prepare(ad.client_request2, reinterpret_cast<void*>(&req2_detour), ad.client_request2_head,
+                 "the second gimmick request", g_req2_hook, ready) ||
         !enable_all(ready, "client")) {
         return;
     }
     g_client_hooks.store(true);
-    log::info("DockedGimmicks: client probe hooked at the entries of 0x8E59D0 (vf +0x740) and 0x8E5F60 (5 bytes "
-              "each); log only, nothing of the game is written");
+    log::info("DockedGimmicks: client probe hooked at the entries of exe+0x{:X} and exe+0x{:X} (5 bytes each); log only, "
+              "nothing of the game is written",
+              ad.client_request, ad.client_request2);
+    install_interact(secs);
+}
+
+// guest_gimmick_interact = 1: the two compares (builds 3527 / 3549 / 3576 only; trace needs no hook of its own).
+void install_interact(std::span<const gad::Section> secs) {
+    const gil::Mode m = gi_mode();
+    if (m == gil::Mode::Off || !g_guest.load()) return;
+    if (m == gil::Mode::Trace) {
+        log::info("GimmickInteract (guest_gimmick_interact=trace): the refused requests are traced at the entry hooks; "
+                  "nothing passes");
+        return;
+    }
+    const game::Build build = game::current_build();
+    if (build != game::Build::v3527 && build != game::Build::v3576) {
+        log::error("GimmickInteract: guest_gimmick_interact=1 has no compare addresses for this build; it stays trace");
+        return;
+    }
+    // 3576: the same compares (3527's bytes and patches) at docked_gimmicks_logic.h's 3576 addresses.
+    const uintptr_t check1 = build == game::Build::v3576 ? dgl::kClientCheck3576 : dgl::kClientCheck3527;
+    const uintptr_t check2 = build == game::Build::v3576 ? dgl::kClientCheck23576 : dgl::kClientCheck23527;
+    if (!p8_install_mid(g_base, secs, check1, dgl::kClientCheckPatch3527, dgl::kClientCheckBytes3527, &gi_compare_mid,
+                        g_gi_mid, "GimmickInteract", "the request's control compare (cmp eax,[rsi+0x90])") ||
+        !p8_install_mid(g_base, secs, check2, dgl::kClientCheck2Patch3527, dgl::kClientCheck2Bytes3527, &gi_compare2_mid,
+                        g_gi_mid2, "GimmickInteract", "the second request's control compare (cmp eax,[r13+0x90])")) {
+        g_gi_mid = {};
+        g_gi_mid2 = {};
+        log::error("GimmickInteract: not both compares could be hooked; nothing passes (trace goes on)");
+        return;
+    }
+    g_gi_hooks.store(true);
+    std::string list;
+    for (size_t i = 0; i < g_gi_events.n; ++i) list += std::format("{}0x{:08X}", list.empty() ? "" : ", ", g_gi_events.hash[i]);
+    log::info("GimmickInteract (guest_gimmick_interact=1): compares exe+0x{:X} / exe+0x{:X} hooked; a request refused "
+              "only because the host controls the gimmick passes for the events [{}]",
+              check1, check2, list.empty() ? std::string("none listed") : list);
 }
 
 // The one install of 0x2792A7B for whichever user asks first (docked_gimmicks' worker, user2_stages' thread: the lock
@@ -593,9 +731,11 @@ bool ctl_write_acquire(uint8_t user, const char* who) {
         return true;
     }
     const uintptr_t base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    const Addrs& ad = addrs();
     std::vector<gad::Section> secs;
     if (base != g2976::kImageBase || !p8_exe_sections(base, secs)) {
-        log::error("{}: the server's controller write 0x2792A7B: unsupported build or unreadable sections; REFUSED", who);
+        log::error("{}: the server's controller write exe+0x{:X}: unsupported build or unreadable sections; REFUSED", who,
+                   ad.ctl_write);
         return false;
     }
     const auto same = [&](uintptr_t rva, std::span<const uint8_t> expected) {
@@ -603,17 +743,16 @@ bool ctl_write_acquire(uint8_t user, const char* who) {
         return game::safe_read(base + rva, actual.data(), actual.size()) &&
                std::equal(actual.begin(), actual.end(), expected.begin());
     };
-    if (!same(dgl::kControllerBlock, dgl::kControllerBlockBytes) ||
-        !same(dgl::kFieldOwnerRead, dgl::kFieldOwnerReadBytes)) {
-        log::error("{}: the controller block 0x2792A11 / the field-owner read 0x2792A70 are not build 2976's code; "
-                   "0x2792A7B REFUSED, nothing written",
-                   who);
+    if (!same(ad.ctl_block, ad.ctl_block_bytes) || !same(ad.owner_read, dgl::kFieldOwnerReadBytes)) {
+        log::error("{}: the controller block exe+0x{:X} / the field-owner read exe+0x{:X} are not this build's expected "
+                   "code; exe+0x{:X} REFUSED, nothing written",
+                   who, ad.ctl_block, ad.owner_read, ad.ctl_write);
         return false;
     }
-    if (!p8_install_mid(base, secs, dgl::kControllerWrite, dgl::kControllerWritePatch, dgl::kControllerWriteBytes,
-                        &ctl_write_mid, g_ctl_mid, who,
-                        "the server's controller write 0x2792A7B (mov [r14+0x90],eax; one hook for docked_gimmicks "
-                        "and user2_npc_control)")) {
+    if (!p8_install_mid(base, secs, ad.ctl_write, dgl::kControllerWritePatch, dgl::kControllerWriteBytes, &ctl_write_mid,
+                        g_ctl_mid, who,
+                        "the server's controller write (mov [r14+0x90],eax; one hook for docked_gimmicks and "
+                        "user2_npc_control)")) {
         return false;
     }
     g_ctl_users.store(user);
@@ -630,24 +769,25 @@ void ctl_write_release(uint8_t user) {
 }
 
 void install_server(std::span<const gad::Section> secs) {
+    const Addrs& ad = addrs();
     const Check checks[] = {
-        {dgl::kDockEquip, dgl::kDockHead, "the equipment docking spawn 0x28AD170's entry"},
-        {dgl::kDockOther, dgl::kDockHead, "the docking spawn 0x28ADE40's entry"},
-        {dgl::kDockEquipCallSite, dgl::kDockEquipCall, "its 2249 caller 0x2970ADF (call 0x28AD170)"},
-        {dgl::kFieldOwnerRead, dgl::kFieldOwnerReadBytes, "the field-owner read 0x2792A70"},
-        {dgl::kServerExecute, dgl::kServerExecuteHead, "ServerGimmick_ExecuteFrameEvent 0x2AC1270's entry"},
-        {dgl::kServerUpdate, dgl::kServerUpdateHead, "ServerGimmick_Update 0x2AC0790's entry"},
+        {ad.dock_equip, dgl::kDockHead, "the equipment docking spawn's entry"},
+        {ad.dock_other, dgl::kDockHead, "the other docking spawn's entry"},
+        {ad.dock_call_site, ad.dock_call, "its 2249 caller (call to the equipment docking spawn)"},
+        {ad.owner_read, dgl::kFieldOwnerReadBytes, "the field-owner read"},
+        {ad.server_execute, dgl::kServerExecuteHead, "ServerGimmick_ExecuteFrameEvent's entry"},
+        {ad.server_update, ad.server_update_head, "ServerGimmick_Update's entry"},
     };
     if (!checks_ok(secs, checks)) return;
     std::vector<Prepared> ready;
-    if (!prepare(dgl::kDockEquip, reinterpret_cast<void*>(&dock_detour), dgl::kDockHead,
-                 "the equipment docking spawn 0x28AD170", g_dock_hook, ready) ||
-        !prepare(dgl::kDockOther, reinterpret_cast<void*>(&dock2_detour), dgl::kDockHead,
-                 "the docking spawn 0x28ADE40", g_dock2_hook, ready) ||
-        !prepare(dgl::kServerExecute, reinterpret_cast<void*>(&exec_detour), dgl::kServerExecuteHead,
-                 "ServerGimmick_ExecuteFrameEvent 0x2AC1270", g_exec_hook, ready) ||
-        !prepare(dgl::kServerUpdate, reinterpret_cast<void*>(&upd_detour), dgl::kServerUpdateHead,
-                 "ServerGimmick_Update 0x2AC0790", g_upd_hook, ready)) {
+    if (!prepare(ad.dock_equip, reinterpret_cast<void*>(&dock_detour), dgl::kDockHead,
+                 "the equipment docking spawn", g_dock_hook, ready) ||
+        !prepare(ad.dock_other, reinterpret_cast<void*>(&dock2_detour), dgl::kDockHead,
+                 "the other docking spawn", g_dock2_hook, ready) ||
+        !prepare(ad.server_execute, reinterpret_cast<void*>(&exec_detour), dgl::kServerExecuteHead,
+                 "ServerGimmick_ExecuteFrameEvent", g_exec_hook, ready) ||
+        !prepare(ad.server_update, reinterpret_cast<void*>(&upd_detour), ad.server_update_head,
+                 "ServerGimmick_Update", g_upd_hook, ready)) {
         return;
     }
     // The controller's write first (a mid hook, read only here; shared with user2_npc_control, one install): without
@@ -660,16 +800,15 @@ void install_server(std::span<const gad::Section> secs) {
         return;
     }
     g_server_hooks.store(true);
-    log::info("DockedGimmicks: server probe hooked: entries of 0x28AD170 / 0x28ADE40 (the docking spawns), "
-              "0x2AC1270 / 0x2AC0790 (the server's gimmick event / update: accepted or rejected) and a mid hook at "
-              "0x2792A7B (the controller written at creation); log only, nothing of the game is written");
+    log::info("DockedGimmicks: server probe hooked: entries of exe+0x{:X} / exe+0x{:X} (the docking spawns), exe+0x{:X} / "
+              "exe+0x{:X} (the server's gimmick event / update: accepted or rejected) and a mid hook at exe+0x{:X} (the "
+              "controller written at creation); log only, nothing of the game is written",
+              ad.dock_equip, ad.dock_other, ad.server_execute, ad.server_update, ad.ctl_write);
 }
 
 bool build_ok() {
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;
+    const game::Build b = game::current_build();
+    return g_base == g2976::kImageBase && (b == game::Build::v2976 || b == game::Build::v3527 || b == game::Build::v3576);
 }
 
 // ---------------------------------------------------------------- the module's thread
@@ -696,7 +835,39 @@ struct State {
     std::vector<PendingCheck> checks;
     std::map<uint32_t, uint32_t> docked_parent;  // player-docked gimmick key -> parent (from the 2005s)
     uint64_t checks_match = 0, checks_mismatch = 0, checks_not_found = 0;
+    // guest_gimmick_interact's trace: the player's position (world x / z, each tick) and the dedupe.
+    bool have_pos = false;
+    float px = 0, pz = 0;
+    gil::Seen<512> gi_pairs;   // (event hash, caller)
+    gil::Seen<2048> gi_near;   // (gimmick key, event hash) within kGiNearM of the player
+    uint64_t gi_lines = 0;
 };
+constexpr float kGiNearM = 6.0f;
+constexpr uint64_t kGiLines = 800;
+
+// A gimmick's type and world position (x / z), read on the worker thread: the actor may be gone (guarded reads).
+struct GiActor {
+    uint8_t type = 0;
+    bool pos = false;
+    float x = 0, z = 0;
+};
+GiActor gi_actor(uintptr_t a) noexcept {
+    GiActor g;
+    if (!a) return g;
+    if (const auto ti = game::fast_ptr(a + dgl::kActor_TypeInfo)) {
+        if (const auto t = game::fast<uint8_t>(*ti + 1)) g.type = *t;
+    }
+    const auto comps = game::fast_ptr(a + dgl::kActor_Comps);
+    const auto ts = comps ? game::fast_ptr(*comps + 0x1A0) : std::nullopt;
+    if (!ts) return g;
+    const auto x = game::fast<float>(*ts + 0xB4), z = game::fast<float>(*ts + 0xBC);
+    const auto sx = game::fast<int16_t>(*ts + 0xC0), sz = game::fast<int16_t>(*ts + 0xC2);
+    if (!x || !z || !sx || !sz || !std::isfinite(*x) || !std::isfinite(*z)) return g;
+    g.pos = true;
+    g.x = *x + *sx * 1000.0f;
+    g.z = *z + *sz * 1000.0f;
+    return g;
+}
 
 uint64_t g_priority_lines = 0;  // the worker's thread only
 void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_logged) {
@@ -769,6 +940,32 @@ void log_event(const p8p::Event& e, State& st, uint64_t& lines, uint64_t& not_lo
                       hash_text(static_cast<uint32_t>(e.v[1])),
                       e.v[2] ? "REFUSED (eErrNoActorNotExist: not this client's to control)" : "accepted here",
                       e.kind == kEvClientFirst ? "first request seen for it" : "a new refused event", e.tid);
+            return;
+        }
+        case kEvGiTrace: {
+            const auto key = static_cast<uint32_t>(e.v[0]);
+            const int fn = static_cast<int>((e.v[0] >> 32) & 1);
+            const bool let = ((e.v[0] >> 33) & 1) != 0;
+            const auto hash = static_cast<uint32_t>(e.v[1]);
+            const auto caller = static_cast<uint32_t>(e.v[1] >> 32);
+            const GiActor ga = gi_actor(static_cast<uintptr_t>(e.v[2]));
+            const float d = st.have_pos && ga.pos ? std::hypot(ga.x - st.px, ga.z - st.pz) : -1.0f;
+            const bool is_near = d >= 0 && d <= kGiNearM;
+            const uint32_t pair_seen = st.gi_pairs.note(gil::pair_key(hash, caller ^ (fn ? 0x80000000u : 0)));
+            const uint32_t near_seen = is_near ? st.gi_near.note(gil::pair_key(key, hash)) : gil::Seen<2048>::kFull;
+            const bool show = let ? near_seen < 3 || pair_seen < 3 : pair_seen < 2 || near_seen < 2;
+            if (!show) return;
+            if (st.gi_lines++ >= kGiLines) {
+                g_gi_lines_dropped.fetch_add(1, std::memory_order_relaxed);
+                return;
+            }
+            log::info("GimmickInteract #{} {}: gimmick 0x{:08X} type {} controller 0x{:08X} | {} | event {} | caller "
+                      "exe+0x{:X} | {} | {} | thread {}",
+                      seq, p8_when(e.qpc_us), key, ga.type, static_cast<uint32_t>(e.v[3]),
+                      fn ? "0x9D0B00" : "0x9D05D0", hash_text(hash), caller,
+                      let ? "LET THROUGH (guest_gimmick_interact=1)" : "refused (the host controls it)",
+                      d < 0 ? std::string("distance unknown") : std::format("{:.1f} m from the player{}", d, is_near ? " (near)" : ""),
+                      e.tid);
             return;
         }
         case kEvDockEntry:
@@ -924,7 +1121,7 @@ void run_checks(State& st, uint64_t now, uint64_t& lines, uint64_t& not_logged) 
         const auto ctl = game::read<uint32_t>(*actor + dgl::kActor_Controller);
         const auto comps = game::read_ptr(*actor + dgl::kActor_Comps);
         const auto comp = comps ? game::read_ptr(*comps + dgl::kComps_Gimmick) : std::nullopt;
-        const bool vt_ok = comp && game::has_vtable(*comp, g_base + dgl::kClientGimmickVtbl);
+        const bool vt_ok = comp && game::has_vtable(*comp, g_base + addrs().client_vtbl);
         const auto parent = vt_ok ? game::read<uint32_t>(*comp + dgl::kComp_DockParent) : std::nullopt;
         // P8 S29: only +0x90 is compared. +0x2B4 is not the docked parent (0 in 80 / 80 S28 checks on both PCs,
         // also for natively controlled devices); it stays in the line for information.
@@ -1116,6 +1313,12 @@ void log_summary(State& st, uint64_t not_logged) {
               g_client_hooks.load() ? "on" : "OFF", client.empty() ? std::string("none seen yet") : client,
               g_client_untracked.load(), g_client.used(), g_client.full(), g_err_code.load(), not_logged,
               g_ring.dropped());
+    if (gi_mode() != gil::Mode::Off) {
+        log::info("GimmickInteract summary (guest_gimmick_interact={}, compares {}): refused {}, let through {} | trace "
+                  "lines {} (not logged past the cap {}), (event, caller) pairs {}, near (gimmick, event) pairs {}",
+                  gil::mode_name(gi_mode()), g_gi_hooks.load() ? "hooked" : "not hooked", g_gi_refused.load(),
+                  g_gi_let.load(), st.gi_lines, g_gi_lines_dropped.load(), st.gi_pairs.used(), st.gi_near.used());
+    }
     if (!guest) {
         std::string unspawn;
         for (int u = 0; u < 2; ++u) {
@@ -1196,7 +1399,7 @@ DWORD WINAPI worker_thread(LPVOID) {
                 if (in_world >= kWorldTicks) {
                     hook_tried = true;
                     uint32_t code = 0;
-                    if (game::safe_read(g_base + dgl::kErrNotControllerGlobal, &code, sizeof code) && code) {
+                    if (game::safe_read(g_base + addrs().err_global, &code, sizeof code) && code) {
                         if (code != dgl::kErrNotController) {
                             log::warn("DockedGimmicks: the game's eErrNoActorNotExist is 0x{:08X}, not 0x{:08X}; the "
                                       "game's value is used for 'refused'",
@@ -1216,6 +1419,13 @@ DWORD WINAPI worker_thread(LPVOID) {
                         }
                     }
                     last_minute = now;
+                }
+            }
+            if (hook_tried && gi_mode() != gil::Mode::Off) {
+                if (const auto s = reader.read()) {
+                    st.have_pos = true;
+                    st.px = s->position.x;
+                    st.pz = s->position.z;
                 }
             }
             p8p::Event e;
@@ -1304,7 +1514,7 @@ void docked_gimmicks_guest_deliver(std::vector<uint8_t>& packet) noexcept {
                 return;
             }
         }
-        const dgl::Result2005 r = dgl::process_2005(pl, self, m, g_keys, other_mode());
+        const dgl::Result2005 r = dgl::process_2005(pl, self, m, g_keys, other_mode(), addrs().rec);
         if (r.learned_user) {
             g_own_user.store(r.learned_user);
             push(kEvLearnedUser, self.own_key | (uint64_t{r.learned_user} << 32));
@@ -1409,7 +1619,7 @@ void docked_gimmicks_sniffed(const uint8_t* packet, size_t size, uint64_t, bool 
         std::vector<uint8_t> copy(packet, packet + size);
         const std::span<uint8_t> pl = dgl::payload_2005(copy);
         if (pl.empty()) return;
-        const dgl::Result2005 r = dgl::process_2005(pl, t_self, dgl::Mode::Probe, t_keys);
+        const dgl::Result2005 r = dgl::process_2005(pl, t_self, dgl::Mode::Probe, t_keys, dgl::Mode::Off, addrs().rec);
         if (r.learned_user) push(kEvLearnedUser, t_self.own_key | (uint64_t{r.learned_user} << 32));
         count(r);
         push_docked(r, /*host=*/true);
@@ -1420,6 +1630,12 @@ void docked_gimmicks_sniffed(const uint8_t* packet, size_t size, uint64_t, bool 
 
 bool docked_gimmicks_ctl_write_for_user2(const char* who) noexcept {
     try {
+        // 3527 / 3576: user2_npc_control is not ported; only docked_gimmicks' read-only use of the hook is verified there.
+        if (game::current_build() == game::Build::v3527 || game::current_build() == game::Build::v3576) {
+            log::warn("{}: user2_npc_control's use of the server's controller write is not ported to 1.0.0.{}; REFUSED",
+                      who, game::current_build() == game::Build::v3576 ? 3576 : 3527);
+            return false;
+        }
         return ctl_write_acquire(kCtlUserU2, who);
     } catch (...) {
         return false;
@@ -1531,8 +1747,8 @@ bool start_common(bool guest) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (!build_ok()) {
         g_common.store(-1);
-        log::error("DockedGimmicks: unsupported game build (not 1.0.0.2976); docked_gimmicks and gimmick_event_dedup "
-                   "stay off");
+        log::error("DockedGimmicks: unsupported game build (not 1.0.0.2976, 1.0.0.3527 or 1.0.0.3576); docked_gimmicks "
+                   "and gimmick_event_dedup stay off");
         return false;
     }
     g_guest.store(guest);
@@ -1546,6 +1762,13 @@ void gimmick_event_dedup_start(const std::string& raw, bool guest) {
     const dgl::ParsedMode pm = dgl::parse_mode(raw);
     if (!pm.ok) log::warn("GimmickEventDedup: gimmick_event_dedup '{}' is not 0 | probe | 1; it stays off", raw);
     if (pm.mode == dgl::Mode::Off) return;
+    // 3527: the 2779 / 2250 layouts this mode parses have not been checked (no 2779 in the captures); only docked_gimmicks
+    // is ported. As before this module knew 3527, it stays off there.
+    if (game::current_build() == game::Build::v3527 || game::current_build() == game::Build::v3576) {
+        log::warn("GimmickEventDedup: not ported to 1.0.0.{} (2779 / 2250 unverified); gimmick_event_dedup stays off",
+                  game::current_build() == game::Build::v3576 ? 3576 : 3527);
+        return;
+    }
     // Set before the thread exists: the worker installs docked_gimmicks' hooks only when that mode is on.
     g_dedup_mode.store(static_cast<uint8_t>(pm.mode));
     if (!start_common(guest)) {
@@ -1624,6 +1847,36 @@ void docked_gimmicks_start(const std::string& raw, bool guest) {
                       "enabled=1)",
               guest ? "" : "; server: the docking spawns 0x28AD170 / 0x28ADE40, the controller write 0x2792A7B, "
                            "0x2AC1270 / 0x2AC0790 accepted or rejected, the 2221 unspawns at the server's receive");
+}
+
+void docked_gimmicks_interact_start(const std::string& raw, const std::string& events, bool guest) {
+    const auto m = gil::parse_mode(raw);
+    if (!m) {
+        log::warn("GimmickInteract: guest_gimmick_interact '{}' is not 0 | trace | 1; it stays off", raw);
+        return;
+    }
+    if (*m == gil::Mode::Off) return;
+    if (!guest) {
+        log::info("GimmickInteract: guest_gimmick_interact is a guest key; ignored on the host");
+        return;
+    }
+    if (mode() == dgl::Mode::Off) {
+        log::warn("GimmickInteract: guest_gimmick_interact needs docked_gimmicks (its client hooks); it stays off");
+        return;
+    }
+    const auto ev = gil::parse_events(events);
+    if (!ev) {
+        log::warn("GimmickInteract: guest_gimmick_interact_events '{}' is not a list of at most {} hex hashes; it "
+                  "stays off",
+                  events, gil::kMaxEvents);
+        return;
+    }
+    g_gi_events = *ev;  // before the hooks (the worker installs them once the world is up)
+    g_gi_mode.store(static_cast<uint8_t>(*m));
+    log::info("GimmickInteract ON (guest_gimmick_interact={}, {} event(s) listed): the client's gimmick requests "
+              "refused because the host controls the gimmick are traced{}",
+              gil::mode_name(*m), ev->n,
+              *m == gil::Mode::On ? "; the listed events pass the control compare (the server still decides)" : "");
 }
 
 }  // namespace cdmp::session2

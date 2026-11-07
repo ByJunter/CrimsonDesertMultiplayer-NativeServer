@@ -54,12 +54,15 @@ std::deque<std::vector<uint8_t>> guest_take_outgoing(size_t link_backlog = 0);
 bool guest_reannounce_configure(const std::string& raw, bool errors_hook_expected);
 bool guest_active();  // hooks installed
 bool guest_remote();  // the current connection goes to the host
+bool guest_host_ready();  // the host said it can take this guest now (the HUD: Play would go to its world)
 // S25 (docs/research/s25/invisibles.md): this game run already played on the host and the current connection does
 // not (back to the title and Continue: its own server, alone). The HUD says so.
 bool guest_local_after_remote();
 // ui_pause_block (ui_pause.h): the current connection plays on the host right
 // now: remote, the tunnel up and the connection not stopped. Atomics only.
 bool guest_remote_live() noexcept;
+// [session2] docking_dedupe (docking_dedupe_logic.h): the guest's repeated equipment-docking requests, once per 2 s.
+void guest_set_docking_dedupe(bool on);
 // The client connection's epoch ([session+0xB0], 0 before the first): an atomic
 // load, safe from any thread (the P8 probes stamp their events with it).
 uint64_t guest_connection_epoch() noexcept;

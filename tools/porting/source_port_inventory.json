@@ -1,0 +1,7269 @@
+{
+  "method": "heuristic: const/constexpr address-like integers 0x10000..0x1fffffff; includes hash/sentinel false positives. Comment-stripped source. Direct base+literal lines separately listed. Decimal 2000..3119 occurrences are opcode candidates, not exact opcode count.",
+  "files": 322,
+  "address_candidates": [
+    {
+      "file": "src/common/save_guard.cpp",
+      "line": 10,
+      "type": "uint32_t",
+      "name": "kGenericAll",
+      "value": "0x10000000"
+    },
+    {
+      "file": "src/common/save_guard.cpp",
+      "line": 12,
+      "type": "uint32_t",
+      "name": "kMaximumAllowed",
+      "value": "0x02000000"
+    },
+    {
+      "file": "src/common/save_guard.cpp",
+      "line": 13,
+      "type": "uint32_t",
+      "name": "kDelete",
+      "value": "0x00010000"
+    },
+    {
+      "file": "src/common/save_guard.cpp",
+      "line": 14,
+      "type": "uint32_t",
+      "name": "kWriteDac",
+      "value": "0x00040000"
+    },
+    {
+      "file": "src/common/save_guard.cpp",
+      "line": 15,
+      "type": "uint32_t",
+      "name": "kWriteOwner",
+      "value": "0x00080000"
+    },
+    {
+      "file": "src/common/save_guard.cpp",
+      "line": 24,
+      "type": "uint32_t",
+      "name": "kFlagDeleteOnClose",
+      "value": "0x04000000"
+    },
+    {
+      "file": "src/mod/mod.cpp",
+      "line": 722,
+      "type": "uint32_t",
+      "name": "hp_stat",
+      "value": "0x000F4240"
+    },
+    {
+      "file": "src/mod/game/game_errors.cpp",
+      "line": 25,
+      "type": "uintptr_t",
+      "name": "kErrorLogger",
+      "value": "0x35D8D0"
+    },
+    {
+      "file": "src/mod/game/game_errors.cpp",
+      "line": 69,
+      "type": "uintptr_t",
+      "name": "kActorCreateFailedFrom",
+      "value": "0x8BDF7C"
+    },
+    {
+      "file": "src/mod/game/hook_prepare.cpp",
+      "line": 17,
+      "type": "uint64_t",
+      "name": "kGranule",
+      "value": "0x10000"
+    },
+    {
+      "file": "src/mod/game/safe_memory.cpp",
+      "line": 11,
+      "type": "uintptr_t",
+      "name": "kMinAddress",
+      "value": "0x10000"
+    },
+    {
+      "file": "src/mod/net/aggro_test.cpp",
+      "line": 32,
+      "type": "uintptr_t",
+      "name": "kIsTargetable",
+      "value": "0x22141E0"
+    },
+    {
+      "file": "src/mod/net/aggro_test.cpp",
+      "line": 35,
+      "type": "uintptr_t",
+      "name": "kSetCurrentTarget",
+      "value": "0x2217290"
+    },
+    {
+      "file": "src/mod/net/aggro_test.cpp",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kCheckAIBattleType",
+      "value": "0x22E0A30"
+    },
+    {
+      "file": "src/mod/net/guest_hits.cpp",
+      "line": 46,
+      "type": "uint32_t",
+      "name": "kStatHP",
+      "value": "0x000F4240"
+    },
+    {
+      "file": "src/mod/net/local_capture.cpp",
+      "line": 97,
+      "type": "uint32_t",
+      "name": "kStatHP",
+      "value": "0x000F4240"
+    },
+    {
+      "file": "src/mod/net/piece4_test.cpp",
+      "line": 141,
+      "type": "uint32_t",
+      "name": "stat",
+      "value": "0x000F4240"
+    },
+    {
+      "file": "src/mod/net/player_hits.cpp",
+      "line": 45,
+      "type": "uint32_t",
+      "name": "kStatHP",
+      "value": "0x000F4240"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 839,
+      "type": "uintptr_t",
+      "name": "kNotifyAppear",
+      "value": "0x2B000C0"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 843,
+      "type": "uintptr_t",
+      "name": "kNotifyReadSessions",
+      "value": "0x2B001B7"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 845,
+      "type": "uintptr_t",
+      "name": "kNotifyReadKeys",
+      "value": "0x2B0021D"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 847,
+      "type": "uintptr_t",
+      "name": "kNotifyFindCall",
+      "value": "0x2B00233"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 849,
+      "type": "uintptr_t",
+      "name": "kCallerNewObservers",
+      "value": "0x2AF90EB"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 851,
+      "type": "uintptr_t",
+      "name": "kCallerMovingUser",
+      "value": "0x2AF92D1"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 853,
+      "type": "uintptr_t",
+      "name": "kStartAction",
+      "value": "0x296CAA0"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 857,
+      "type": "uintptr_t",
+      "name": "kStartActionVtable",
+      "value": "0x5B251D8"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 858,
+      "type": "uintptr_t",
+      "name": "kRestoreWrite",
+      "value": "0x2328890"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 863,
+      "type": "uintptr_t",
+      "name": "kServerRealmSet",
+      "value": "0x27733A6"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 21,
+      "type": "uintptr_t",
+      "name": "kTravel",
+      "value": "0x2BC0A30"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 25,
+      "type": "uintptr_t",
+      "name": "kTravelOwnerCmp",
+      "value": "0x2BC0A78"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 27,
+      "type": "uintptr_t",
+      "name": "kTravelGetterCall",
+      "value": "0x2BC0CC7"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 29,
+      "type": "uintptr_t",
+      "name": "kLoading",
+      "value": "0x219D7F0"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 34,
+      "type": "uintptr_t",
+      "name": "kLoadingFlagCmp",
+      "value": "0x219D82B"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 36,
+      "type": "uintptr_t",
+      "name": "kGetter",
+      "value": "0x20E55A0"
+    },
+    {
+      "file": "src/mod/session2/combat_follow.cpp",
+      "line": 34,
+      "type": "uintptr_t",
+      "name": "kClockBase",
+      "value": "0x6C8CD68"
+    },
+    {
+      "file": "src/mod/session2/combat_follow.cpp",
+      "line": 35,
+      "type": "uintptr_t",
+      "name": "kClockFrac",
+      "value": "0x6C8CD70"
+    },
+    {
+      "file": "src/mod/session2/combat_follow.cpp",
+      "line": 36,
+      "type": "uintptr_t",
+      "name": "kClockBias",
+      "value": "0x6D69438"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 30,
+      "type": "uintptr_t",
+      "name": "kCreate",
+      "value": "0x8AF580"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 38,
+      "type": "uintptr_t",
+      "name": "kFindSite",
+      "value": "0x8AF60E"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 44,
+      "type": "uintptr_t",
+      "name": "kFactorySite",
+      "value": "0x8AF685"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kMapSite",
+      "value": "0x8AF6C6"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 56,
+      "type": "uintptr_t",
+      "name": "kConfirm",
+      "value": "0x206B2D0"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 65,
+      "type": "uintptr_t",
+      "name": "kSlotErrSite",
+      "value": "0x206B394"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kMainAcqSite",
+      "value": "0x206B49E"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 78,
+      "type": "uintptr_t",
+      "name": "kMainCompSite",
+      "value": "0x206B4FD"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 80,
+      "type": "uintptr_t",
+      "name": "kMainStateSite",
+      "value": "0x206B52F"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 87,
+      "type": "uintptr_t",
+      "name": "kAttachSite",
+      "value": "0x206B5D0"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 107,
+      "type": "uintptr_t",
+      "name": "kCrash",
+      "value": "0x232D5C0"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 110,
+      "type": "uintptr_t",
+      "name": "kCrashSite",
+      "value": "0x232D5EE"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 113,
+      "type": "uintptr_t",
+      "name": "kCallerLayer",
+      "value": "0x232D51E"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 115,
+      "type": "uintptr_t",
+      "name": "kCallerCopy",
+      "value": "0x232D543"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 118,
+      "type": "uintptr_t",
+      "name": "kCallerCall",
+      "value": "0x232D59D"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 123,
+      "type": "uintptr_t",
+      "name": "kScopeAck",
+      "value": "0xCB4160"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 130,
+      "type": "uintptr_t",
+      "name": "kBadThisFn",
+      "value": "0xAAFC00"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 134,
+      "type": "uintptr_t",
+      "name": "kBadThis",
+      "value": "0xAAFC1D"
+    },
+    {
+      "file": "src/mod/session2/door_trace.cpp",
+      "line": 19,
+      "type": "uint32_t",
+      "name": "kRva",
+      "value": "0x282DC80"
+    },
+    {
+      "file": "src/mod/session2/enemy_damage_probe.cpp",
+      "line": 19,
+      "type": "uintptr_t",
+      "name": "kRva",
+      "value": "0x209CB30"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 43,
+      "type": "uintptr_t",
+      "name": "kVtServerSequencerStageManager",
+      "value": "0x5B17A58"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 96,
+      "type": "uintptr_t",
+      "name": "kFastTravel",
+      "value": "0x655110"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 103,
+      "type": "uintptr_t",
+      "name": "kFastTravelPoint",
+      "value": "0xA9A860"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 107,
+      "type": "uintptr_t",
+      "name": "kPointCall",
+      "value": "0x6555C6"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 20,
+      "type": "uintptr_t",
+      "name": "kAcquireField",
+      "value": "0x2B07790"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 24,
+      "type": "uintptr_t",
+      "name": "kEnterField",
+      "value": "0x2BC04F0"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 28,
+      "type": "uintptr_t",
+      "name": "kTryAddRef",
+      "value": "0x14343A0"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 31,
+      "type": "uintptr_t",
+      "name": "kVecPush",
+      "value": "0x40B5B0"
+    },
+    {
+      "file": "src/mod/session2/guest.cpp",
+      "line": 84,
+      "type": "uintptr_t",
+      "name": "kServerFrameworkMode",
+      "value": "0x6A65564"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 45,
+      "type": "uintptr_t",
+      "name": "kFinishHead",
+      "value": "0x4FD2E0"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 48,
+      "type": "uintptr_t",
+      "name": "kFinishActor",
+      "value": "0x4FD390"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kFinishState",
+      "value": "0x4FD3AA"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kFinishLogin",
+      "value": "0x4FD3E0"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 56,
+      "type": "uintptr_t",
+      "name": "kFinishError",
+      "value": "0x4FD488"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 64,
+      "type": "uintptr_t",
+      "name": "kErrStateGlobal",
+      "value": "0x6CDB92C"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 65,
+      "type": "uintptr_t",
+      "name": "kErrActionChartGlobal",
+      "value": "0x6CF6C50"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 82,
+      "type": "uintptr_t",
+      "name": "kStateSite",
+      "value": "0x7798D0"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 93,
+      "type": "uintptr_t",
+      "name": "kWaitSite",
+      "value": "0x779ED0"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 97,
+      "type": "uintptr_t",
+      "name": "kFind",
+      "value": "0x464290"
+    },
+    {
+      "file": "src/mod/session2/guest_lifecycle.cpp",
+      "line": 16,
+      "type": "uintptr_t",
+      "name": "kMinPtr",
+      "value": "0x10000"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 35,
+      "type": "uintptr_t",
+      "name": "kWaitHead",
+      "value": "0x779E8B"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 40,
+      "type": "uintptr_t",
+      "name": "kWaitLoop",
+      "value": "0x779ED0"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 45,
+      "type": "uintptr_t",
+      "name": "kWaitRemove",
+      "value": "0x779EF7"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kReady",
+      "value": "0x4FE240"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 54,
+      "type": "uintptr_t",
+      "name": "kFind",
+      "value": "0x464290"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 66,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 79,
+      "type": "uintptr_t",
+      "name": "kNullRead",
+      "value": "0x232D5FB"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 80,
+      "type": "uintptr_t",
+      "name": "kSpawnCall",
+      "value": "0x48B18F"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 877,
+      "type": "uintptr_t",
+      "name": "kKnownCrashSite",
+      "value": "0x232D5FF"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 998,
+      "type": "uint32_t",
+      "name": "kVtClientHierarchy",
+      "value": "0x5578BB8"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 42,
+      "type": "uintptr_t",
+      "name": "kLoadSlot",
+      "value": "0x186F570"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kSave",
+      "value": "0x186E450"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kFlush",
+      "value": "0x1871930"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 59,
+      "type": "uintptr_t",
+      "name": "kGetOrCreate",
+      "value": "0x2355EC0"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 61,
+      "type": "uintptr_t",
+      "name": "kAddFile",
+      "value": "0x235B100"
+    },
+    {
+      "file": "src/mod/session2/guest_scene_diag.cpp",
+      "line": 35,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 38,
+      "type": "uintptr_t",
+      "name": "kPoint",
+      "value": "0xC0B626"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 63,
+      "type": "uintptr_t",
+      "name": "kVtHolderDtor",
+      "value": "0x5725E48"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kVtSeqPlayComp",
+      "value": "0x55BEE78"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kNodeLookupRva",
+      "value": "0x1869D70"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 58,
+      "type": "uintptr_t",
+      "name": "kKeyLookupRva",
+      "value": "0x1862A80"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 63,
+      "type": "uintptr_t",
+      "name": "kStageCallRva",
+      "value": "0xA9FFC3"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 66,
+      "type": "uintptr_t",
+      "name": "kVtFile",
+      "value": "0x57DB080"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 62,
+      "type": "uint32_t",
+      "name": "kHandlerBegin",
+      "value": "0xC05BB0"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kPoint",
+      "value": "0x8B6144"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kTickRva",
+      "value": "0xA953C0"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 70,
+      "type": "uintptr_t",
+      "name": "kLiveRva",
+      "value": "0xAA3E70"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 73,
+      "type": "uintptr_t",
+      "name": "kOwnerRva",
+      "value": "0x9A5B70"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 91,
+      "type": "uintptr_t",
+      "name": "kSkipPoint",
+      "value": "0xAA4B27"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 107,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 108,
+      "type": "uintptr_t",
+      "name": "kVtClientField",
+      "value": "0x55BCEA0"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 110,
+      "type": "uintptr_t",
+      "name": "kLiveGateByte",
+      "value": "0x6CC0218"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 131,
+      "type": "uint32_t",
+      "name": "kRaDeletingDtor",
+      "value": "0x5D9750"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kPoint",
+      "value": "0x86490F"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 54,
+      "type": "uintptr_t",
+      "name": "kExit",
+      "value": "0x864B1A"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 64,
+      "type": "uintptr_t",
+      "name": "kRegsAt",
+      "value": "0x8646FC"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 94,
+      "type": "uintptr_t",
+      "name": "kExitTailAt",
+      "value": "0x864B1D"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kP2661",
+      "value": "0xC0612A"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kP2981",
+      "value": "0xC07749"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 62,
+      "type": "uintptr_t",
+      "name": "kP2810",
+      "value": "0xC0659E"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 75,
+      "type": "uintptr_t",
+      "name": "kP2322",
+      "value": "0xB87A67"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 93,
+      "type": "uintptr_t",
+      "name": "kP2524",
+      "value": "0xC08178"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 114,
+      "type": "uintptr_t",
+      "name": "kS2335",
+      "value": "0xC0B5C1"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 131,
+      "type": "uintptr_t",
+      "name": "kS2126",
+      "value": "0xC0BA4E"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 146,
+      "type": "uintptr_t",
+      "name": "kS2958",
+      "value": "0xC0C761"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 169,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 170,
+      "type": "uintptr_t",
+      "name": "kVtSeqPlayComp",
+      "value": "0x55BEE78"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 248,
+      "type": "uintptr_t",
+      "name": "kP2524Lookup",
+      "value": "0xA9E55B"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 40,
+      "type": "uintptr_t",
+      "name": "kIn2661",
+      "value": "0xC05BB0"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kFrame2661",
+      "value": "0xC05BC0"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 49,
+      "type": "uintptr_t",
+      "name": "kKind2661",
+      "value": "0xC060C6"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 51,
+      "type": "uintptr_t",
+      "name": "kActor2661",
+      "value": "0xC060C2"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kVf48_2661",
+      "value": "0xC06120"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kCreate2661",
+      "value": "0xC06179"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 59,
+      "type": "uintptr_t",
+      "name": "kRoute2661",
+      "value": "0xC0612A"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 63,
+      "type": "uintptr_t",
+      "name": "kResult2661",
+      "value": "0xC061C1"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kMissing",
+      "value": "0xA9CE87"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 75,
+      "type": "uintptr_t",
+      "name": "kCreateHomes",
+      "value": "0xA9CA40"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 78,
+      "type": "uintptr_t",
+      "name": "kBindType",
+      "value": "0xA9CB87"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 80,
+      "type": "uintptr_t",
+      "name": "kBindActor",
+      "value": "0xA9CB98"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 82,
+      "type": "uintptr_t",
+      "name": "kBindMissing",
+      "value": "0xA9CC0E"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 87,
+      "type": "uintptr_t",
+      "name": "kIn2981",
+      "value": "0xC073A0"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 90,
+      "type": "uintptr_t",
+      "name": "kWrap2981",
+      "value": "0xC073BC"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 92,
+      "type": "uintptr_t",
+      "name": "kActor2981",
+      "value": "0xC076E6"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 94,
+      "type": "uintptr_t",
+      "name": "kVf48_2981",
+      "value": "0xC0773F"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 97,
+      "type": "uintptr_t",
+      "name": "kRoute2981",
+      "value": "0xC07749"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 103,
+      "type": "uintptr_t",
+      "name": "kIn2810",
+      "value": "0xC06330"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 106,
+      "type": "uintptr_t",
+      "name": "kVf48_2810",
+      "value": "0xC06594"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 109,
+      "type": "uintptr_t",
+      "name": "kRoute2810",
+      "value": "0xC0659E"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 117,
+      "type": "uintptr_t",
+      "name": "kRoute2322",
+      "value": "0xB87A32"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 121,
+      "type": "uintptr_t",
+      "name": "kField2322",
+      "value": "0xB87A28"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 123,
+      "type": "uintptr_t",
+      "name": "kRaw2322",
+      "value": "0xB879B7"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 128,
+      "type": "uintptr_t",
+      "name": "kNpcEntry",
+      "value": "0x9ED290"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 131,
+      "type": "uintptr_t",
+      "name": "kNpcFrame",
+      "value": "0x9ED2A8"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 133,
+      "type": "uintptr_t",
+      "name": "kNpcComp",
+      "value": "0x9ED2B5"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 136,
+      "type": "uintptr_t",
+      "name": "kNpcRes8",
+      "value": "0x9ED401"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 141,
+      "type": "uintptr_t",
+      "name": "kNpcOwner",
+      "value": "0x9ED453"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 146,
+      "type": "uintptr_t",
+      "name": "kNpcInstance",
+      "value": "0x9ED48C"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 153,
+      "type": "uintptr_t",
+      "name": "kReady0",
+      "value": "0x77AA8B"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 156,
+      "type": "uintptr_t",
+      "name": "kReady0P",
+      "value": "0x77AA5C"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 158,
+      "type": "uintptr_t",
+      "name": "kReady0M",
+      "value": "0x77AA6C"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 161,
+      "type": "uintptr_t",
+      "name": "kReady1",
+      "value": "0x77B0CE"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 164,
+      "type": "uintptr_t",
+      "name": "kReady1M",
+      "value": "0x77AE9F"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 166,
+      "type": "uintptr_t",
+      "name": "kReady1P",
+      "value": "0x77AE8A"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 172,
+      "type": "uintptr_t",
+      "name": "kErrMissingActor",
+      "value": "0x6CDB9E4"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 173,
+      "type": "uintptr_t",
+      "name": "kErrDuplicate",
+      "value": "0x6CF76A4"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 174,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kV1",
+      "value": "0x5F2A3A"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 61,
+      "type": "uintptr_t",
+      "name": "kV0",
+      "value": "0x778AB0"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 68,
+      "type": "uintptr_t",
+      "name": "kClear",
+      "value": "0xC07776"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 109,
+      "type": "uintptr_t",
+      "name": "kUiControlRaxRva",
+      "value": "0x5725E48"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 217,
+      "type": "uintptr_t",
+      "name": "kVtStageManager",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 43,
+      "type": "uintptr_t",
+      "name": "kH1",
+      "value": "0x2A78D0D"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kH1Frame",
+      "value": "0x2A78CB0"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kH1Args",
+      "value": "0x2A78CBF"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kH1Actor",
+      "value": "0x2A78CCB"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 56,
+      "type": "uintptr_t",
+      "name": "kH1B",
+      "value": "0x2A78D06"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 59,
+      "type": "uintptr_t",
+      "name": "kH1Local",
+      "value": "0x2A78D15"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 63,
+      "type": "uintptr_t",
+      "name": "kH1b",
+      "value": "0x2A79060"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kH1bOut",
+      "value": "0x2A78FF8"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 70,
+      "type": "uintptr_t",
+      "name": "kH1bCall",
+      "value": "0x2A7906E"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 76,
+      "type": "uintptr_t",
+      "name": "kBindAi",
+      "value": "0x20853D0"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 79,
+      "type": "uintptr_t",
+      "name": "kBindAiVf107",
+      "value": "0x91CDDA"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 81,
+      "type": "uintptr_t",
+      "name": "kBindAi2874",
+      "value": "0xC0D235"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 85,
+      "type": "uintptr_t",
+      "name": "kRebind",
+      "value": "0x9F2FA0"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 88,
+      "type": "uintptr_t",
+      "name": "kRebindVf107",
+      "value": "0x91CE05"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 90,
+      "type": "uintptr_t",
+      "name": "kRebind2874",
+      "value": "0xC0D24D"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 93,
+      "type": "uintptr_t",
+      "name": "kRebindRes8",
+      "value": "0x9F30CB"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 97,
+      "type": "uintptr_t",
+      "name": "kRebindFrame",
+      "value": "0x9F2FAE"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 100,
+      "type": "uintptr_t",
+      "name": "kRebindRes8Src",
+      "value": "0x9F30A5"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 104,
+      "type": "uintptr_t",
+      "name": "kRebindInst",
+      "value": "0x9F312D"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 108,
+      "type": "uintptr_t",
+      "name": "kRebindLookup",
+      "value": "0x9F3118"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 112,
+      "type": "uintptr_t",
+      "name": "kRebindBind",
+      "value": "0x9F313A"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 123,
+      "type": "uintptr_t",
+      "name": "kVf13Res8",
+      "value": "0x9ED401"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 126,
+      "type": "uintptr_t",
+      "name": "kVf13Frame",
+      "value": "0x9ED2A8"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 128,
+      "type": "uintptr_t",
+      "name": "kVf13Comp",
+      "value": "0x9ED2B5"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 215,
+      "type": "uintptr_t",
+      "name": "kLobbyLoad",
+      "value": "0x2B7F4D0"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 219,
+      "type": "uintptr_t",
+      "name": "kLobbyVtable",
+      "value": "0x5B2BE58"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 220,
+      "type": "uintptr_t",
+      "name": "kLobbyConstant",
+      "value": "0x2B7F66C"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 223,
+      "type": "uintptr_t",
+      "name": "kLobbyAddCall",
+      "value": "0x2B7F6DB"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 226,
+      "type": "uintptr_t",
+      "name": "kClearLobbySite",
+      "value": "0x2C3E0FF"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 228,
+      "type": "uintptr_t",
+      "name": "kClearListSite",
+      "value": "0x2C3E126"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 230,
+      "type": "uintptr_t",
+      "name": "kStatusVtable",
+      "value": "0x5B203F0"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 231,
+      "type": "uintptr_t",
+      "name": "kStatusLoad",
+      "value": "0x293FE70"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 234,
+      "type": "uintptr_t",
+      "name": "kLoginMgrSite",
+      "value": "0x2777A18"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 236,
+      "type": "uintptr_t",
+      "name": "kLoginMgrSlot",
+      "value": "0x6D696A8"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 237,
+      "type": "uintptr_t",
+      "name": "kFindByNoScan",
+      "value": "0x2A84066"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 240,
+      "type": "uintptr_t",
+      "name": "kFindByNoRead",
+      "value": "0x2A84090"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 31,
+      "type": "uintptr_t",
+      "name": "kLoad",
+      "value": "0x20688A0"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 39,
+      "type": "uintptr_t",
+      "name": "kComponentSite",
+      "value": "0x20693CD"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 45,
+      "type": "uintptr_t",
+      "name": "kOwner",
+      "value": "0x2AE1010"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kPhases",
+      "value": "0x2941020"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kAck",
+      "value": "0x28F31F0"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 60,
+      "type": "uintptr_t",
+      "name": "kPacker",
+      "value": "0x17908C0"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kVersionThis",
+      "value": "0x179199C"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 69,
+      "type": "uintptr_t",
+      "name": "kVersionSite",
+      "value": "0x1791B94"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 75,
+      "type": "uintptr_t",
+      "name": "kClientStatus",
+      "value": "0xB742B0"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 77,
+      "type": "uintptr_t",
+      "name": "kClientVersionSite",
+      "value": "0xB742F0"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 82,
+      "type": "uintptr_t",
+      "name": "kRestoreVersion",
+      "value": "0x6C8CD98"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 83,
+      "type": "uintptr_t",
+      "name": "kStatusVtable",
+      "value": "0x5B203F0"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 84,
+      "type": "uintptr_t",
+      "name": "kStatusLoad",
+      "value": "0x293FE70"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 85,
+      "type": "uintptr_t",
+      "name": "kLoadStub",
+      "value": "0x35EA90"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kCommonVf53",
+      "value": "0x2228260"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 54,
+      "type": "uintptr_t",
+      "name": "kRideOnEnter",
+      "value": "0x681C80"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 56,
+      "type": "uintptr_t",
+      "name": "kCodeEnd",
+      "value": "0x51EB000"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 63,
+      "type": "uintptr_t",
+      "name": "kGateThunk",
+      "value": "0x2329A90"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 92,
+      "type": "uintptr_t",
+      "name": "kHoldUpdate",
+      "value": "0x88E6A0"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 98,
+      "type": "uintptr_t",
+      "name": "kActionReq",
+      "value": "0xA45AC0"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 37,
+      "type": "uintptr_t",
+      "name": "kCtorRva",
+      "value": "0x2A757A0"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kVtToTarget",
+      "value": "0x5B25438"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kVf0Rva",
+      "value": "0x2A75740"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kEmitRva",
+      "value": "0x2999D80"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 76,
+      "type": "uintptr_t",
+      "name": "kEmitOpRva",
+      "value": "0x2999E77"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 39,
+      "type": "uintptr_t",
+      "name": "kSiteRva",
+      "value": "0x28797AD"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kReturnRva",
+      "value": "0x287981E"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kOwnerCallRva",
+      "value": "0x287974C"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kOwnerMethodRva",
+      "value": "0x20532D5"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 58,
+      "type": "uintptr_t",
+      "name": "kOwnerFindRva",
+      "value": "0x205D7DC"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kEmitRva",
+      "value": "0x2A4E4C0"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 81,
+      "type": "uintptr_t",
+      "name": "kEmitOpRva",
+      "value": "0x2A4E60C"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 87,
+      "type": "uintptr_t",
+      "name": "kCtorRva",
+      "value": "0x2A757A0"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 93,
+      "type": "uintptr_t",
+      "name": "kVtToTarget",
+      "value": "0x5B25438"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 94,
+      "type": "uintptr_t",
+      "name": "kVf0Rva",
+      "value": "0x2A75740"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 43,
+      "type": "uintptr_t",
+      "name": "kPrepare",
+      "value": "0x2A4DEF0"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kPrepareLoop",
+      "value": "0x2A4E024"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 49,
+      "type": "uintptr_t",
+      "name": "kPrepareOpcode",
+      "value": "0x2A4E09F"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kDelete",
+      "value": "0x2A4E4C0"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 58,
+      "type": "uintptr_t",
+      "name": "kDeleteSeq",
+      "value": "0x2A4E5C2"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 60,
+      "type": "uintptr_t",
+      "name": "kDeleteOpcode",
+      "value": "0x2A4E60C"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kBranch",
+      "value": "0x2A4F2D0"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 70,
+      "type": "uintptr_t",
+      "name": "kBranchSeq",
+      "value": "0x2A4F3F8"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kBranchOpcode",
+      "value": "0x2A4F486"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 77,
+      "type": "uintptr_t",
+      "name": "kMilestone",
+      "value": "0x2999D80"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 80,
+      "type": "uintptr_t",
+      "name": "kMilestoneOpcode",
+      "value": "0x2999E77"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 89,
+      "type": "uintptr_t",
+      "name": "kEntry",
+      "value": "0x2BC84E2"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 93,
+      "type": "uintptr_t",
+      "name": "kEntryPred",
+      "value": "0x2BC84D9"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 95,
+      "type": "uintptr_t",
+      "name": "kEntryR13",
+      "value": "0x2BC769E"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 97,
+      "type": "uintptr_t",
+      "name": "kEntryR14",
+      "value": "0x2BC76AA"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 103,
+      "type": "uintptr_t",
+      "name": "kVtToTarget",
+      "value": "0x5B25438"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 104,
+      "type": "uintptr_t",
+      "name": "kVtFinderBase",
+      "value": "0x5B253F8"
+    },
+    {
+      "file": "src/mod/session2/owner_fanout.cpp",
+      "line": 31,
+      "type": "uintptr_t",
+      "name": "kVf1",
+      "value": "0x2A757F0"
+    },
+    {
+      "file": "src/mod/session2/owner_fanout.cpp",
+      "line": 43,
+      "type": "uintptr_t",
+      "name": "kVtToTarget",
+      "value": "0x5B25438"
+    },
+    {
+      "file": "src/mod/session2/owner_fanout.cpp",
+      "line": 44,
+      "type": "uintptr_t",
+      "name": "kVf0",
+      "value": "0x2A75740"
+    },
+    {
+      "file": "src/mod/session2/owner_fanout.cpp",
+      "line": 49,
+      "type": "uintptr_t",
+      "name": "kVtToControlUser",
+      "value": "0x5B252F8"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kPred1",
+      "value": "0x779E48"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kPred1Ctx",
+      "value": "0x779E39"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kPred2",
+      "value": "0x779E77"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 59,
+      "type": "uintptr_t",
+      "name": "kPred2Ctx",
+      "value": "0x779E55"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kH2322",
+      "value": "0xB87890"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kH2322Ctx",
+      "value": "0xB878AC"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 74,
+      "type": "uintptr_t",
+      "name": "kH2322Payload",
+      "value": "0xB87918"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 78,
+      "type": "uintptr_t",
+      "name": "kW2322",
+      "value": "0xB87A67"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 82,
+      "type": "uintptr_t",
+      "name": "kW2322Ctx",
+      "value": "0xB87A5D"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 91,
+      "type": "uintptr_t",
+      "name": "kOwner",
+      "value": "0x2BC8470"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 94,
+      "type": "uintptr_t",
+      "name": "kOwnerCtx",
+      "value": "0x2BC8452"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 98,
+      "type": "uintptr_t",
+      "name": "kOwnerPrep",
+      "value": "0x2BC84D4"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 106,
+      "type": "uintptr_t",
+      "name": "kEmit",
+      "value": "0x287F1CC"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 116,
+      "type": "uintptr_t",
+      "name": "kUi",
+      "value": "0xE919C0"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 120,
+      "type": "uintptr_t",
+      "name": "kUiVtable",
+      "value": "0x569C6B8"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 121,
+      "type": "uintptr_t",
+      "name": "kUiVtableSlot",
+      "value": "0x569CA40"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 126,
+      "type": "uintptr_t",
+      "name": "kFind",
+      "value": "0x24314C0"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 142,
+      "type": "uintptr_t",
+      "name": "kFindRetPrimary",
+      "value": "0x863914"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 152,
+      "type": "uintptr_t",
+      "name": "kRestart",
+      "value": "0x86392A"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 156,
+      "type": "uintptr_t",
+      "name": "kRestartLoop",
+      "value": "0x8638EA"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 162,
+      "type": "uintptr_t",
+      "name": "kRestartCc",
+      "value": "0x86389C"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 172,
+      "type": "uintptr_t",
+      "name": "kBodyAnim",
+      "value": "0xA79770"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 176,
+      "type": "uintptr_t",
+      "name": "kBodyAnimArgs",
+      "value": "0xA797B8"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 178,
+      "type": "uintptr_t",
+      "name": "kInstall70",
+      "value": "0xA79BAC"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 181,
+      "type": "uintptr_t",
+      "name": "kInstall70Ctx",
+      "value": "0xA79B78"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 183,
+      "type": "uintptr_t",
+      "name": "kInstall70Load",
+      "value": "0xA79BA9"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 185,
+      "type": "uintptr_t",
+      "name": "kInstall78",
+      "value": "0xA79F4C"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 188,
+      "type": "uintptr_t",
+      "name": "kInstall78Ctx",
+      "value": "0xA79F18"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 190,
+      "type": "uintptr_t",
+      "name": "kInstall78Load",
+      "value": "0xA79F49"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 199,
+      "type": "uintptr_t",
+      "name": "kBind",
+      "value": "0x9ED431"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 202,
+      "type": "uintptr_t",
+      "name": "kBindFrame",
+      "value": "0x9ED2A8"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 204,
+      "type": "uintptr_t",
+      "name": "kBindComp",
+      "value": "0x9ED2B5"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 206,
+      "type": "uintptr_t",
+      "name": "kBindCtx",
+      "value": "0x9ED415"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 208,
+      "type": "uintptr_t",
+      "name": "kSeq",
+      "value": "0x9ED47F"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 211,
+      "type": "uintptr_t",
+      "name": "kSeqCtx",
+      "value": "0x9ED470"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 220,
+      "type": "uintptr_t",
+      "name": "kTimerThreshold",
+      "value": "0x6CC8898"
+    },
+    {
+      "file": "src/mod/session2/remote_interp.cpp",
+      "line": 61,
+      "type": "uintptr_t",
+      "name": "kDelayGlobal",
+      "value": "0x6CB9548"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 48,
+      "type": "uintptr_t",
+      "name": "kPointClimbEnter",
+      "value": "0x691400"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 58,
+      "type": "uintptr_t",
+      "name": "kModeFn",
+      "value": "0x88E8E0"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kModeFnTable",
+      "value": "0x88E9B4"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 76,
+      "type": "uintptr_t",
+      "name": "kIsLocalFn",
+      "value": "0x17F2A50"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 83,
+      "type": "uintptr_t",
+      "name": "kIsLocalTable",
+      "value": "0x17F2A9C"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 92,
+      "type": "uintptr_t",
+      "name": "kWallUpGate",
+      "value": "0x87DD25"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 98,
+      "type": "uintptr_t",
+      "name": "kWallUpCmp",
+      "value": "0x87DD2F"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 102,
+      "type": "uintptr_t",
+      "name": "kWallUpCall",
+      "value": "0x87D6EF"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 107,
+      "type": "uintptr_t",
+      "name": "kWallUpByte",
+      "value": "0x6D76D5C"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 185,
+      "type": "uintptr_t",
+      "name": "kClockBase",
+      "value": "0x6C8CD68"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 186,
+      "type": "uintptr_t",
+      "name": "kClockFrac",
+      "value": "0x6C8CD70"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 187,
+      "type": "uintptr_t",
+      "name": "kClockBias",
+      "value": "0x6D69438"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 188,
+      "type": "uintptr_t",
+      "name": "kDelayGlobal",
+      "value": "0x6CB9548"
+    },
+    {
+      "file": "src/mod/session2/report_guard.cpp",
+      "line": 19,
+      "type": "uintptr_t",
+      "name": "kReporter",
+      "value": "0x1317D40"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 41,
+      "type": "uintptr_t",
+      "name": "kE",
+      "value": "0x288B7A0"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 47,
+      "type": "uintptr_t",
+      "name": "kG",
+      "value": "0x288B87A"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 55,
+      "type": "uintptr_t",
+      "name": "kP",
+      "value": "0x288AAEF"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 62,
+      "type": "uintptr_t",
+      "name": "kC",
+      "value": "0x29E9282"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 156,
+      "type": "uintptr_t",
+      "name": "kVtProcServer",
+      "value": "0x5B1FE10"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 159,
+      "type": "uintptr_t",
+      "name": "kColProcClient",
+      "value": "0x5DB7A20"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 161,
+      "type": "uintptr_t",
+      "name": "kVtClientStageMgr",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 56,
+      "type": "uintptr_t",
+      "name": "kScale",
+      "value": "0x35CD990"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 65,
+      "type": "uintptr_t",
+      "name": "kCall1",
+      "value": "0xAD143C"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 68,
+      "type": "uintptr_t",
+      "name": "kRet1",
+      "value": "0xAD1441"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 70,
+      "type": "uintptr_t",
+      "name": "kTrivialVf",
+      "value": "0x63DA70"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 73,
+      "type": "uintptr_t",
+      "name": "kClockLocal",
+      "value": "0x6C8CD35"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 74,
+      "type": "uintptr_t",
+      "name": "kClockBase",
+      "value": "0x6C8CD68"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 75,
+      "type": "uintptr_t",
+      "name": "kClockFrac",
+      "value": "0x6C8CD70"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kRankCtx1",
+      "value": "0x221E279"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 56,
+      "type": "uintptr_t",
+      "name": "kRankCtx2",
+      "value": "0x221F297"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kExecuteTroc",
+      "value": "0x2774B20"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 77,
+      "type": "uintptr_t",
+      "name": "kVf40",
+      "value": "0x2B00C70"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 86,
+      "type": "uintptr_t",
+      "name": "kVf48",
+      "value": "0x2B00CE0"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 99,
+      "type": "uintptr_t",
+      "name": "kQuestEventCb",
+      "value": "0x290DBD0"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 114,
+      "type": "uintptr_t",
+      "name": "kOwnerChar",
+      "value": "0x2AFFF50"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 141,
+      "type": "uintptr_t",
+      "name": "kDeadCallCtx",
+      "value": "0x29432D2"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 144,
+      "type": "uintptr_t",
+      "name": "kDeadRet",
+      "value": "0x29432E3"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 148,
+      "type": "uintptr_t",
+      "name": "kOwnerUserStub",
+      "value": "0x20DEE60"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 152,
+      "type": "uintptr_t",
+      "name": "kLootCallCtx",
+      "value": "0x2B83D1C"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 155,
+      "type": "uintptr_t",
+      "name": "kLootRet",
+      "value": "0x2B83D29"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 160,
+      "type": "uintptr_t",
+      "name": "kFindUser",
+      "value": "0x2A82590"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 165,
+      "type": "uintptr_t",
+      "name": "kUserManagerSlot",
+      "value": "0x6D696B8"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 170,
+      "type": "uintptr_t",
+      "name": "kReloadCallCtx",
+      "value": "0x2A5F7F2"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 177,
+      "type": "uintptr_t",
+      "name": "kApplyReload",
+      "value": "0x2896120"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 183,
+      "type": "uintptr_t",
+      "name": "kVtServerSequencerStageManager",
+      "value": "0x5B17A58"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 187,
+      "type": "uintptr_t",
+      "name": "kApplyCallCtx",
+      "value": "0x2BC4C49"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 195,
+      "type": "uintptr_t",
+      "name": "kVtServerNormalInGameActor",
+      "value": "0x5B1DE20"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 197,
+      "type": "uintptr_t",
+      "name": "kVtServerChildOnlyInGameActor",
+      "value": "0x5B1E2B0"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 198,
+      "type": "uintptr_t",
+      "name": "kVtServerQuestActorComponent",
+      "value": "0x5B1F8F8"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 199,
+      "type": "uintptr_t",
+      "name": "kVtServerQuestManager",
+      "value": "0x5B1FA48"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 201,
+      "type": "uintptr_t",
+      "name": "kTrocInstancesBegin",
+      "value": "0x6A51AE0"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 202,
+      "type": "uintptr_t",
+      "name": "kTrocInstancesEnd",
+      "value": "0x6A82C80"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 94,
+      "type": "uintptr_t",
+      "name": "kGate",
+      "value": "0x288B87A"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 113,
+      "type": "uintptr_t",
+      "name": "kGate2",
+      "value": "0x2911435"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 121,
+      "type": "uint32_t",
+      "name": "kG2_CallerRsi",
+      "value": "0x1C2F0"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 130,
+      "type": "uintptr_t",
+      "name": "kEval",
+      "value": "0x2881A19"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 137,
+      "type": "uintptr_t",
+      "name": "kElem",
+      "value": "0x288A970"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 150,
+      "type": "uintptr_t",
+      "name": "kNoStageCode",
+      "value": "0x6CF7DFC"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 152,
+      "type": "uintptr_t",
+      "name": "kArmFn",
+      "value": "0x287F450"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 154,
+      "type": "uintptr_t",
+      "name": "kLoadFn",
+      "value": "0x287DA50"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 155,
+      "type": "uintptr_t",
+      "name": "kUnloadFn",
+      "value": "0x287D4C0"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 156,
+      "type": "uintptr_t",
+      "name": "kEnqueueFn",
+      "value": "0x2774430"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 158,
+      "type": "uintptr_t",
+      "name": "kServerNetSlot",
+      "value": "0x6D69680"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 159,
+      "type": "uintptr_t",
+      "name": "kPeriodSlot",
+      "value": "0x6D06098"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 160,
+      "type": "uintptr_t",
+      "name": "kTroc2043Slot",
+      "value": "0x6FA3ED8"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 161,
+      "type": "uintptr_t",
+      "name": "kZeroCell",
+      "value": "0x5545F50"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 175,
+      "type": "uintptr_t",
+      "name": "kListFn",
+      "value": "0x2896C60"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 177,
+      "type": "uintptr_t",
+      "name": "kInterestFn",
+      "value": "0x287FA30"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 278,
+      "type": "uint32_t",
+      "name": "kCtxVf40Ret",
+      "value": "0x2880D74"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 3100,
+      "type": "uintptr_t",
+      "name": "kFindActorFn",
+      "value": "0x2A827B0"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 26,
+      "type": "uintptr_t",
+      "name": "kHandlerWrite",
+      "value": "0x29C2915"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 28,
+      "type": "uintptr_t",
+      "name": "kCollectorRead",
+      "value": "0x2C38E28"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 15,
+      "type": "uintptr_t",
+      "name": "kWorldSystemSlot",
+      "value": "0x6D69190"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 16,
+      "type": "uintptr_t",
+      "name": "kChunkOrigin",
+      "value": "0x6D56500"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 17,
+      "type": "uintptr_t",
+      "name": "kStaticPlayerPos",
+      "value": "0x6D77858"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 20,
+      "type": "uintptr_t",
+      "name": "kVtClientActorManager",
+      "value": "0x55B62C8"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 21,
+      "type": "uintptr_t",
+      "name": "kVtControlledActor",
+      "value": "0x5585C40"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 22,
+      "type": "uintptr_t",
+      "name": "kVtCharacterControl",
+      "value": "0x55B5460"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 23,
+      "type": "uintptr_t",
+      "name": "kVtStatusComponent",
+      "value": "0x558D868"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 24,
+      "type": "uintptr_t",
+      "name": "kVtPhysicsObject",
+      "value": "0x5D00F88"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 59,
+      "type": "uintptr_t",
+      "name": "kCameraSlot",
+      "value": "0x6C8CF30"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 60,
+      "type": "uintptr_t",
+      "name": "kVtCamera",
+      "value": "0x5D20718"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kClientPostPacket",
+      "value": "0x35C670"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kClientOnRecvPacket",
+      "value": "0x35CA00"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 81,
+      "type": "uintptr_t",
+      "name": "kTrocInstancesBegin",
+      "value": "0x6A51AE0"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 82,
+      "type": "uintptr_t",
+      "name": "kTrocInstancesEnd",
+      "value": "0x6A82C80"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 119,
+      "type": "uintptr_t",
+      "name": "kMinimapIconDecide",
+      "value": "0x9E89C0"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 122,
+      "type": "uintptr_t",
+      "name": "kMinimapIconRoot",
+      "value": "0x6D69528"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 123,
+      "type": "uintptr_t",
+      "name": "kMinimapIconRootAlt",
+      "value": "0x6D69530"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 135,
+      "type": "uintptr_t",
+      "name": "kServerOtherEquipWriter",
+      "value": "0x29ED1F0"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 176,
+      "type": "uintptr_t",
+      "name": "kServerDockingWriter",
+      "value": "0x2969BC0"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 187,
+      "type": "uintptr_t",
+      "name": "kVtWallUpMovementMethod",
+      "value": "0x55968B8"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 194,
+      "type": "uintptr_t",
+      "name": "kPointClimbEnter",
+      "value": "0x691400"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 207,
+      "type": "uintptr_t",
+      "name": "kActionLayerAdvance",
+      "value": "0x1F63F70"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 218,
+      "type": "uintptr_t",
+      "name": "kActionLayersAdvance",
+      "value": "0x2329700"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 224,
+      "type": "uintptr_t",
+      "name": "kRideOnEnter",
+      "value": "0x681C80"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 225,
+      "type": "uintptr_t",
+      "name": "kRideOffEnter",
+      "value": "0x682C20"
+    },
+    {
+      "file": "src/mod/session2/catch_seq_logic.h",
+      "line": 44,
+      "type": "uintptr_t",
+      "name": "kApply",
+      "value": "0x935DD0"
+    },
+    {
+      "file": "src/mod/session2/catch_seq_logic.h",
+      "line": 49,
+      "type": "uintptr_t",
+      "name": "kApplyCall",
+      "value": "0xB58943"
+    },
+    {
+      "file": "src/mod/session2/catch_seq_logic.h",
+      "line": 51,
+      "type": "uintptr_t",
+      "name": "kApplyReturn",
+      "value": "0xB58948"
+    },
+    {
+      "file": "src/mod/session2/catch_seq_logic.h",
+      "line": 53,
+      "type": "uintptr_t",
+      "name": "kCheckSite",
+      "value": "0x935E43"
+    },
+    {
+      "file": "src/mod/session2/catch_seq_logic.h",
+      "line": 76,
+      "type": "size_t",
+      "name": "kCheckCmpAt",
+      "value": "0x935E8E"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.h",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kWorldTime",
+      "value": "0x6A6D238"
+    },
+    {
+      "file": "src/mod/session2/clock_push_logic.h",
+      "line": 38,
+      "type": "uintptr_t",
+      "name": "kServerClock",
+      "value": "0x6A6D238"
+    },
+    {
+      "file": "src/mod/session2/clock_push_logic.h",
+      "line": 39,
+      "type": "uintptr_t",
+      "name": "kClientClock",
+      "value": "0x6A6D218"
+    },
+    {
+      "file": "src/mod/session2/clock_push_logic.h",
+      "line": 40,
+      "type": "uintptr_t",
+      "name": "kWorldSystem",
+      "value": "0x6D69190"
+    },
+    {
+      "file": "src/mod/session2/clock_push_logic.h",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kClockBias",
+      "value": "0x6D69438"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 68,
+      "type": "uintptr_t",
+      "name": "kRestoreSite",
+      "value": "0x8646F2"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 73,
+      "type": "uintptr_t",
+      "name": "kRestoreLock",
+      "value": "0x86473F"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 78,
+      "type": "uintptr_t",
+      "name": "kRestoreExit",
+      "value": "0x864B1A"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 85,
+      "type": "uintptr_t",
+      "name": "kRestartCall",
+      "value": "0x864AEA"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 706,
+      "type": "uintptr_t",
+      "name": "kClientRequest",
+      "value": "0x8E59D0"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 710,
+      "type": "uintptr_t",
+      "name": "kClientRequest2",
+      "value": "0x8E5F60"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 713,
+      "type": "uintptr_t",
+      "name": "kClientGimmickVtbl",
+      "value": "0x55B7898"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 714,
+      "type": "uintptr_t",
+      "name": "kClientGimmickRequestSlot",
+      "value": "0x55B7898"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 727,
+      "type": "uintptr_t",
+      "name": "kErrNotControllerGlobal",
+      "value": "0x6CF6B68"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 731,
+      "type": "uintptr_t",
+      "name": "kDockEquip",
+      "value": "0x28AD170"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 732,
+      "type": "uintptr_t",
+      "name": "kDockOther",
+      "value": "0x28ADE40"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 736,
+      "type": "uintptr_t",
+      "name": "kDockEquipCallSite",
+      "value": "0x2970ADF"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 740,
+      "type": "uintptr_t",
+      "name": "kControllerWrite",
+      "value": "0x2792A7B"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 746,
+      "type": "uintptr_t",
+      "name": "kControllerBlock",
+      "value": "0x2792A11"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 750,
+      "type": "uintptr_t",
+      "name": "kFieldOwnerRead",
+      "value": "0x2792A70"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 756,
+      "type": "uintptr_t",
+      "name": "kServerExecute",
+      "value": "0x2AC1270"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks_logic.h",
+      "line": 759,
+      "type": "uintptr_t",
+      "name": "kServerUpdate",
+      "value": "0x2AC0790"
+    },
+    {
+      "file": "src/mod/session2/fast_travel_logic.h",
+      "line": 211,
+      "type": "uint32_t",
+      "name": "kReloadVf48Ret",
+      "value": "0x2A5F7FC"
+    },
+    {
+      "file": "src/mod/session2/fast_travel_logic.h",
+      "line": 218,
+      "type": "uint32_t",
+      "name": "kApplyVf48Ret",
+      "value": "0x2BC4C53"
+    },
+    {
+      "file": "src/mod/session2/funcnpc_trade_policy.h",
+      "line": 46,
+      "type": "uint32_t",
+      "name": "kDictSeed",
+      "value": "0x000C5EDE"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag_logic.h",
+      "line": 29,
+      "type": "uintptr_t",
+      "name": "kBodyAnim",
+      "value": "0xA79770"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag_logic.h",
+      "line": 30,
+      "type": "uintptr_t",
+      "name": "kConfigure",
+      "value": "0x2432F60"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag_logic.h",
+      "line": 31,
+      "type": "uintptr_t",
+      "name": "kRetLayer0",
+      "value": "0xA79C24"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag_logic.h",
+      "line": 32,
+      "type": "uintptr_t",
+      "name": "kRetLayer1",
+      "value": "0xA79FCA"
+    },
+    {
+      "file": "src/mod/session2/guest_lifecycle.h",
+      "line": 56,
+      "type": "uint32_t",
+      "name": "kSamKeyIndexMask",
+      "value": "0xFFFFF"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 462,
+      "type": "uint64_t",
+      "name": "kRetUserLogin",
+      "value": "0x2C17886"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 463,
+      "type": "uint64_t",
+      "name": "kRetLobby3093",
+      "value": "0x2C3E1D3"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 464,
+      "type": "uint64_t",
+      "name": "kRetCharacter3093",
+      "value": "0x1042ABF8"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 483,
+      "type": "uint64_t",
+      "name": "kRetAutosave",
+      "value": "0xCBD86D3"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 484,
+      "type": "uint64_t",
+      "name": "kRetManual2910",
+      "value": "0x103BE99F"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 501,
+      "type": "uint64_t",
+      "name": "kRetFlushLogout",
+      "value": "0x28F273F"
+    },
+    {
+      "file": "src/mod/session2/guest_save_logic.h",
+      "line": 502,
+      "type": "uint64_t",
+      "name": "kRetFlushTimer",
+      "value": "0x108393CD"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load_logic.h",
+      "line": 118,
+      "type": "uint32_t",
+      "name": "kNameHashInit",
+      "value": "0xC5EDE"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load_logic.h",
+      "line": 139,
+      "type": "uintptr_t",
+      "name": "kManagerSlot",
+      "value": "0x6C8CDA0"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load_logic.h",
+      "line": 140,
+      "type": "uintptr_t",
+      "name": "kClientRootSlot",
+      "value": "0x6D69518"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load_logic.h",
+      "line": 141,
+      "type": "uintptr_t",
+      "name": "kServerRootSlot",
+      "value": "0x6D69520"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load_logic.h",
+      "line": 143,
+      "type": "uintptr_t",
+      "name": "kVtManager",
+      "value": "0x57DB090"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present_logic.h",
+      "line": 35,
+      "type": "uint32_t",
+      "name": "kVtProcClient",
+      "value": "0x558C080"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present_logic.h",
+      "line": 36,
+      "type": "uint32_t",
+      "name": "kColProcClient",
+      "value": "0x5DB7A20"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present_logic.h",
+      "line": 37,
+      "type": "uint32_t",
+      "name": "kRetRva",
+      "value": "0x359B50"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present_logic.h",
+      "line": 68,
+      "type": "uint32_t",
+      "name": "kWorldSlot",
+      "value": "0x6D691E0"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present_logic.h",
+      "line": 435,
+      "type": "uint32_t",
+      "name": "kVtTimeline",
+      "value": "0x5C75F30"
+    },
+    {
+      "file": "src/mod/session2/mount_sync_logic.h",
+      "line": 1270,
+      "type": "uint32_t",
+      "name": "kVf178Actor",
+      "value": "0x4FE260"
+    },
+    {
+      "file": "src/mod/session2/npc_activation_logic.h",
+      "line": 517,
+      "type": "uint32_t",
+      "name": "kGroupLeaderRet",
+      "value": "0x281A4B5"
+    },
+    {
+      "file": "src/mod/session2/npc_family_logic.h",
+      "line": 45,
+      "type": "uint32_t",
+      "name": "kVtNpcSchedule",
+      "value": "0x5B04CB0"
+    },
+    {
+      "file": "src/mod/session2/npc_family_logic.h",
+      "line": 46,
+      "type": "uint32_t",
+      "name": "kVtInstantGimmick",
+      "value": "0x5B04C68"
+    },
+    {
+      "file": "src/mod/session2/npc_family_logic.h",
+      "line": 49,
+      "type": "uint32_t",
+      "name": "kVtDescBase",
+      "value": "0x5B04BE8"
+    },
+    {
+      "file": "src/mod/session2/npc_family_logic.h",
+      "line": 50,
+      "type": "uint32_t",
+      "name": "kVtWrapSimple",
+      "value": "0x5B04E80"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 12,
+      "type": "uintptr_t",
+      "name": "kServerNetSlot",
+      "value": "0x6D69680"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 13,
+      "type": "uintptr_t",
+      "name": "kClientNetSlot",
+      "value": "0x6D69170"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 14,
+      "type": "uintptr_t",
+      "name": "kSamSlot",
+      "value": "0x6DA67D8"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 28,
+      "type": "uintptr_t",
+      "name": "kNwVirtualAsyncSessionVtable",
+      "value": "0x57260C0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 29,
+      "type": "uintptr_t",
+      "name": "kNwAsyncSessionVtable",
+      "value": "0x5726140"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 43,
+      "type": "uintptr_t",
+      "name": "kServerUserActorVtable",
+      "value": "0x5B257A8"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 51,
+      "type": "uintptr_t",
+      "name": "kServerOnRecvPacket",
+      "value": "0x2773C20"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 54,
+      "type": "uintptr_t",
+      "name": "kSessionSend",
+      "value": "0x1437740"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 57,
+      "type": "uintptr_t",
+      "name": "kNwSessionCtor",
+      "value": "0x1436EE0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 60,
+      "type": "uintptr_t",
+      "name": "kQueuePush",
+      "value": "0x35DF50"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kAllocGlobal",
+      "value": "0x47EFA78"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 74,
+      "type": "uintptr_t",
+      "name": "kAllocThread",
+      "value": "0x47EF9B0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 83,
+      "type": "uintptr_t",
+      "name": "kTlsIndexSlot",
+      "value": "0x6C88C50"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 95,
+      "type": "uintptr_t",
+      "name": "kToNearExceptOneControlVtable",
+      "value": "0x5B25358"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 96,
+      "type": "uintptr_t",
+      "name": "kToNearExceptOneSelfVtable",
+      "value": "0x5B25378"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 97,
+      "type": "uintptr_t",
+      "name": "kToNearVtable",
+      "value": "0x5B25418"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 98,
+      "type": "uintptr_t",
+      "name": "kExceptOneVf1",
+      "value": "0x2A759B0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 99,
+      "type": "uintptr_t",
+      "name": "kExceptOneSelfVf1",
+      "value": "0x2A75880"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 100,
+      "type": "uintptr_t",
+      "name": "kToNearVf1",
+      "value": "0x2A75860"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 127,
+      "type": "uintptr_t",
+      "name": "kTrocInstancesBegin",
+      "value": "0x6A51AE0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 128,
+      "type": "uintptr_t",
+      "name": "kTrocInstancesEnd",
+      "value": "0x6A82C80"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 140,
+      "type": "uintptr_t",
+      "name": "kSyncSessionSend",
+      "value": "0x14380B0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 143,
+      "type": "uintptr_t",
+      "name": "kNetLoopPump",
+      "value": "0x35BAD4"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 157,
+      "type": "uintptr_t",
+      "name": "kClientOnRecvPacket",
+      "value": "0x35CA00"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 165,
+      "type": "uintptr_t",
+      "name": "kWorldSystemSlot",
+      "value": "0x6D69190"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 167,
+      "type": "uintptr_t",
+      "name": "kServerActorLookupSlot",
+      "value": "0x6D69698"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 179,
+      "type": "uintptr_t",
+      "name": "kWindowsLock3Vtable",
+      "value": "0x557C120"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 180,
+      "type": "uintptr_t",
+      "name": "kWindowsLockVf1",
+      "value": "0x1371340"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 181,
+      "type": "uintptr_t",
+      "name": "kWindowsLockVf2",
+      "value": "0xCE4EF0"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 185,
+      "type": "uintptr_t",
+      "name": "kSaveMgrRefreshSlots",
+      "value": "0x1870C20"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 190,
+      "type": "uintptr_t",
+      "name": "kSlotRefreshReqSequence",
+      "value": "0x2A22475"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 211,
+      "type": "uintptr_t",
+      "name": "kTitlePlayReadsSaveMgr",
+      "value": "0x65DC3E"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kApply",
+      "value": "0x592340"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 77,
+      "type": "uintptr_t",
+      "name": "kApplyCall",
+      "value": "0xB5BB7B"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 79,
+      "type": "uintptr_t",
+      "name": "kApplyReturn",
+      "value": "0xB5BB80"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 82,
+      "type": "uintptr_t",
+      "name": "kInfoCopy",
+      "value": "0x59238F"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 106,
+      "type": "uintptr_t",
+      "name": "kMapSite",
+      "value": "0x5947C7"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 142,
+      "type": "uintptr_t",
+      "name": "kWorldSystem",
+      "value": "0x6D69190"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 147,
+      "type": "uintptr_t",
+      "name": "kResolve",
+      "value": "0x1851010"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 150,
+      "type": "uintptr_t",
+      "name": "kAttDtor",
+      "value": "0x1434880"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 153,
+      "type": "uintptr_t",
+      "name": "kScopeAttacherBaseVtbl",
+      "value": "0x5725E48"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 187,
+      "type": "uintptr_t",
+      "name": "kRelease",
+      "value": "0x5A7A10"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 190,
+      "type": "uintptr_t",
+      "name": "kReleaseThreadCheck",
+      "value": "0x5A7A7D"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 192,
+      "type": "uintptr_t",
+      "name": "kMainThreadId",
+      "value": "0x6A652D4"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 196,
+      "type": "uintptr_t",
+      "name": "kClientRemoteCatchVtbl",
+      "value": "0x55890D8"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 201,
+      "type": "uintptr_t",
+      "name": "kApplyFailedErr",
+      "value": "0x6CF70A4"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 208,
+      "type": "uintptr_t",
+      "name": "k2471Handler",
+      "value": "0xB5BD60"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 213,
+      "type": "uintptr_t",
+      "name": "k2471HandlerSlot",
+      "value": "0x560BA60"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 216,
+      "type": "uintptr_t",
+      "name": "k2471Release",
+      "value": "0xB5BF44"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 239,
+      "type": "uintptr_t",
+      "name": "kSrvRelease",
+      "value": "0x27D9110"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 244,
+      "type": "uintptr_t",
+      "name": "kSrvReleaseSlot",
+      "value": "0x5B1D858"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 247,
+      "type": "uintptr_t",
+      "name": "kSrvArgs",
+      "value": "0x27D9134"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 263,
+      "type": "uintptr_t",
+      "name": "kWriter",
+      "value": "0x29688C0"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 266,
+      "type": "uintptr_t",
+      "name": "kWriterSite",
+      "value": "0x2903A79"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 280,
+      "type": "uintptr_t",
+      "name": "kToNearVtbl",
+      "value": "0x5B25418"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 290,
+      "type": "uintptr_t",
+      "name": "kToNearVf1",
+      "value": "0x2A75860"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 296,
+      "type": "uintptr_t",
+      "name": "kTsOwnerCall",
+      "value": "0x2BC4F92"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 320,
+      "type": "uintptr_t",
+      "name": "kActRelease",
+      "value": "0x1807390"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 325,
+      "type": "uintptr_t",
+      "name": "kServerRemoteCatchVtbl",
+      "value": "0x5B1F508"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 326,
+      "type": "uintptr_t",
+      "name": "kActReleaseSlot",
+      "value": "0x5B1F648"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 327,
+      "type": "uintptr_t",
+      "name": "kSrvCompVf158Slot",
+      "value": "0x5B1F660"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 328,
+      "type": "uintptr_t",
+      "name": "kSlotReset",
+      "value": "0x1807C80"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 331,
+      "type": "uintptr_t",
+      "name": "kActClientCall",
+      "value": "0x58B3D9"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 334,
+      "type": "uintptr_t",
+      "name": "kActDispatch",
+      "value": "0x2328EE4"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 346,
+      "type": "uintptr_t",
+      "name": "kActKeepTest",
+      "value": "0x1807610"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 355,
+      "type": "uintptr_t",
+      "name": "kActNotify",
+      "value": "0x1807646"
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "line": 364,
+      "type": "uintptr_t",
+      "name": "kActSelfRelease",
+      "value": "0x18076DF"
+    },
+    {
+      "file": "src/mod/session2/rope_probe_logic.h",
+      "line": 31,
+      "type": "uintptr_t",
+      "name": "kTreePull",
+      "value": "0x6D46D0"
+    },
+    {
+      "file": "src/mod/session2/rope_probe_logic.h",
+      "line": 37,
+      "type": "uintptr_t",
+      "name": "kTreePullVtbl",
+      "value": "0x5584130"
+    },
+    {
+      "file": "src/mod/session2/rope_probe_logic.h",
+      "line": 38,
+      "type": "uintptr_t",
+      "name": "kTreePullSlot",
+      "value": "0x5584138"
+    },
+    {
+      "file": "src/mod/session2/rope_probe_logic.h",
+      "line": 41,
+      "type": "uintptr_t",
+      "name": "kPullApply",
+      "value": "0x8A30C0"
+    },
+    {
+      "file": "src/mod/session2/rope_probe_logic.h",
+      "line": 49,
+      "type": "uintptr_t",
+      "name": "kPullApplyCall",
+      "value": "0x87B2BE"
+    },
+    {
+      "file": "src/mod/session2/rope_probe_logic.h",
+      "line": 52,
+      "type": "uintptr_t",
+      "name": "kPullApplyReturn",
+      "value": "0x87B2CB"
+    },
+    {
+      "file": "src/mod/session2/scene_diag_logic.h",
+      "line": 397,
+      "type": "uintptr_t",
+      "name": "kManagerSlot",
+      "value": "0x6C8CDA0"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 60,
+      "type": "uint32_t",
+      "name": "kVtServerField",
+      "value": "0x5B29A60"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 72,
+      "type": "uint32_t",
+      "name": "kGateFnBegin",
+      "value": "0x2830400"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 73,
+      "type": "uint32_t",
+      "name": "kGateRva",
+      "value": "0x283044D"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 74,
+      "type": "uint32_t",
+      "name": "kGateSigRva",
+      "value": "0x2830432"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 82,
+      "type": "uint32_t",
+      "name": "kDeleteRva",
+      "value": "0x2829E60"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 90,
+      "type": "uint32_t",
+      "name": "kRet2834",
+      "value": "0x29C3049"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 91,
+      "type": "uint32_t",
+      "name": "kRetOwnerLoad",
+      "value": "0x28363D4"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 92,
+      "type": "uint32_t",
+      "name": "kRetLoader",
+      "value": "0x2876460"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 99,
+      "type": "uint32_t",
+      "name": "kFrameSiteRva",
+      "value": "0x29C2D60"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 101,
+      "type": "uint32_t",
+      "name": "kCallSiteRva",
+      "value": "0x29C2FF7"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 21,
+      "type": "uintptr_t",
+      "name": "kAiRead",
+      "value": "0x1EB8946"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 26,
+      "type": "uintptr_t",
+      "name": "kAiReadFrame",
+      "value": "0x1EB88CB"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 29,
+      "type": "uintptr_t",
+      "name": "kAiReadArg",
+      "value": "0x1EB88D5"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 32,
+      "type": "uintptr_t",
+      "name": "kAiReadInit",
+      "value": "0x1EB88F8"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 35,
+      "type": "uintptr_t",
+      "name": "kAiReadCall",
+      "value": "0x1EB8938"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 40,
+      "type": "uintptr_t",
+      "name": "kAiDone",
+      "value": "0x206DE6B"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 45,
+      "type": "uintptr_t",
+      "name": "kAiDoneThis",
+      "value": "0x206DBE2"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 48,
+      "type": "uintptr_t",
+      "name": "kAiDoneCall",
+      "value": "0x206DE5C"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 60,
+      "type": "uintptr_t",
+      "name": "kVtPlayData",
+      "value": "0x55BEE78"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe_logic.h",
+      "line": 68,
+      "type": "uint64_t",
+      "name": "kStageMask",
+      "value": "0x1FFFFFFF"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe_logic.h",
+      "line": 69,
+      "type": "uint32_t",
+      "name": "kShopKey",
+      "value": "0x000F4321"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe_logic.h",
+      "line": 73,
+      "type": "uint32_t",
+      "name": "kInfoTableSlot",
+      "value": "0x6D69AB8"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 27,
+      "type": "uint32_t",
+      "name": "kIdHashInit",
+      "value": "0xC5EDE"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 175,
+      "type": "uintptr_t",
+      "name": "kPointA",
+      "value": "0x2126A1F"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 183,
+      "type": "uintptr_t",
+      "name": "kCtxA",
+      "value": "0x2126A14"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 193,
+      "type": "uintptr_t",
+      "name": "kVtClientField",
+      "value": "0x55BCEA0"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 194,
+      "type": "uintptr_t",
+      "name": "kVtServerField",
+      "value": "0x5B29A60"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 195,
+      "type": "uintptr_t",
+      "name": "kVtClientStageMgr",
+      "value": "0x55C9720"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 196,
+      "type": "uintptr_t",
+      "name": "kVtServerStageMgr",
+      "value": "0x5B17A58"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 45,
+      "type": "uintptr_t",
+      "name": "kVf2",
+      "value": "0x117F7E0"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 49,
+      "type": "uintptr_t",
+      "name": "kVf2Slot",
+      "value": "0x56FFB58"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 51,
+      "type": "uintptr_t",
+      "name": "kApply",
+      "value": "0x1190FD0"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 54,
+      "type": "uintptr_t",
+      "name": "kApplyCall",
+      "value": "0x117F911"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 57,
+      "type": "uintptr_t",
+      "name": "kSetBend",
+      "value": "0x349EA10"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 60,
+      "type": "uintptr_t",
+      "name": "kSetBendCall",
+      "value": "0x1191532"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 65,
+      "type": "uintptr_t",
+      "name": "kTick",
+      "value": "0x59C0D0"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 69,
+      "type": "uintptr_t",
+      "name": "kTickJump",
+      "value": "0x8A5DA0"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 74,
+      "type": "uintptr_t",
+      "name": "kGetTarget",
+      "value": "0x5B1600"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 76,
+      "type": "uintptr_t",
+      "name": "kFindTree",
+      "value": "0x491AC0"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 91,
+      "type": "uintptr_t",
+      "name": "kClientRemoteCatchVtbl",
+      "value": "0x55890D8"
+    },
+    {
+      "file": "src/mod/session2/tree_bend_logic.h",
+      "line": 111,
+      "type": "uintptr_t",
+      "name": "kMainThreadId",
+      "value": "0x6A652D4"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels_logic.h",
+      "line": 93,
+      "type": "uint32_t",
+      "name": "kRespawnVf40Ret",
+      "value": "0x2B03AA7"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels_logic.h",
+      "line": 94,
+      "type": "uint32_t",
+      "name": "kQuestEventVf40Ret",
+      "value": "0x290DC0B"
+    },
+    {
+      "file": "src/mod/session2/user2_road_logic.h",
+      "line": 37,
+      "type": "uint32_t",
+      "name": "kVtDescBase",
+      "value": "0x5B04BE8"
+    },
+    {
+      "file": "src/mod/session2/user2_road_logic.h",
+      "line": 38,
+      "type": "uint32_t",
+      "name": "kVtWrapRider",
+      "value": "0x5B04E60"
+    },
+    {
+      "file": "src/mod/session2/user2_road_logic.h",
+      "line": 44,
+      "type": "uint32_t",
+      "name": "kVtWrapSimple",
+      "value": "0x5B04E80"
+    },
+    {
+      "file": "src/mod/session2/user2_road_logic.h",
+      "line": 48,
+      "type": "uint32_t",
+      "name": "kVtInstantGimmick",
+      "value": "0x5B04C68"
+    },
+    {
+      "file": "src/mod/session2/user2_road_logic.h",
+      "line": 59,
+      "type": "uint32_t",
+      "name": "kVtWrapLinkedVehicle",
+      "value": "0x5B04D80"
+    },
+    {
+      "file": "src/mod/session2/user2_shops_logic.h",
+      "line": 255,
+      "type": "uint32_t",
+      "name": "kShopInteraction",
+      "value": "0x000F4321"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 63,
+      "type": "uint32_t",
+      "name": "kVtStageMgr",
+      "value": "0x5B17A58"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 64,
+      "type": "uint32_t",
+      "name": "kVtSchedMgr",
+      "value": "0x5B16968"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 91,
+      "type": "uint32_t",
+      "name": "kVtServerField",
+      "value": "0x5B29A60"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 672,
+      "type": "uint32_t",
+      "name": "kVtDescNpcSchedule",
+      "value": "0x5B04CB0"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 1205,
+      "type": "uint32_t",
+      "name": "kPrepRetTick",
+      "value": "0x287DCD5"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 1206,
+      "type": "uint32_t",
+      "name": "kPrepRet2895",
+      "value": "0x289604E"
+    },
+    {
+      "file": "src/mod/session2/user2_stages_logic.h",
+      "line": 1207,
+      "type": "uint32_t",
+      "name": "kPrepRetMoveField",
+      "value": "0x2BC84D9"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 46,
+      "type": "uintptr_t",
+      "name": "kModuleSlot",
+      "value": "0x6C8CEC8"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 50,
+      "type": "uintptr_t",
+      "name": "kGetterVf60",
+      "value": "0x6DA0A0"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 52,
+      "type": "uintptr_t",
+      "name": "kClientSlot",
+      "value": "0x6D69198"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 54,
+      "type": "uintptr_t",
+      "name": "kVtWeatherSystem",
+      "value": "0x5D51268"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 63,
+      "type": "uintptr_t",
+      "name": "kUpdate",
+      "value": "0x3DC4730"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 67,
+      "type": "uintptr_t",
+      "name": "kUpdateCall",
+      "value": "0x3B10737"
+    },
+    {
+      "file": "src/mod/session2/weather_sync_logic.h",
+      "line": 72,
+      "type": "uintptr_t",
+      "name": "kClockBase",
+      "value": "0x6C8CD68"
+    },
+    {
+      "file": "src/mod/session2/world_anchor_logic.h",
+      "line": 70,
+      "type": "uintptr_t",
+      "name": "kVtServerField",
+      "value": "0x5B29A60"
+    },
+    {
+      "file": "src/mod/session2/world_anchor_logic.h",
+      "line": 71,
+      "type": "uintptr_t",
+      "name": "kVtFieldLock",
+      "value": "0x57A30B8"
+    },
+    {
+      "file": "src/mod/session2/world_anchor_logic.h",
+      "line": 74,
+      "type": "uintptr_t",
+      "name": "kLockUnlock",
+      "value": "0x1371B70"
+    }
+  ],
+  "direct_base_literal": [
+    {
+      "file": "src/mod/net/troc_sniffer.cpp",
+      "line": 245,
+      "code": "\"ClientNet::OnRecvPacket (exe+0x35CA00) took the mod's derived packet\");"
+    },
+    {
+      "file": "src/mod/net/troc_sniffer.cpp",
+      "line": 337,
+      "code": "if (!vt || *vt < base || *vt >= base + 0x10000000) continue;"
+    },
+    {
+      "file": "src/mod/session2/catch_seq.cpp",
+      "line": 236,
+      "code": "log::info(\"CatchSeq: exe+0x935DD0 (ClientCatch_ApplyResult, the 2156 apply; one caller 0xB58943) hooked at its \""
+    },
+    {
+      "file": "src/mod/session2/catch_seq.cpp",
+      "line": 281,
+      "code": "? std::string(\"from exe+0xB58948 (the 2156 handler)\")"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 1197,
+      "code": "\"(U-e, the exe+0x1831598 crash): waits for restore 1, the host as its controller or a drop\","
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 450,
+      "code": ": std::format(\"REJECTED (the game error \\\"Actor ... failed\\\" from exe+0x8BDF7C should name \""
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 645,
+      "code": "\"CompCrash 0x232D5C0 about to read [[r8+0x10]+0xE4] with [r8+0x10] = 0 (exe+0x232D5FF): CC 0x{:X} \""
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 683,
+      "code": "\"CompBadThis 0xAAFC00 is about to read [this+0x210] with an unreadable this 0x{:X} (exe+0xAAFC1D) | \""
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 252,
+      "code": "log::info(\"GuestFastTravel: guest_fast_travel_veto={} ON: exe+0x655110 hooked ({} bytes); while this game plays on \""
+    },
+    {
+      "file": "src/mod/session2/guest.cpp",
+      "line": 1216,
+      "code": "\"field (session 6: crash at exe+0x2045A6A 22 ms later), so the game ENDS NOW (TerminateProcess, \""
+    },
+    {
+      "file": "src/mod/session2/guest.cpp",
+      "line": 1339,
+      "code": "\"(it would crash at exe+0x2045A6A): the client keeps waiting for its 2002\","
+    },
+    {
+      "file": "src/mod/session2/guest.cpp",
+      "line": 1908,
+      "code": "log::info(\"Session2 guest: child_reannounce ON ({}): each CreateOwnedActor failure (exe+0x8BDF7C) of a user's \""
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 191,
+      "code": "if (const uint32_t st = err_global(kErrStateGlobal); st && code == st) return \"actor +0x5E != 8 (exe+0x6CDB92C)\";"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 307,
+      "code": "log::info(\"GuestDiag login FAILED (FinishGroup exe+0x4FD491): actor 0x{:X} key 0x{:08X} control(+0x90) \""
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 765,
+      "code": "\"exe+0x88F832, MovementController_UpdateByMode, called only from 0x860D30); the local user's actors and \""
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 666,
+      "code": "\"at exe+0x7798D0); it stays off\","
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 1129,
+      "code": "capture(ep, \"first chance at the known site exe+0x232D5FF, vectored; the game does not handle it\");"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 1148,
+      "code": "\"lifetime thunks | per foreign stage, in P1: vptr == exe+0x558C080, [proc+0x10] == the stage, [proc+8] == \""
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 1175,
+      "code": "if (q64(gpr::kVtTimeline) != g_base + 0x34C0B60 || q64(gpr::kVtTimeline + 8) != g_base + 0x34BD680) {"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 1176,
+      "code": "refuse(\"the timeline object's vtable exe+0x5C75F30 is not build 2976's\");"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 1189,
+      "code": "\"the timeline [ctx+8] (vptr exe+0x5C75F30) -> id +0x1D8 -> the stage P1 noted: foreign, M known, G != M, \""
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 574,
+      "code": "\"Status after exe+0x20688A0, invariant at exe+0x2941020); uniqueness check {}\","
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 473,
+      "code": "uint32_t rva_of(uintptr_t va) { return va >= g_base && va < g_base + 0x10000000 ? static_cast<uint32_t>(va - g_base) : 0; }"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 1888,
+      "code": "\"MountSync gate [fix B] {} T{} | 0x2329A90 from exe+0x8639CD (a received action) | remote 0x{:08X} new \""
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 2114,
+      "code": "log::error(\"MountSync: the 0x863880 call site (exe+0x8639C0) or the network mark (exe+0x1EC9C26) is not build \""
+    },
+    {
+      "file": "src/mod/session2/npc_probe_client.cpp",
+      "line": 172,
+      "code": "if (play && ptr(play) == g_base + 0x55BEE78) {"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 649,
+      "code": "bad += \" 2322 emitter entry (exe+0x2999D80)\";"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 656,
+      "code": "bad += \" ToTarget/ISendTargetFinder vtables (exe+0x5B25438 / exe+0x5B253F8)\";"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 371,
+      "code": "bad += \" 2810 serializer entry (exe+0x2A4E4C0)\";"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 377,
+      "code": "bad += \" ToTarget/ISendTargetFinder vtables (exe+0x5B25438 / exe+0x5B253F8)\";"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 858,
+      "code": "caller == kFindRetPrimary   ? \"RestartLayerAction primary (exe+0x863914)\""
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 859,
+      "code": ": caller == kFindRetFallback ? \"RestartLayerAction fallback (exe+0x86392A)\""
+    },
+    {
+      "file": "src/mod/session2/remote_interp.cpp",
+      "line": 703,
+      "code": "mode == Mode::On ? (g_patch_state.load() == 1 ? \" (exe+0x11B2073 / 0x11B2775 patched)\" : \" (patch REFUSED)\")"
+    },
+    {
+      "file": "src/mod/session2/remote_rope.cpp",
+      "line": 966,
+      "code": "log::info(\"RemoteRope: hooked at their entries ({} bytes patched): exe+0x592340 (RemoteCatchComponent_Apply, the \""
+    },
+    {
+      "file": "src/mod/session2/remote_rope.cpp",
+      "line": 967,
+      "code": "\"2763 apply; one caller 0xB5BB7B), exe+0xB5BD60 (the 2471 handler, log only){}; {}\","
+    },
+    {
+      "file": "src/mod/session2/remote_rope.cpp",
+      "line": 969,
+      "code": "host ? \", exe+0x27D9110 (the server's release frame event), exe+0x1807390 (the remote catch \""
+    },
+    {
+      "file": "src/mod/session2/rope_probe.cpp",
+      "line": 139,
+      "code": "if (*vt >= g_base && *vt < g_base + 0x10000000) r.far_vt = static_cast<uint32_t>(*vt - g_base);"
+    },
+    {
+      "file": "src/mod/session2/rope_probe.cpp",
+      "line": 476,
+      "code": "log::info(\"RopeProbe: hooked at their entries ({} bytes patched): exe+0x6D46D0 (pa::ClientFrameEventTreePulling::vf1, \""
+    },
+    {
+      "file": "src/mod/session2/rope_probe.cpp",
+      "line": 477,
+      "code": "\"log only) and exe+0x8A30C0 (the tree pull's per-frame apply, counted per character; one caller \""
+    },
+    {
+      "file": "src/mod/session2/server.cpp",
+      "line": 249,
+      "code": "n.in_exe = n.address >= g_base && n.address < g_base + 0x20000000;"
+    },
+    {
+      "file": "src/mod/session2/server.cpp",
+      "line": 905,
+      "code": "return game::game_fault_continue(ep, \"Session2 relay fix\", \"ToNear::vf1 (exe+0x2A75860) built the recipients\");"
+    },
+    {
+      "file": "src/mod/session2/server.cpp",
+      "line": 980,
+      "code": "if (!vt || *vt < g_base || *vt >= g_base + 0x10000000) continue;"
+    },
+    {
+      "file": "src/mod/session2/server.cpp",
+      "line": 1249,
+      "code": "if (game::safe_read(g_base + 0x6A6D238, ft, sizeof ft)) {"
+    },
+    {
+      "file": "src/mod/session2/tree_bend.cpp",
+      "line": 595,
+      "code": "log::info(\"TreeBend: hooked at their entries (5/7/5/5 bytes patched): exe+0x117F7E0 (RemoteCatchFunctions vf2, M1), \""
+    },
+    {
+      "file": "src/mod/session2/tree_bend.cpp",
+      "line": 596,
+      "code": "\"exe+0x1190FD0 (the bend's apply, M2), exe+0x349EA10 (TreeComponent::SetBend, M3: the thrower's values, \""
+    },
+    {
+      "file": "src/mod/session2/tree_bend.cpp",
+      "line": 597,
+      "code": "\"sent), exe+0x59C0D0 (the RemoteCatch tick, M4: the observer {})\","
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 2772,
+      "code": "case kWhySlots: return \"ServerNet [exe+0x6D69680], the 2043 Troc [exe+0x6FA3ED8] or the period read 0\";"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 6645,
+      "code": "v[9] == 1 ? \"the actor lookup [exe+0x6D69698] is 0\""
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 6646,
+      "code": ": \"the actor lookup's SAM pointer [[exe+0x6D69698]] is 0\","
+    },
+    {
+      "file": "src/mod/session2/weather_sync.cpp",
+      "line": 595,
+      "code": "log::info(\"WeatherSync: exe+0x3DC4730 (X's update, one caller 0x3B10737) hooked at its entry ({} bytes patched); \""
+    },
+    {
+      "file": "src/mod/session2/weather_sync.cpp",
+      "line": 1078,
+      "code": "log::warn(\"WeatherSync: exe+0x6DA0A0 is not `mov rax,[rcx+0x60]; ret` (the simulators' path to X is then not \""
+    },
+    {
+      "file": "src/mod/session2/weather_sync.cpp",
+      "line": 1079,
+      "code": "\"[[exe+0x6C8CEC8]+0x60]+0xF68); the probe says so on each line\");"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 198,
+      "code": "\"TryLock (exclusive) of a ServerField's lock (vf+0x28, exe+0x1371BA0)\")) {"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 206,
+      "code": "\"Unlock (exclusive) of a ServerField's lock (vf+0x20, exe+0x1371B70)\")) {"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 288,
+      "code": "log::error(\"WorldAnchor: the lock of field 0x{:X} is not pa::WindowsRWLock<4,1> with TryLock exe+0x1371BA0 / \""
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 289,
+      "code": "\"Unlock exe+0x1371B70 (build 1.0.0.2976 only): nothing written\","
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 507,
+      "code": "log::error(\"Session2: user2_world_anchor: the slot's writer exe+0x29C2915 / reader exe+0x2C38E28 are not the bytes \""
+    }
+  ],
+  "build_checks": [
+    {
+      "file": "src/mod/mod.cpp",
+      "line": 141,
+      "code": "file_version(exe), base, nt->OptionalHeader.SizeOfImage, nt->FileHeader.TimeDateStamp);"
+    },
+    {
+      "file": "src/mod/game/camera_reader.cpp",
+      "line": 48,
+      "code": "enabled_ = base_ == off::kImageBase && nt->FileHeader.TimeDateStamp == off::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/game/player_reader.cpp",
+      "line": 30,
+      "code": "enabled_ = base_ == off::kImageBase && nt->FileHeader.TimeDateStamp == off::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/net/troc_sniffer.cpp",
+      "line": 754,
+      "code": "if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/net/troc_sniffer.cpp",
+      "line": 806,
+      "code": "auto* args = new ThreadArgs{dir, stop, nt->FileHeader.TimeDateStamp, record};"
+    },
+    {
+      "file": "src/mod/session2/catch_seq.cpp",
+      "line": 252,
+      "code": "game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/session2/docked_gimmicks.cpp",
+      "line": 672,
+      "code": "game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/session2/door_trace.cpp",
+      "line": 148,
+      "code": "nt.FileHeader.TimeDateStamp != 0x6AB28F00)"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 198,
+      "code": "nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp || !p8_exe_sections(base, secs)) {"
+    },
+    {
+      "file": "src/mod/session2/guest.cpp",
+      "line": 1374,
+      "code": "if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest.cpp",
+      "line": 1476,
+      "code": "if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 775,
+      "code": "nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 336,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 628,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 527,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_scene_diag.cpp",
+      "line": 494,
+      "code": "nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 795,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 932,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 635,
+      "code": "nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 676,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 971,
+      "code": "nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 388,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 1132,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 944,
+      "code": "nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/guest_x_interaction.cpp",
+      "line": 375,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 657,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 2067,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 653,
+      "code": "nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 1123,
+      "code": "nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/remote_interp.cpp",
+      "line": 655,
+      "code": "nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 850,
+      "code": "nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/remote_rope.cpp",
+      "line": 985,
+      "code": "game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/session2/rope_probe.cpp",
+      "line": 489,
+      "code": "game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share.cpp",
+      "line": 331,
+      "code": "nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != sls::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/server.cpp",
+      "line": 1051,
+      "code": "if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 607,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 1307,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 1309,
+      "code": "log::warn(\"ShopTradeProbe: not build 1.0.0.2976 (base / PE TimeDateStamp) or unreadable sections / .pdata: \""
+    },
+    {
+      "file": "src/mod/session2/tree_bend.cpp",
+      "line": 609,
+      "code": "game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 516,
+      "code": "nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 1663,
+      "code": "nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 7152,
+      "code": "!game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||"
+    },
+    {
+      "file": "src/mod/session2/weather_sync.cpp",
+      "line": 828,
+      "code": "game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 11,
+      "code": "inline constexpr uint32_t kPeTimestamp = 0x6AB28F00;"
+    },
+    {
+      "file": "src/mod/session2/host_save_logic.h",
+      "line": 492,
+      "code": "std::string pe_timestamp = \"0x6AB28F00\";"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 216,
+      "code": "inline constexpr uint32_t kPeTimestamp = 0x6AB28F00;"
+    },
+    {
+      "file": "src/mod/session2/scene_level_share_logic.h",
+      "line": 58,
+      "code": "inline constexpr uint32_t kPeTimestamp = 0x6AB28F00;"
+    }
+  ],
+  "signature_arrays": [
+    {
+      "file": "src/mod/game/game_errors.cpp",
+      "line": 26,
+      "name": "kErrorLoggerHead"
+    },
+    {
+      "file": "src/mod/net/aggro_test.cpp",
+      "line": 33,
+      "name": "kIsTargetableHead"
+    },
+    {
+      "file": "src/mod/net/aggro_test.cpp",
+      "line": 36,
+      "name": "kSetCurrentTargetHead"
+    },
+    {
+      "file": "src/mod/net/aggro_test.cpp",
+      "line": 47,
+      "name": "kCheckAIBattleTypeHead"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 840,
+      "name": "kNotifyAppearHead"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 844,
+      "name": "kNotifyReadSessionsBytes"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 846,
+      "name": "kNotifyReadKeysBytes"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 848,
+      "name": "kNotifyFindCallBytes"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 850,
+      "name": "kCallerNewObserversBytes"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 852,
+      "name": "kCallerMovingUserBytes"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 854,
+      "name": "kStartActionHead"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 859,
+      "name": "kRestoreWriteBytes"
+    },
+    {
+      "file": "src/mod/session2/child_hold.cpp",
+      "line": 864,
+      "name": "kServerRealmSetBytes"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 22,
+      "name": "kTravelHead"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 26,
+      "name": "kTravelOwnerCmpBytes"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 28,
+      "name": "kTravelGetterCallBytes"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 30,
+      "name": "kLoadingHead"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 35,
+      "name": "kLoadingFlagCmpBytes"
+    },
+    {
+      "file": "src/mod/session2/clock_gate.cpp",
+      "line": 37,
+      "name": "kGetterHead"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 31,
+      "name": "kCreateHead"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 39,
+      "name": "kFindSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 45,
+      "name": "kFactorySiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 51,
+      "name": "kMapSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 57,
+      "name": "kConfirmHead"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 66,
+      "name": "kSlotErrSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 72,
+      "name": "kMainAcqSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 79,
+      "name": "kMainCompSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 81,
+      "name": "kMainStateSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 88,
+      "name": "kAttachSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 108,
+      "name": "kCrashHead"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 111,
+      "name": "kCrashSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 114,
+      "name": "kCallerLayerBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 116,
+      "name": "kCallerCopyBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 119,
+      "name": "kCallerCallBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 124,
+      "name": "kScopeAckHead"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 131,
+      "name": "kBadThisFnHead"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.cpp",
+      "line": 135,
+      "name": "kBadThisBytes"
+    },
+    {
+      "file": "src/mod/session2/door_trace.cpp",
+      "line": 20,
+      "name": "kHead"
+    },
+    {
+      "file": "src/mod/session2/enemy_damage_probe.cpp",
+      "line": 20,
+      "name": "kBytes"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 97,
+      "name": "kFastTravelBytes"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 104,
+      "name": "kFastTravelPointBytes"
+    },
+    {
+      "file": "src/mod/session2/fast_travel.cpp",
+      "line": 108,
+      "name": "kPointCallBytes"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 21,
+      "name": "kAcquireFieldHead"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 25,
+      "name": "kEnterFieldHead"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 29,
+      "name": "kTryAddRefHead"
+    },
+    {
+      "file": "src/mod/session2/field_share.cpp",
+      "line": 32,
+      "name": "kVecPushHead"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 46,
+      "name": "kFinishHeadBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 49,
+      "name": "kFinishActorBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 51,
+      "name": "kFinishStateBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 54,
+      "name": "kFinishLoginBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 57,
+      "name": "kFinishErrorBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 83,
+      "name": "kStateSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 91,
+      "name": "kStateHookBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 94,
+      "name": "kWaitSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_actor_diag.cpp",
+      "line": 98,
+      "name": "kFindBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 42,
+      "name": "kBodyAnimBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 44,
+      "name": "kArgsBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 45,
+      "name": "kName0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 46,
+      "name": "kCall0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 47,
+      "name": "kName1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 48,
+      "name": "kCall1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_bodyanim_diag.cpp",
+      "line": 52,
+      "name": "kConfigureBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 36,
+      "name": "kWaitHeadBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 41,
+      "name": "kWaitLoopBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 46,
+      "name": "kWaitRemoveBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 51,
+      "name": "kReadyBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_reload_wait.cpp",
+      "line": 55,
+      "name": "kFindBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 51,
+      "name": "kNullConsumerBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 54,
+      "name": "kNullReadBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 56,
+      "name": "kUpdateBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 59,
+      "name": "kSpawnBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 62,
+      "name": "kSpawnAlBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 64,
+      "name": "kSpawnCallBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 66,
+      "name": "kAckBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_s3.cpp",
+      "line": 70,
+      "name": "kStartBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 43,
+      "name": "kLoadSlotHead"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 48,
+      "name": "kSaveHead"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 54,
+      "name": "kFlushHead"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 60,
+      "name": "kGetOrCreateHead"
+    },
+    {
+      "file": "src/mod/session2/guest_save_host.cpp",
+      "line": 62,
+      "name": "kAddFileHead"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 39,
+      "name": "kPointBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 41,
+      "name": "kCallBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 43,
+      "name": "kFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 44,
+      "name": "kKeyBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_bind.cpp",
+      "line": 45,
+      "name": "kArgKeyBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 56,
+      "name": "kNodeLookupBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 59,
+      "name": "kKeyLookupBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_sched_load.cpp",
+      "line": 64,
+      "name": "kStageCallBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 57,
+      "name": "kFixCode"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 66,
+      "name": "kP1Sig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 69,
+      "name": "kP21Sig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 72,
+      "name": "kP22Sig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 79,
+      "name": "kP3Sig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_foreign.cpp",
+      "line": 91,
+      "name": "kP4Sig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 52,
+      "name": "kPointBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 54,
+      "name": "kFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 55,
+      "name": "kDtBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 56,
+      "name": "kActorBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 58,
+      "name": "kAttachBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 59,
+      "name": "kVf48Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 60,
+      "name": "kModePtrBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 61,
+      "name": "kLiveGate1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 63,
+      "name": "kLiveGate2Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 68,
+      "name": "kTickBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 71,
+      "name": "kLiveBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 74,
+      "name": "kOwnerBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 93,
+      "name": "kSkipBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 95,
+      "name": "kSkipTailBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 97,
+      "name": "kSkipCopyBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 98,
+      "name": "kSkipLoopBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 99,
+      "name": "kSkipR13Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 100,
+      "name": "kSkipRsi1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 101,
+      "name": "kSkipRsi2Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_play.cpp",
+      "line": 102,
+      "name": "kSkipRsi3Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 46,
+      "name": "kCamSelSig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 49,
+      "name": "kPresetSig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 53,
+      "name": "kLetterSig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 56,
+      "name": "kPostSig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 60,
+      "name": "kDialogSig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 66,
+      "name": "kLoadSig"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 68,
+      "name": "kLoadHead"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 106,
+      "name": "kSaCode"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 109,
+      "name": "kSdCode"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_present.cpp",
+      "line": 117,
+      "name": "kRbCode"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 52,
+      "name": "kPointBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 57,
+      "name": "kPrologueBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 63,
+      "name": "kHeadBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 65,
+      "name": "kRegsBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 66,
+      "name": "kR14Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 69,
+      "name": "kCtorLoopBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 71,
+      "name": "kCtorBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 74,
+      "name": "kLockBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 76,
+      "name": "kReleaseBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 82,
+      "name": "kIndex0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 83,
+      "name": "kIndex1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 84,
+      "name": "kChart0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 86,
+      "name": "kHash0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 87,
+      "name": "kChart1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 89,
+      "name": "kHash1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 90,
+      "name": "kReloadBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 91,
+      "name": "kCallBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 93,
+      "name": "kExitBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 95,
+      "name": "kExitTailBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 97,
+      "name": "kRestartLookBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 102,
+      "name": "kRestartCheckBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_restore.cpp",
+      "line": 109,
+      "name": "kFindBodyBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 47,
+      "name": "kP2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 49,
+      "name": "kFrame2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 50,
+      "name": "kKind2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 51,
+      "name": "kActor2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 52,
+      "name": "kVf48_2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 53,
+      "name": "kWrap2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 56,
+      "name": "kP2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 58,
+      "name": "kWrap2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 59,
+      "name": "kActor2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 60,
+      "name": "kVf48_2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 63,
+      "name": "kP2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 65,
+      "name": "kVf48_2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 66,
+      "name": "kFrame2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 69,
+      "name": "kFind2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 71,
+      "name": "kSeq2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 76,
+      "name": "kP2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 78,
+      "name": "kVf48_2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 79,
+      "name": "kRaw2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 82,
+      "name": "kFind2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 94,
+      "name": "kP2524Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 96,
+      "name": "kWrap2524Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 98,
+      "name": "kFind2524Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 100,
+      "name": "kActor2524Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 101,
+      "name": "kVf48_2524Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 102,
+      "name": "kUse2524Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 115,
+      "name": "kS2335Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 132,
+      "name": "kS2126Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 147,
+      "name": "kSChangeBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 249,
+      "name": "kLookupBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 250,
+      "name": "kLookupHomeBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 251,
+      "name": "kLookupFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 253,
+      "name": "kLookupBranchBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 254,
+      "name": "kLookupCallBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 255,
+      "name": "kLookupInstBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 257,
+      "name": "kLookupUseBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 259,
+      "name": "kLookupMissBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_seq_route.cpp",
+      "line": 1100,
+      "name": "kTearBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 41,
+      "name": "kIn2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 48,
+      "name": "kFrame2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 50,
+      "name": "kKind2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 52,
+      "name": "kActor2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 54,
+      "name": "kVf48_2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 56,
+      "name": "kCreate2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 60,
+      "name": "kRoute2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 64,
+      "name": "kResult2661Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 73,
+      "name": "kMissingBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 76,
+      "name": "kCreateHomesBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 79,
+      "name": "kBindTypeBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 81,
+      "name": "kBindActorBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 83,
+      "name": "kBindMissingBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 88,
+      "name": "kIn2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 91,
+      "name": "kWrap2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 93,
+      "name": "kActor2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 95,
+      "name": "kVf48_2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 99,
+      "name": "kRoute2981Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 104,
+      "name": "kIn2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 107,
+      "name": "kVf48_2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 111,
+      "name": "kRoute2810Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 119,
+      "name": "kRoute2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 122,
+      "name": "kField2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 124,
+      "name": "kRaw2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 129,
+      "name": "kNpcEntryBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 132,
+      "name": "kNpcFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 134,
+      "name": "kNpcCompBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 138,
+      "name": "kNpcRes8Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 143,
+      "name": "kNpcOwnerBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 148,
+      "name": "kNpcInstanceBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 154,
+      "name": "kReady0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 157,
+      "name": "kReady0PBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 159,
+      "name": "kReady0MBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 162,
+      "name": "kReady1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 165,
+      "name": "kReady1MBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_stage_diag.cpp",
+      "line": 167,
+      "name": "kReady1PBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 55,
+      "name": "kV1Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 56,
+      "name": "kV1CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 58,
+      "name": "kV1EpilogueBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 63,
+      "name": "kV0Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 70,
+      "name": "kClearBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 71,
+      "name": "kClearCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 111,
+      "name": "kQuestDlgBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 116,
+      "name": "kTimelineBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 118,
+      "name": "kTimelineEndBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 119,
+      "name": "kBlockInterBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 124,
+      "name": "kSetInterBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 128,
+      "name": "kInputBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 132,
+      "name": "kUiControlBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 134,
+      "name": "kPhaseTagBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 141,
+      "name": "kMinimapBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 143,
+      "name": "kFindPathBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 144,
+      "name": "kStageIconBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 148,
+      "name": "kGuideBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 150,
+      "name": "kBgGuideBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 151,
+      "name": "kHintBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 152,
+      "name": "kHintEndBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 154,
+      "name": "kFadeBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 155,
+      "name": "kLetterBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 156,
+      "name": "kSeqCamBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 157,
+      "name": "kDeactCamBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 159,
+      "name": "kDeactCamEndBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 161,
+      "name": "kDeactFadeBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 162,
+      "name": "kDeactFade2Bytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 163,
+      "name": "kPresetBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 164,
+      "name": "kPresetEndBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 165,
+      "name": "kLockOnBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 166,
+      "name": "kLookAtBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 167,
+      "name": "kLookAtEndBytes"
+    },
+    {
+      "file": "src/mod/session2/guest_x_veto.cpp",
+      "line": 168,
+      "name": "kPostBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 45,
+      "name": "kH1Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 48,
+      "name": "kH1FrameBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 51,
+      "name": "kH1ArgsBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 54,
+      "name": "kH1ActorBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 57,
+      "name": "kH1BBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 60,
+      "name": "kH1LocalBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 65,
+      "name": "kH1bBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 68,
+      "name": "kH1bOutBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 71,
+      "name": "kH1bCallBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 77,
+      "name": "kBindAiBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 80,
+      "name": "kBindAiVf107Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 82,
+      "name": "kBindAi2874Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 86,
+      "name": "kRebindBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 89,
+      "name": "kRebindVf107Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 91,
+      "name": "kRebind2874Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 95,
+      "name": "kRebindRes8Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 98,
+      "name": "kRebindFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 101,
+      "name": "kRebindRes8SrcBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 106,
+      "name": "kRebindInstBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 109,
+      "name": "kRebindLookupBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 113,
+      "name": "kRebindBindBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 125,
+      "name": "kVf13Res8Bytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 127,
+      "name": "kVf13FrameBytes"
+    },
+    {
+      "file": "src/mod/session2/host_scene_diag.cpp",
+      "line": 129,
+      "name": "kVf13CompBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 216,
+      "name": "kLobbyLoadHead"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 221,
+      "name": "kLobbyConstantBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 224,
+      "name": "kLobbyAddCallBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 227,
+      "name": "kClearLobbySiteBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 229,
+      "name": "kClearListSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 235,
+      "name": "kLoginMgrSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 238,
+      "name": "kFindByNoScanBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_fix.cpp",
+      "line": 241,
+      "name": "kFindByNoReadBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 32,
+      "name": "kLoadHead"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 40,
+      "name": "kComponentSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 46,
+      "name": "kOwnerHead"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 51,
+      "name": "kPhasesHead"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 56,
+      "name": "kAckHead"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 61,
+      "name": "kPackerHead"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 68,
+      "name": "kVersionThisBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 70,
+      "name": "kVersionSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 76,
+      "name": "kClientStatusBytes"
+    },
+    {
+      "file": "src/mod/session2/identity_probe.cpp",
+      "line": 78,
+      "name": "kClientVersionSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 64,
+      "name": "kGateCallSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 66,
+      "name": "kGateNetOrBytes"
+    },
+    {
+      "file": "src/mod/session2/mount_sync.cpp",
+      "line": 99,
+      "name": "kActionReqBytes"
+    },
+    {
+      "file": "src/mod/session2/npc_action_probe.cpp",
+      "line": 22,
+      "name": "kActionBytes"
+    },
+    {
+      "file": "src/mod/session2/npc_action_probe.cpp",
+      "line": 24,
+      "name": "kNodeBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 38,
+      "name": "kCtorBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 48,
+      "name": "kVf0Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 54,
+      "name": "kVf1Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 60,
+      "name": "kVf2Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 68,
+      "name": "kEmitHead"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 77,
+      "name": "kEmitOpBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 86,
+      "name": "kRecipeBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 92,
+      "name": "kSite2144Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 98,
+      "name": "kCallCoreBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 101,
+      "name": "kSite3066Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 108,
+      "name": "kScopeFindBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 111,
+      "name": "kScopeCurBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_milestone.cpp",
+      "line": 116,
+      "name": "kRealmBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 40,
+      "name": "kSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 54,
+      "name": "kOwnerCallBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 56,
+      "name": "kOwnerMethodBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 59,
+      "name": "kOwnerFindBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 73,
+      "name": "kEmitHead"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 82,
+      "name": "kEmitOpBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 88,
+      "name": "kCtorBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 95,
+      "name": "kVf1Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 101,
+      "name": "kVf2Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 104,
+      "name": "kScopeFindBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_scene_copy.cpp",
+      "line": 107,
+      "name": "kRealmBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 44,
+      "name": "kPrepareBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 47,
+      "name": "kPrepareLoopBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 50,
+      "name": "kPrepareOpcodeBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 56,
+      "name": "kDeleteBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 59,
+      "name": "kDeleteSeqBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 61,
+      "name": "kDeleteOpcodeBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 68,
+      "name": "kBranchBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 71,
+      "name": "kBranchSeqBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 73,
+      "name": "kBranchOpcodeBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 78,
+      "name": "kMilestoneBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 81,
+      "name": "kMilestoneOpcodeBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 91,
+      "name": "kEntryBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 94,
+      "name": "kEntryPredBytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 96,
+      "name": "kEntryR13Bytes"
+    },
+    {
+      "file": "src/mod/session2/observer_stage.cpp",
+      "line": 98,
+      "name": "kEntryR14Bytes"
+    },
+    {
+      "file": "src/mod/session2/owner_fanout.cpp",
+      "line": 32,
+      "name": "kVf1Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 49,
+      "name": "kPred1Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 51,
+      "name": "kPred1CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 57,
+      "name": "kPred2Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 60,
+      "name": "kPred2CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 69,
+      "name": "kH2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 72,
+      "name": "kH2322CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 75,
+      "name": "kH2322PayloadBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 80,
+      "name": "kW2322Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 83,
+      "name": "kW2322CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 93,
+      "name": "kOwnerBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 95,
+      "name": "kOwnerCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 99,
+      "name": "kOwnerPrepBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 108,
+      "name": "kEmitBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 118,
+      "name": "kUiBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 128,
+      "name": "kFindBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 154,
+      "name": "kRestartBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 157,
+      "name": "kRestartLoopBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 163,
+      "name": "kRestartCcBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 174,
+      "name": "kBodyAnimBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 177,
+      "name": "kBodyAnimArgsBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 180,
+      "name": "kInstall70Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 182,
+      "name": "kInstall70CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 184,
+      "name": "kInstall70LoadBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 187,
+      "name": "kInstall78Bytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 189,
+      "name": "kInstall78CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 191,
+      "name": "kInstall78LoadBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 201,
+      "name": "kBindBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 203,
+      "name": "kBindFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 205,
+      "name": "kBindCompBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 207,
+      "name": "kBindCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 210,
+      "name": "kSeqBytes"
+    },
+    {
+      "file": "src/mod/session2/p8_probes.cpp",
+      "line": 212,
+      "name": "kSeqCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 49,
+      "name": "kPointClimbHead"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 59,
+      "name": "kModeFnBytes"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 73,
+      "name": "kModeFnTableBytes"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 77,
+      "name": "kIsLocalFnBytes"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 84,
+      "name": "kIsLocalTableBytes"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 93,
+      "name": "kWallUpGateBytes"
+    },
+    {
+      "file": "src/mod/session2/remote_motion.cpp",
+      "line": 103,
+      "name": "kWallUpCallBytes"
+    },
+    {
+      "file": "src/mod/session2/report_guard.cpp",
+      "line": 20,
+      "name": "kReporterHead"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 43,
+      "name": "kEBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 49,
+      "name": "kGBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 50,
+      "name": "kGCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 57,
+      "name": "kPBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 58,
+      "name": "kPCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 64,
+      "name": "kCBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_probe.cpp",
+      "line": 65,
+      "name": "kCCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 47,
+      "name": "kSigP1"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 50,
+      "name": "kSigP1b"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 53,
+      "name": "kSigU2c"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 56,
+      "name": "kSigP2"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 59,
+      "name": "kSigP2a"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 62,
+      "name": "kSigP5"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 65,
+      "name": "kSigP6"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 72,
+      "name": "kHead21F2780"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 84,
+      "name": "kHead2369360"
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe.cpp",
+      "line": 100,
+      "name": "kHead2B36EF0"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 57,
+      "name": "kScaleHead"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 66,
+      "name": "kCall1Bytes"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 67,
+      "name": "kCall2Bytes"
+    },
+    {
+      "file": "src/mod/session2/ui_pause.cpp",
+      "line": 71,
+      "name": "kTrivialVfBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 54,
+      "name": "kRankCtx1Bytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 57,
+      "name": "kRankCtx2Bytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 61,
+      "name": "kRankCallBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 68,
+      "name": "kExecuteTrocBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 78,
+      "name": "kVf40Bytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 87,
+      "name": "kVf48Bytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 100,
+      "name": "kQuestEventCbBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 115,
+      "name": "kOwnerCharBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 142,
+      "name": "kDeadCallCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 149,
+      "name": "kOwnerUserStubBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 153,
+      "name": "kLootCallCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 161,
+      "name": "kFindUserBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 171,
+      "name": "kReloadCallCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 178,
+      "name": "kApplyReloadBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "line": 188,
+      "name": "kApplyCallCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 64,
+      "name": "kCBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 65,
+      "name": "kDBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 66,
+      "name": "kLBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 67,
+      "name": "kUBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 68,
+      "name": "kNBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 69,
+      "name": "kTBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 70,
+      "name": "kSBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 71,
+      "name": "kFBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 72,
+      "name": "kPBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 74,
+      "name": "kOBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 96,
+      "name": "kGateBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 97,
+      "name": "kGateCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 115,
+      "name": "kGate2Bytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 117,
+      "name": "kGate2CtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 132,
+      "name": "kEvalBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 133,
+      "name": "kEvalCtxBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 139,
+      "name": "kElemBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 153,
+      "name": "kArmFnBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 157,
+      "name": "kEnqueueFnBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 176,
+      "name": "kListFnBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 178,
+      "name": "kInterestFnBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 3103,
+      "name": "kFindActorBytes"
+    },
+    {
+      "file": "src/mod/session2/user2_stages.cpp",
+      "line": 3104,
+      "name": "kScopeDtorBytes"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 27,
+      "name": "kHandlerWriteBytes"
+    },
+    {
+      "file": "src/mod/session2/world_anchor.cpp",
+      "line": 29,
+      "name": "kCollectorReadBytes"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 74,
+      "name": "kClientPostPacketHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 76,
+      "name": "kClientOnRecvPacketHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 120,
+      "name": "kMinimapIconDecideHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 136,
+      "name": "kServerOtherEquipWriterHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 177,
+      "name": "kServerDockingWriterHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 195,
+      "name": "kPointClimbEnterHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 208,
+      "name": "kActionLayerAdvanceHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 219,
+      "name": "kActionLayersAdvanceHead"
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "line": 226,
+      "name": "kRideEnterHead"
+    },
+    {
+      "file": "src/mod/session2/catch_seq_logic.h",
+      "line": 54,
+      "name": "kCheckSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 69,
+      "name": "kRestoreSiteBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 74,
+      "name": "kRestoreLockBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 79,
+      "name": "kRestoreExitBytes"
+    },
+    {
+      "file": "src/mod/session2/companion_probe.h",
+      "line": 86,
+      "name": "kRestartCallBytes"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 52,
+      "name": "kServerOnRecvPacketHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 55,
+      "name": "kSessionSendHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 58,
+      "name": "kNwSessionCtorHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 61,
+      "name": "kQueuePushHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 72,
+      "name": "kAllocGlobalHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 76,
+      "name": "kAllocThreadBytes"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 101,
+      "name": "kExceptOneVf1Head"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 103,
+      "name": "kToNearVf1Head"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 141,
+      "name": "kSyncSessionSendHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 144,
+      "name": "kNetLoopPumpHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 154,
+      "name": "kNetLoopPumpAob"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 158,
+      "name": "kClientOnRecvPacketHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 182,
+      "name": "kWindowsLockVf1Head"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 183,
+      "name": "kWindowsLockVf2Head"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 186,
+      "name": "kSaveMgrRefreshSlotsHead"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 191,
+      "name": "kSlotRefreshReqSequenceBytes"
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "line": 212,
+      "name": "kTitlePlayReadsSaveMgrBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 23,
+      "name": "kAiReadBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 27,
+      "name": "kAiReadFrameBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 30,
+      "name": "kAiReadArgBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 33,
+      "name": "kAiReadInitBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 36,
+      "name": "kAiReadCallBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 42,
+      "name": "kAiDoneBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 46,
+      "name": "kAiDoneThisBytes"
+    },
+    {
+      "file": "src/mod/session2/scene_points.h",
+      "line": 49,
+      "name": "kAiDoneCallBytes"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 177,
+      "name": "kBytesA"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 178,
+      "name": "kBytesR"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 179,
+      "name": "kBytesF"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 184,
+      "name": "kCtxABytes"
+    },
+    {
+      "file": "src/mod/session2/stage_lookup_logic.h",
+      "line": 185,
+      "name": "kCtxLookupBytes"
+    }
+  ],
+  "opcode_candidate_files": {
+    "src/common/troc_script.cpp": 3,
+    "src/mod/bg_speed.cpp": 1,
+    "src/mod/config.cpp": 1,
+    "src/mod/log.cpp": 3,
+    "src/mod/mod.cpp": 5,
+    "src/mod/net/aggro_test.cpp": 3,
+    "src/mod/net/attack_probe.cpp": 2,
+    "src/mod/net/coop.cpp": 2,
+    "src/mod/net/enemy_relay.cpp": 14,
+    "src/mod/net/guest_hits.cpp": 10,
+    "src/mod/net/horse_diag.cpp": 1,
+    "src/mod/net/local_capture.cpp": 5,
+    "src/mod/net/piece4_test.cpp": 6,
+    "src/mod/net/player_hits.cpp": 7,
+    "src/mod/net/remote_puppet.cpp": 5,
+    "src/mod/net/steam_transport.cpp": 1,
+    "src/mod/net/troc_sniffer.cpp": 1,
+    "src/mod/render/dx12_hook.cpp": 1,
+    "src/mod/session2/attach_follow.cpp": 1,
+    "src/mod/session2/catch_seq.cpp": 3,
+    "src/mod/session2/child_hold.cpp": 23,
+    "src/mod/session2/clock_push.cpp": 22,
+    "src/mod/session2/combat_follow.cpp": 6,
+    "src/mod/session2/companion_probe.cpp": 3,
+    "src/mod/session2/docked_gimmicks.cpp": 67,
+    "src/mod/session2/door_trace.cpp": 2,
+    "src/mod/session2/enemy_damage_probe.cpp": 1,
+    "src/mod/session2/fast_travel.cpp": 7,
+    "src/mod/session2/guest.cpp": 42,
+    "src/mod/session2/guest_bodyanim_diag.cpp": 2,
+    "src/mod/session2/guest_lifecycle.cpp": 17,
+    "src/mod/session2/guest_reload_wait.cpp": 20,
+    "src/mod/session2/guest_s3.cpp": 19,
+    "src/mod/session2/guest_save_guest.cpp": 14,
+    "src/mod/session2/guest_save_tunnel.cpp": 8,
+    "src/mod/session2/guest_scene_diag.cpp": 11,
+    "src/mod/session2/guest_sched_bind.cpp": 14,
+    "src/mod/session2/guest_sched_load.cpp": 28,
+    "src/mod/session2/guest_seq_foreign.cpp": 5,
+    "src/mod/session2/guest_seq_play.cpp": 8,
+    "src/mod/session2/guest_seq_present.cpp": 9,
+    "src/mod/session2/guest_seq_restore.cpp": 2,
+    "src/mod/session2/guest_seq_route.cpp": 37,
+    "src/mod/session2/guest_stage_diag.cpp": 23,
+    "src/mod/session2/guest_x_interaction.cpp": 1,
+    "src/mod/session2/guest_x_veto.cpp": 5,
+    "src/mod/session2/horse_follow.cpp": 7,
+    "src/mod/session2/host_scene_diag.cpp": 53,
+    "src/mod/session2/identity_fix.cpp": 4,
+    "src/mod/session2/identity_probe.cpp": 2,
+    "src/mod/session2/load_trip.cpp": 9,
+    "src/mod/session2/mount_sync.cpp": 18,
+    "src/mod/session2/npc_probe_client.cpp": 12,
+    "src/mod/session2/observer_hold_acks.cpp": 9,
+    "src/mod/session2/observer_hold_scene_order.cpp": 36,
+    "src/mod/session2/observer_milestone.cpp": 127,
+    "src/mod/session2/observer_scene_copy.cpp": 30,
+    "src/mod/session2/observer_seq_copy.cpp": 136,
+    "src/mod/session2/observer_stage.cpp": 43,
+    "src/mod/session2/owner_fanout.cpp": 2,
+    "src/mod/session2/p8_probes.cpp": 10,
+    "src/mod/session2/remote_interp.cpp": 9,
+    "src/mod/session2/remote_motion.cpp": 3,
+    "src/mod/session2/remote_rope.cpp": 22,
+    "src/mod/session2/ride_filter.cpp": 2,
+    "src/mod/session2/rope_probe.cpp": 7,
+    "src/mod/session2/save_hooks.cpp": 1,
+    "src/mod/session2/scene_level_share.cpp": 10,
+    "src/mod/session2/server.cpp": 38,
+    "src/mod/session2/session2.cpp": 47,
+    "src/mod/session2/shop_probe.cpp": 36,
+    "src/mod/session2/shop_trade_probe.cpp": 12,
+    "src/mod/session2/travel_probe.cpp": 21,
+    "src/mod/session2/tree_bend.cpp": 2,
+    "src/mod/session2/ui_pause.cpp": 2,
+    "src/mod/session2/user2_funnels.cpp": 28,
+    "src/mod/session2/user2_shops.cpp": 19,
+    "src/mod/session2/user2_stages.cpp": 80,
+    "src/mod/session2/weather_sync.cpp": 1,
+    "src/mod/session2/world_anchor.cpp": 11,
+    "src/common/kick_worker.h": 1,
+    "src/common/reliable.h": 2,
+    "src/common/troc_frame.h": 3,
+    "src/common/troc_script.h": 1,
+    "src/mod/config.h": 2,
+    "src/mod/game/offsets.h": 28,
+    "src/mod/session2/attach_follow_logic.h": 5,
+    "src/mod/session2/child_hold.h": 2,
+    "src/mod/session2/clock_push_logic.h": 4,
+    "src/mod/session2/combat_follow_logic.h": 6,
+    "src/mod/session2/docked_gimmicks_logic.h": 22,
+    "src/mod/session2/door_trace_logic.h": 8,
+    "src/mod/session2/family_order_logic.h": 3,
+    "src/mod/session2/fast_travel_logic.h": 6,
+    "src/mod/session2/gimmick_event_dedup_logic.h": 3,
+    "src/mod/session2/guest_goodbye_logic.h": 1,
+    "src/mod/session2/guest_lifecycle.h": 9,
+    "src/mod/session2/guest_reload_wait_logic.h": 6,
+    "src/mod/session2/guest_s3_logic.h": 6,
+    "src/mod/session2/guest_save_logic.h": 4,
+    "src/mod/session2/guest_save_wire.h": 14,
+    "src/mod/session2/guest_sched_load_logic.h": 5,
+    "src/mod/session2/guest_seq_present_logic.h": 2,
+    "src/mod/session2/guest_seq_route_logic.h": 31,
+    "src/mod/session2/guest_x_veto_logic.h": 2,
+    "src/mod/session2/hold_scene_order_logic.h": 12,
+    "src/mod/session2/horse_follow_logic.h": 7,
+    "src/mod/session2/load_trip_logic.h": 43,
+    "src/mod/session2/mount_sync_logic.h": 7,
+    "src/mod/session2/npc_probe_client_logic.h": 14,
+    "src/mod/session2/npc_retirement_logic.h": 1,
+    "src/mod/session2/observer_hold_acks_logic.h": 15,
+    "src/mod/session2/observer_milestone_logic.h": 23,
+    "src/mod/session2/observer_milestone_reload_logic.h": 48,
+    "src/mod/session2/observer_scene_copy_logic.h": 9,
+    "src/mod/session2/observer_seq_copy_logic.h": 28,
+    "src/mod/session2/observer_stage_logic.h": 4,
+    "src/mod/session2/owner_fanout_logic.h": 42,
+    "src/mod/session2/owner_fanout_writers.h": 345,
+    "src/mod/session2/reannounce_logic.h": 1,
+    "src/mod/session2/remote_interp_logic.h": 2,
+    "src/mod/session2/remote_motion_logic.h": 1,
+    "src/mod/session2/remote_rope_logic.h": 7,
+    "src/mod/session2/ride_filter_logic.h": 2,
+    "src/mod/session2/rope_probe_logic.h": 7,
+    "src/mod/session2/scene_diag_logic.h": 29,
+    "src/mod/session2/scene_level_share_logic.h": 8,
+    "src/mod/session2/shop_probe_logic.h": 10,
+    "src/mod/session2/shop_trade_probe_logic.h": 4,
+    "src/mod/session2/travel_probe_logic.h": 31,
+    "src/mod/session2/tree_bend_logic.h": 1,
+    "src/mod/session2/user2_funnels_logic.h": 20,
+    "src/mod/session2/user2_road_logic.h": 18,
+    "src/mod/session2/user2_shops_logic.h": 23,
+    "src/mod/session2/user2_stages.h": 1,
+    "src/mod/session2/user2_stages_logic.h": 25,
+    "src/mod/session2/weather_sync_logic.h": 4,
+    "src/mod/session2/world_anchor_logic.h": 6
+  },
+  "address_first_table_row_counts": [
+    {
+      "file": "src/mod/session2/eerrno_names.h",
+      "address_first_rows": 1346
+    },
+    {
+      "file": "src/mod/session2/owner_fanout_writers.h",
+      "address_first_rows": 345
+    },
+    {
+      "file": "src/mod/session2/shop_trade_probe_logic.h",
+      "address_first_rows": 12
+    }
+  ]
+}

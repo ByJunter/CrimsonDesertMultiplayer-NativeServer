@@ -458,17 +458,16 @@ inline Owner classify_owner(const UserFacts& f) {
     return Owner::Unidentified;
 }
 
+// The callers below are build 2976's; CallerRets carries each build's. Build 3527 [V capstone, 2026-11-05]: the same
+// callers and no others (3 of LoadSlot, 2 of SavePlayerToSlot, 2 of FlushPendingSaveData).
+struct CallerRets {
+    uint64_t user_login, lobby3093, character3093, autosave, manual2910, flush_logout, flush_timer;
+};
 // The three callers of LoadSlot 0x186F570 (all of them: xref scan of the exe), by return address.
 inline constexpr uint64_t kRetUserLogin = 0x2C17886;      // UserLogin 2490 0x2C17520, call at 0x2C17881
 inline constexpr uint64_t kRetLobby3093 = 0x2C3E1D3;      // 3093 0x2C3E030, the lobby reload, call at 0x2C3E1CE
 inline constexpr uint64_t kRetCharacter3093 = 0x1042ABF8; // 3093, .xtls 0x1042AAF0 (SetupCharacter), call at 0x1042ABF3
 enum class LoadCaller : uint8_t { UserLogin, Lobby3093, Character3093, Other };
-inline LoadCaller load_caller(uint64_t return_rva) {
-    if (return_rva == kRetUserLogin) return LoadCaller::UserLogin;
-    if (return_rva == kRetLobby3093) return LoadCaller::Lobby3093;
-    if (return_rva == kRetCharacter3093) return LoadCaller::Character3093;
-    return LoadCaller::Other;
-}
 inline const char* load_caller_name(LoadCaller c) {
     switch (c) {
         case LoadCaller::UserLogin: return "UserLogin 2490";
@@ -483,11 +482,6 @@ inline const char* load_caller_name(LoadCaller c) {
 inline constexpr uint64_t kRetAutosave = 0xCBD86D3;   // .xtls 0xCBD84D0 (via 0x186E1A0, the 2077 timer), call at 0xCBD86CE
 inline constexpr uint64_t kRetManual2910 = 0x103BE99F; // .xtls 0x103BE8E0 (SaveToFileCurrentPlayerReq 2910), call at 0x103BE99A
 enum class SaveCaller : uint8_t { Autosave, Manual2910, Other };
-inline SaveCaller save_caller(uint64_t return_rva) {
-    if (return_rva == kRetAutosave) return SaveCaller::Autosave;
-    if (return_rva == kRetManual2910) return SaveCaller::Manual2910;
-    return SaveCaller::Other;
-}
 inline const char* save_caller_name(SaveCaller c) {
     switch (c) {
         case SaveCaller::Autosave: return "autosave";
@@ -500,9 +494,27 @@ inline const char* save_caller_name(SaveCaller c) {
 // The two callers of FlushPendingSaveData 0x1871930 (probe only).
 inline constexpr uint64_t kRetFlushLogout = 0x28F273F;  // the character's logout phase 0x28F26C0, call at 0x28F273A
 inline constexpr uint64_t kRetFlushTimer = 0x108393CD;  // .xtls 0x10839370, call at 0x108393C8
-inline const char* flush_caller_name(uint64_t return_rva) {
-    if (return_rva == kRetFlushLogout) return "logout phase";
-    if (return_rva == kRetFlushTimer) return "flush timer";
+inline constexpr CallerRets kRets2976{kRetUserLogin, kRetLobby3093, kRetCharacter3093, kRetAutosave, kRetManual2910,
+                                     kRetFlushLogout, kRetFlushTimer};
+inline constexpr CallerRets kRets3527{0x2EBB220, 0x2EE1F36, 0xE48A0A3, 0xB744239, 0xE42468F, 0x2B5C0FF, 0xE7C098D};
+// 1.0.0.3549: the four in the protected section moved. Each target has one direct caller there (E8 scan of the section),
+// at the 2976 function's offset give or take the re-encoding: fn 0xE3CC9D0+0xFF, 0xB7F1180+0x205 (jmp at 0x19AF410),
+// 0xE37C170+0xC1 (jmp at 0x2B66E00), 0xE6FC370+0x58.
+inline constexpr CallerRets kRets3549{0x2EBB220, 0x2EE1F36, 0xE3CCAD4, 0xB7F138A, 0xE37C236, 0x2B5C0FF, 0xE6FC3CD};
+inline LoadCaller load_caller(uint64_t return_rva, const CallerRets& r = kRets2976) {
+    if (return_rva == r.user_login) return LoadCaller::UserLogin;
+    if (return_rva == r.lobby3093) return LoadCaller::Lobby3093;
+    if (return_rva == r.character3093) return LoadCaller::Character3093;
+    return LoadCaller::Other;
+}
+inline SaveCaller save_caller(uint64_t return_rva, const CallerRets& r = kRets2976) {
+    if (return_rva == r.autosave) return SaveCaller::Autosave;
+    if (return_rva == r.manual2910) return SaveCaller::Manual2910;
+    return SaveCaller::Other;
+}
+inline const char* flush_caller_name(uint64_t return_rva, const CallerRets& r = kRets2976) {
+    if (return_rva == r.flush_logout) return "logout phase";
+    if (return_rva == r.flush_timer) return "flush timer";
     return "OTHER";
 }
 

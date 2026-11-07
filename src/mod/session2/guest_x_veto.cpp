@@ -16,6 +16,7 @@
 
 #include <safetyhook.hpp>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
@@ -27,6 +28,8 @@
 #include "mod/session2/guest_seq_present.h"
 #include "mod/session2/guest_seq_route.h"
 #include "mod/session2/guest_x_interaction.h"
+#include "mod/session2/guest_shop_branch.h"
+#include "mod/session2/guest_shop_window.h"
 #include "mod/session2/guest_x_veto_logic.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/p8_probes.h"
@@ -214,6 +217,160 @@ constexpr bool fn_points_in_order() {
 }
 static_assert(fn_points_in_order(), "kFnPoints follows gxv::Fn (the hook callbacks index it)");
 
+// ---------------------------------------------------------------- build 1.0.0.3527 (capstone, 2026-11-05)
+//
+// V1 cannot be byte-ported: the handler Loading 0x6AFE10 (RUNTIME_FUNCTION 0x6AFE10-0x6B0AF8, processor slot +0x220) has no
+// gate call any more. It starts:
+//   0x6AFE28 lea rbp,[rsp-0x320] ; sub rsp,0x420     the frame, complete
+//   0x6AFE37 mov r15,r8 ; mov r13,rcx                V1 (6 bytes, two whole instructions; no branch into 0x6AFE38..3C): RCX =
+//                                                    the processor, nothing has run yet
+//   0x6AFE3D xor esi,esi ; ... call 0x99E350 ...     the handler's body
+//   0x6B0AD7 lea r11,[rsp+0x420] ; mov rbx,[r11+0x30] ; mov rsi,[r11+0x38] ; mov rdi,[r11+0x40] ; mov rsp,r11 ; pops ; ret
+// The epilogue reads only the frame (homes saved before the hook, the pushes): resuming there from 0x6AFE37 is the
+// handler returning without having done anything; 8 native paths reach it the same way (0x6AFE6C je 0x6B0AD7 ...), the
+// dispatch sites never read RAX (p8-s10.md §4.6 for the 2976 sites; Execute is void).
+constexpr uintptr_t kV1Entry3527 = 0x6AFE10, kV1Point3527 = 0x6AFE37, kV1Out3527 = 0x6B0AD7;
+constexpr uint32_t kV1Patch3527 = 6;
+constexpr uint8_t kV1EntryBytes3527[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48, 0x89, 0x7C,
+                                         0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D,
+                                         0xAC, 0x24, 0xE0, 0xFC, 0xFF, 0xFF, 0x48, 0x81, 0xEC, 0x20, 0x04, 0x00, 0x00};
+constexpr uint8_t kV1Bytes3527[] = {0x4D, 0x8B, 0xF8, 0x4C, 0x8B, 0xE9, 0x33, 0xF6, 0x89, 0x75, 0xC8, 0x48, 0x8D, 0x55, 0x80, 0x48};
+constexpr uint8_t kV1OutBytes3527[] = {0x4C, 0x8D, 0x9C, 0x24, 0x20, 0x04, 0x00, 0x00, 0x49, 0x8B, 0x5B, 0x30, 0x49, 0x8B, 0x73,
+                                       0x38, 0x49, 0x8B, 0x7B, 0x40, 0x49, 0x8B, 0xE3, 0x41, 0x5F, 0x41, 0x5E, 0x41, 0x5D, 0x41,
+                                       0x5C, 0x5D, 0xC3};
+// The vetoable handlers: the same native paths as 2976, read whole (replay_way_out says what moved). Span = [hook, way out
+// + its bytes), hashed as in p8-s10.md §4.6.
+//   TimelineEvent 0x2205B10 (vf8 0x255CF50 -> rcx = [[rdx]+0x60]): 0x2205B4A cmp [r14],0 ; je 0x2205EC6 -> [[r8+0x38]] null -> 0x220635C
+//   InputBlock    0x6A1000: 0x6A100E cmp [rcx+0x260],r8b ; je 0x6A103F (the same bytes as 2976's, other rel8)
+//   UIControl     0x6A1050: 0x6A1080 call 0x2227820 (try-lock) ; [rsp+0x50] = 0 -> 0x6A113B -> 0x6A11C9
+//   UIShowMinimap 0x6A9CB0: 0x6A9D07 [[r8+0x20]] null / empty -> 0x6AA74F; r13, rdi and RSI (not r14) take the arguments
+//   UIStageGuide  0x6B0FA0: 0x6B0FCA word [r8+0x20] == 0xFFFF and [r8+0x22] != 0 or [r8+0x24] == 0 -> 0x6B1543; r15 and RDI
+// None of those spans has a branch into its patched bytes (linear sweep of the RUNTIME_FUNCTION, rel32 scan of the PE).
+// The other handlers (camera family, thunks to .text, SetInteraction, BlockInteraction) are not ported: no hook, native. R-A
+// cuts them on foreign stages; without R-A they run natively on X (on 2976 they were probes that ran natively too).
+constexpr uintptr_t kUiControlRaxRva3527 = 0x5AC37B0;  // 0x6A113B lea rax,[rip+0x542266E]
+constexpr uint8_t kTimelineEntry3527[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x4C, 0x89, 0x40, 0x18, 0x48,
+                                          0x89, 0x48, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56,
+                                          0x41, 0x57, 0x48, 0x8D, 0xA8, 0xF8, 0xFE, 0xFF, 0xFF, 0x48, 0x81, 0xEC,
+                                          0xD0, 0x01, 0x00, 0x00, 0xC5, 0xF8, 0x29, 0x70, 0xB8};
+constexpr uint8_t kTimelineOut3527[] = {0x48, 0x8B, 0x9C, 0x24, 0x18, 0x02, 0x00, 0x00};  // mov rbx,[rsp+0x218]
+constexpr uint8_t kInputEntry3527[] = {0x48, 0x83, 0xEC, 0x28, 0x41, 0x0F, 0xB6, 0x40, 0x21, 0x45, 0x0F, 0xB6, 0x40, 0x20};
+constexpr uint8_t kInputBytes3527[] = {0x44, 0x38, 0x81, 0x60, 0x02, 0x00, 0x00, 0x74, 0x28};
+constexpr uint8_t kInputOut3527[] = {0x48, 0x83, 0xC4, 0x28, 0xC3};
+constexpr uint8_t kUiControlEntry3527[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x18, 0x56,
+                                           0x57, 0x41, 0x56, 0x48, 0x81, 0xEC, 0x90, 0x08, 0x00, 0x00};
+constexpr uint8_t kUiControlBytes3527[] = {0x49, 0x8B, 0xE8, 0x48, 0x8B, 0xDA, 0x4C, 0x8B, 0xF1};
+constexpr uint8_t kUiControlOut3527[] = {0x4C, 0x8D, 0x9C, 0x24, 0x90, 0x08, 0x00, 0x00};
+constexpr uint8_t kMinimapEntry3527[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56,
+    0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x80, 0xEC, 0xFF, 0xFF, 0xB8, 0x80, 0x14, 0x00, 0x00, 0xE8, 0xD9, 0xD6, 0x4F,
+    0x04, 0x48, 0x2B, 0xE0, 0xC5, 0xF8, 0x29, 0xB4, 0x24, 0x70, 0x14, 0x00, 0x00, 0xC5, 0xF8, 0x29, 0xBC, 0x24, 0x60,
+    0x14, 0x00, 0x00, 0xC5, 0x78, 0x29, 0x84, 0x24, 0x50, 0x14, 0x00, 0x00, 0xC5, 0x78, 0x29, 0x8C, 0x24, 0x40, 0x14,
+    0x00, 0x00};
+constexpr uint8_t kMinimapBytes3527[] = {0x4D, 0x8B, 0xE8, 0x48, 0x8B, 0xFA, 0x48, 0x8B, 0xF1};
+constexpr uint8_t kMinimapOut3527[] = {0x4C, 0x8D, 0x9C, 0x24, 0x80, 0x14, 0x00, 0x00};
+constexpr uint8_t kGuideEntry3527[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41,
+                                       0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x40, 0xF8,
+                                       0xFF, 0xFF, 0x48, 0x81, 0xEC, 0xC0, 0x08, 0x00, 0x00};
+constexpr uint8_t kGuideBytes3527[] = {0x4D, 0x8B, 0xF8, 0x48, 0x8B, 0xF9, 0xB8, 0xFF, 0xFF, 0x00, 0x00};
+constexpr uint8_t kGuideOut3527[] = {0x48, 0x8B, 0x9C, 0x24, 0x00, 0x09, 0x00, 0x00};
+// rva 0: not ported to this build (no hook; the install line lists it).
+constexpr FnPoint kFnPoints3527[] = {
+    {Fn::SetQuestDialogAICategory, 0, 0, {}, ProcAt::Rcx},
+    {Fn::TimelineEvent, 0x2205B3D, 6, kTimelineBytes, ProcAt::Rcx, 0x2205B10, kTimelineEntry3527, 0x220635C, kTimelineOut3527,
+     0x827, 0xD063F9066506293F},
+    {Fn::TimelineEventEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::BlockInteraction, 0, 0, {}, ProcAt::CtxRdx},
+    {Fn::SetInteraction, 0, 0, {}, ProcAt::CtxRdx},
+    {Fn::InputBlock, 0x6A100E, 7, kInputBytes3527, ProcAt::Rcx, 0x6A1000, kInputEntry3527, 0x6A103F, kInputOut3527, 0x36,
+     0xCC1E2F50EC42C62A},
+    {Fn::UIControl, 0x6A1065, 6, kUiControlBytes3527, ProcAt::Rcx, 0x6A1050, kUiControlEntry3527, 0x6A11C9, kUiControlOut3527,
+     0x16C, 0xE5701AEEBDF3C4E3},
+    {Fn::ChangePhasePanelTag, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIShowMinimap, 0x6A9CFE, 6, kMinimapBytes3527, ProcAt::Rcx, 0x6A9CB0, kMinimapEntry3527, 0x6AA74F, kMinimapOut3527,
+     0xA59, 0xA0BFB755540B5206},
+    {Fn::UIFindPath, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIStageIcon, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIStageGuide, 0x6B0FBF, 6, kGuideBytes3527, ProcAt::Rcx, 0x6B0FA0, kGuideEntry3527, 0x6B1543, kGuideOut3527, 0x58C,
+     0x4C4AB7A83A4AB270},
+    {Fn::UIStageBackgroundGuide, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIHint, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIHintEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactiveSequencerCamera, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactiveSequencerCameraEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::SequencerCamera, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactivateSequencerCameraFadeIn, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactivateSequencerCameraFadeInEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::CameraPreset, 0, 0, {}, ProcAt::Rcx},
+    {Fn::CameraPresetEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::ForceLockOn, 0, 0, {}, ProcAt::Rcx},
+    {Fn::LetterBox, 0, 0, {}, ProcAt::Rcx},
+    {Fn::FadeInOut, 0, 0, {}, ProcAt::Rcx},
+    {Fn::LookAt, 0, 0, {}, ProcAt::Rcx},
+    {Fn::LookAtEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::PostProcess, 0, 0, {}, ProcAt::Rcx},
+};
+static_assert(std::size(kFnPoints3527) == kFns);
+constexpr bool fn_points_3527_in_order() {
+    for (size_t i = 0; i < kFns; ++i) {
+        if (static_cast<size_t>(kFnPoints3527[i].fn) != i) return false;
+    }
+    return true;
+}
+static_assert(fn_points_3527_in_order(), "kFnPoints3527 follows gxv::Fn (the hook callbacks index it)");
+constexpr uintptr_t kVtStageManager3527 = 0x59572E0;  // pa::ClientSequencerStageManager (rtti_3527.json)
+
+// Build 3576 (static, 2026-11-06 evening; not yet run). Every handler moved as a whole function (+0x660; TimelineEvent
+// +0xC40): the entry, hook and way-out bytes are 3527's (the minimap's entry but its __chkstk rel32), the spans have the
+// same lengths, and their hashes differ only by the rel32 / RIP displacements inside them (InputBlock's 0x36 bytes read:
+// its one call 0xBA4110 is the only difference). V1 moved by +0x660 with the same bytes. UIControl's way out loads
+// 0x5AC58E0 (0x6A179B lea rax,[rip+0x542413E]).
+constexpr uintptr_t kV1Entry3576 = 0x6B0470, kV1Point3576 = 0x6B0497, kV1Out3576 = 0x6B1137;
+constexpr uintptr_t kUiControlRaxRva3576 = 0x5AC58E0;
+constexpr uintptr_t kVtStageManager3576 = 0x5959438;  // vtable_map_3549_3576.json
+constexpr uint8_t kMinimapEntry3576[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56,
+    0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x80, 0xEC, 0xFF, 0xFF, 0xB8, 0x80, 0x14, 0x00, 0x00, 0xE8, 0x59, 0xE0, 0x4F,
+    0x04, 0x48, 0x2B, 0xE0, 0xC5, 0xF8, 0x29, 0xB4, 0x24, 0x70, 0x14, 0x00, 0x00, 0xC5, 0xF8, 0x29, 0xBC, 0x24, 0x60,
+    0x14, 0x00, 0x00, 0xC5, 0x78, 0x29, 0x84, 0x24, 0x50, 0x14, 0x00, 0x00, 0xC5, 0x78, 0x29, 0x8C, 0x24, 0x40, 0x14,
+    0x00, 0x00};
+constexpr FnPoint kFnPoints3576[] = {
+    {Fn::SetQuestDialogAICategory, 0, 0, {}, ProcAt::Rcx},
+    {Fn::TimelineEvent, 0x220677D, 6, kTimelineBytes, ProcAt::Rcx, 0x2206750, kTimelineEntry3527, 0x2206F9C, kTimelineOut3527,
+     0x827, 0x63E24A8F015A0750},
+    {Fn::TimelineEventEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::BlockInteraction, 0, 0, {}, ProcAt::CtxRdx},
+    {Fn::SetInteraction, 0, 0, {}, ProcAt::CtxRdx},
+    {Fn::InputBlock, 0x6A166E, 7, kInputBytes3527, ProcAt::Rcx, 0x6A1660, kInputEntry3527, 0x6A169F, kInputOut3527, 0x36,
+     0x51B91D24719C88E8},
+    {Fn::UIControl, 0x6A16C5, 6, kUiControlBytes3527, ProcAt::Rcx, 0x6A16B0, kUiControlEntry3527, 0x6A1829, kUiControlOut3527,
+     0x16C, 0x564A282DC7CBF3C4},
+    {Fn::ChangePhasePanelTag, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIShowMinimap, 0x6AA35E, 6, kMinimapBytes3527, ProcAt::Rcx, 0x6AA310, kMinimapEntry3576, 0x6AADAF, kMinimapOut3527,
+     0xA59, 0x11216A53D80FA7A8},
+    {Fn::UIFindPath, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIStageIcon, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIStageGuide, 0x6B161F, 6, kGuideBytes3527, ProcAt::Rcx, 0x6B1600, kGuideEntry3527, 0x6B1BA3, kGuideOut3527, 0x58C,
+     0x7AE9E078B55C2E68},
+    {Fn::UIStageBackgroundGuide, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIHint, 0, 0, {}, ProcAt::Rcx},
+    {Fn::UIHintEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactiveSequencerCamera, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactiveSequencerCameraEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::SequencerCamera, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactivateSequencerCameraFadeIn, 0, 0, {}, ProcAt::Rcx},
+    {Fn::DeactivateSequencerCameraFadeInEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::CameraPreset, 0, 0, {}, ProcAt::Rcx},
+    {Fn::CameraPresetEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::ForceLockOn, 0, 0, {}, ProcAt::Rcx},
+    {Fn::LetterBox, 0, 0, {}, ProcAt::Rcx},
+    {Fn::FadeInOut, 0, 0, {}, ProcAt::Rcx},
+    {Fn::LookAt, 0, 0, {}, ProcAt::Rcx},
+    {Fn::LookAtEnd, 0, 0, {}, ProcAt::Rcx},
+    {Fn::PostProcess, 0, 0, {}, ProcAt::Rcx},
+};
+static_assert(std::size(kFnPoints3576) == kFns);
+
 constexpr uintptr_t kVtStageManager = 0x55C9720;  // pa::ClientSequencerStageManager (RTTI)
 constexpr uint32_t kProc_Mgr = 0x08, kProc_Stage = 0x10, kStage_Key = 0x30;
 constexpr uint32_t kMgr_Actor = 0x18, kActor_Key = 0x60;
@@ -223,6 +380,13 @@ constexpr uint32_t kStage_Data = 0x48, kData_Name = 0x1B8, kCtx_Stage = 0x00, kS
 constexpr uint32_t kReq_Type = 0x18, kReq_Sub = 0x19;  // 0x778AB0's request: type -> P+0x1DD, +0x19 -> P+0x1DE
 
 uintptr_t g_base = 0;
+// The build and what depends on it: written by guest_x_veto_start before any hook or thread.
+bool g_3527 = false;  // 3527's layout (3527, 3549, 3576)
+bool g_3576 = false;  // 3576's addresses
+const FnPoint* g_points = kFnPoints;
+uintptr_t g_vt_mgr = kVtStageManager;
+uintptr_t g_world_slot = off::kWorldSystemSlot;
+uint32_t g_stage_data = kStage_Data, g_stage_proc = kStage_Proc;  // 3527: +0x50, +0x60
 std::atomic<bool> g_started{false};
 // The keys: g_cam = guest_x_camera_veto as asked (Off when not installed), g_camera_asked the raw value for the log.
 std::atomic<uint8_t> g_stage{0}, g_cam{0}, g_camera_asked{0}, g_ui{0};
@@ -294,7 +458,7 @@ gxv::Facts facts_of(uintptr_t proc) noexcept {
     f.remote = guest_remote_live();
     if (!f.remote) return f;
     f.g = rdp(proc + kProc_Mgr);
-    f.want_vt = g_base + kVtStageManager;
+    f.want_vt = g_base + g_vt_mgr;
     if (!f.g) return f;
     f.g_vt = rdp(f.g);
     if (f.g_vt != f.want_vt) return f;
@@ -337,6 +501,29 @@ void on_v1(safetyhook::Context& ctx) noexcept {
     if (a == Act::None) return;
     if (a == Act::Veto) {
         ctx.rax = 0;  // je 0x5F35D7: the epilogue, the handler returns 0
+        g_v1_vetoed.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        g_v1_would.fetch_add(1, std::memory_order_relaxed);
+    }
+    p::Event e;
+    fill(e, proc, f, v, a);
+    emit(kEV1, e);
+}
+
+// V1 on 1.0.0.3527: 0x6AFE37, the handler's first instructions after its prologue (see kV1Point3527). There is no gate to
+// follow: a veto resumes at the epilogue 0x6B0AD7 and the handler returns having done nothing.
+void on_v1_3527(safetyhook::Context& ctx) noexcept {
+    if (!g_v1_on.load(std::memory_order_acquire)) return;
+    g_v1_calls.fetch_add(1, std::memory_order_relaxed);
+    const uintptr_t proc = ctx.rcx;
+    const gxv::Facts f = facts_of(proc);
+    const Verdict v = gxv::judge(f);
+    g_v1_verdicts[static_cast<size_t>(v)].fetch_add(1, std::memory_order_relaxed);
+    const Act a = gxv::act(static_cast<Mode>(g_stage.load(std::memory_order_relaxed)), v);
+    if (v == Verdict::OwnManager) g_v1_own_m.fetch_add(1, std::memory_order_relaxed);
+    if (a == Act::None) return;
+    if (a == Act::Veto) {
+        ctx.rip = g_base + (g_3576 ? kV1Out3576 : kV1Out3527);
         g_v1_vetoed.fetch_add(1, std::memory_order_relaxed);
     } else {
         g_v1_would.fetch_add(1, std::memory_order_relaxed);
@@ -413,21 +600,26 @@ void replay_way_out(gxv::Fn fn, safetyhook::Context& ctx) noexcept {
             break;
         case Fn::UIControl:  // 0x5E4EC5 mov rbp,r8 ; mov rbx,rdx ; mov r14,rcx ; xor edi,edi ; ... call 0x206AE30 (fails)
             ctx.rbp = ctx.r8;  // 0x5E4F95 lea rax,[rip+0x5140EAC]
-            ctx.rbx = ctx.rdx;
+            ctx.rbx = ctx.rdx;  // 3527: the same, 0x6A1065; the try-lock is 0x2227820, the lea 0x6A113B
             ctx.r14 = ctx.rcx;
             ctx.rdi = 0;
-            ctx.rax = g_base + kUiControlRaxRva;
+            ctx.rax = g_base + (g_3576 ? kUiControlRaxRva3576 : g_3527 ? kUiControlRaxRva3527 : kUiControlRaxRva);
             break;
         case Fn::UIShowMinimap:  // 0x5ECDDE mov r13,r8 ; mov rdi,rdx ; mov r14,rcx ; mov rax,[r8+0x20] ; mov r9,[rax]
-            ctx.r13 = ctx.r8;
+            ctx.r13 = ctx.r8;  // 3527: 0x6A9CFE mov r13,r8 ; mov rdi,rdx ; mov rsi,rcx ; the same two reads
             ctx.rdi = ctx.rdx;
-            ctx.r14 = ctx.rcx;
+            (g_3527 ? ctx.rsi : ctx.r14) = ctx.rcx;
             ctx.rax = rdv<uint64_t>(ctx.r8 + 0x20);
             ctx.r9 = rdv<uint64_t>(ctx.rax);
             break;
         case Fn::UIStageGuide:  // 0x5F3AAF mov r14,r8 ; mov rbx,rcx ; mov eax,0xFFFF ; cmp ... ; jcc 0x5F4031
-            ctx.r14 = ctx.r8;
-            ctx.rbx = ctx.rcx;
+            if (g_3527) {       // 0x6B0FBF mov r15,r8 ; mov rdi,rcx ; mov eax,0xFFFF ; cmp ... ; jcc 0x6B1543
+                ctx.r15 = ctx.r8;
+                ctx.rdi = ctx.rcx;
+            } else {
+                ctx.r14 = ctx.r8;
+                ctx.rbx = ctx.rcx;
+            }
             ctx.rax = 0xFFFF;
             break;
         default:
@@ -441,9 +633,9 @@ void replay_way_out(gxv::Fn fn, safetyhook::Context& ctx) noexcept {
 template <size_t I>
 void on_fn(safetyhook::Context& ctx) noexcept {
     if (!g_fn_on[I].load(std::memory_order_acquire)) return;
-    constexpr const FnPoint& pt = kFnPoints[I];
+    const FnPoint& pt = g_points[I];
     g_fn_calls[I].fetch_add(1, std::memory_order_relaxed);
-    const uintptr_t proc = pt.proc == ProcAt::Rcx ? ctx.rcx : rdp(rdp(ctx.rdx + kCtx_Stage) + kStage_Proc);
+    const uintptr_t proc = pt.proc == ProcAt::Rcx ? ctx.rcx : rdp(rdp(ctx.rdx + kCtx_Stage) + g_stage_proc);
     const gxv::Facts f = facts_of(proc);
     const Verdict v = gxv::judge(f);
     const gxv::Dir dir = gxv::fn_dir(pt.fn, ctx.r8);
@@ -455,10 +647,16 @@ void on_fn(safetyhook::Context& ctx) noexcept {
             if (dir == gxv::Dir::On) g_fn_x_on[I].fetch_add(1, std::memory_order_relaxed);
             if (dir == gxv::Dir::Off) g_fn_x_off[I].fetch_add(1, std::memory_order_relaxed);
             break;
-        case gxv::Who::M: g_fn_m[I].fetch_add(1, std::memory_order_relaxed); break;
+        case gxv::Who::M:
+            g_fn_m[I].fetch_add(1, std::memory_order_relaxed);
+            if (pt.fn == Fn::InputBlock) guest_shop_window_on_scene();  // its own shop scene's UI phase
+            break;
         case gxv::Who::Other: break;
     }
-    const bool allowed = gxv::fn_in(g_allow.load(std::memory_order_relaxed), pt.fn);
+    // guest_shop_branch: while this client has a shop of the host's world open locally, the host scenes' UI handlers
+    // run (the shop's menu and window are UIControl events of that scene).
+    const bool allowed = gxv::fn_in(g_allow.load(std::memory_order_relaxed), pt.fn) ||
+                         (gxv::who(v) == gxv::Who::X && guest_shop_open_now());
     const Act a = gxv::fn_act(static_cast<Mode>(g_fn_mode[I].load(std::memory_order_relaxed)), allowed, v);
     if (a == Act::None) return;
     Act done = Act::Would;
@@ -478,7 +676,7 @@ void on_fn(safetyhook::Context& ctx) noexcept {
     e.v[0] |= static_cast<uint64_t>(dir) << 16;
     e.v[7] = I;
     // The stage's name, [[[proc+0x10]+0x48]+0x1B8] (a char*), up to 24 bytes.
-    const uintptr_t data = rdp(rdp(proc + kProc_Stage) + kStage_Data);
+    const uintptr_t data = rdp(rdp(proc + kProc_Stage) + g_stage_data);
     const uintptr_t name = data ? rdp(data + kData_Name) : 0;
     for (size_t k = 0; name && k < 3 && rd(name + 8 * k, e.v[9 + k]); ++k) {
     }
@@ -598,7 +796,7 @@ bool context_ok(std::span<const gad::Section> secs, uintptr_t rva, std::span<con
     if (gad::in_real_code(secs, static_cast<uint32_t>(rva), static_cast<uint32_t>(bytes.size())) && bytes_at(rva, bytes)) {
         return true;
     }
-    log::error("GuestXVeto: {} (exe+0x{:X}, {} bytes) is not build 2976's .rsrc code; REFUSED", what, rva, bytes.size());
+    log::error("GuestXVeto: {} (exe+0x{:X}, {} bytes) is not this build's .rsrc code; REFUSED", what, rva, bytes.size());
     return false;
 }
 
@@ -654,18 +852,30 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || !(game::legacy_layout() || g_3576) ||
         !p8_exe_sections(g_base, secs)) {
         log::error("GuestXVeto: unsupported game build or unreadable sections; nothing installed");
         return 0;
     }
     for (int i = 0; i < 1200; ++i) {  // WorldSystem (up to 10 minutes), as the other guest modules
         uintptr_t world = 0;
-        if (game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world) break;
+        if (game::safe_read(g_base + g_world_slot, &world, sizeof world) && world) break;
         Sleep(500);
     }
     std::string stage_line = "off", fn_line = "off";
-    if (g_stage.load() != 0) {
+    if (g_stage.load() != 0 && g_3527) {
+        // V1 with the frame it relies on and the whole epilogue it resumes at. V0 and the X context's clear point only
+        // counted a load request inside an X context: not ported (V1 is the veto).
+        if (context_ok(secs, g_3576 ? kV1Entry3576 : kV1Entry3527, kV1EntryBytes3527, "Loading's prologue") &&
+            context_ok(secs, g_3576 ? kV1Out3576 : kV1Out3527, kV1OutBytes3527, "Loading's epilogue") &&
+            p8_install_mid(g_base, secs, g_3576 ? kV1Point3576 : kV1Point3527, kV1Patch3527, kV1Bytes3527, on_v1_3527, g_v1_hook, "GuestXVeto",
+                           "V1, Loading's first instructions 0x6AFE37 (build 3527)")) {
+            g_v1_on.store(true, std::memory_order_release);
+        }
+        stage_line = std::format("V1 exe+0x{:X} -> exe+0x{:X} {}, V0 and the X context's clear point not ported to build "
+                                 "3527 (they only counted)",
+                                 kV1Point3527, kV1Out3527, g_v1_on.load() ? "hooked" : "REFUSED");
+    } else if (g_stage.load() != 0) {
         // V1 with its context and the epilogue its je reaches.
         if (context_ok(secs, kV1Ctx, kV1CtxBytes, "Loading's gate call") &&
             context_ok(secs, kV1Epilogue, kV1EpilogueBytes, "Loading's epilogue") &&
@@ -689,13 +899,17 @@ DWORD WINAPI install_thread(LPVOID) {
     const gxv::FnSet allow = g_allow.load();
     if (ui != Mode::Off || cam != Mode::Off) {
         size_t n = 0, wanted = 0;
-        std::string veto, probe, held, refused, allowed;
+        std::string veto, probe, held, refused, allowed, not_ported;
         for (size_t i = 0; i < kFns; ++i) {
-            const FnPoint& pt = kFnPoints[i];
+            const FnPoint& pt = g_points[i];
             const gxv::FnInfo info = gxv::fn_info(pt.fn);
             const bool is_allowed = gxv::fn_in(allow, pt.fn);
             Mode m = gxv::fn_mode(pt.fn, ui, cam, is_allowed);
             if (m == Mode::Off) continue;
+            if (!pt.rva) {  // build 3527: runs natively (R-A cuts it on foreign stages), no hook, no count
+                not_ported += std::format(" {}", info.name);
+                continue;
+            }
             ++wanted;
             // A veto resumes at the native way out: the frame it restores (entry .. hook) and the way out itself must
             // be build 2976's; otherwise this handler is only counted.
@@ -728,14 +942,15 @@ DWORD WINAPI install_thread(LPVOID) {
                               "read whole: .xtls thunk, none, or not verified):{}{}",
                               n, wanted, veto.empty() ? " none" : veto, allowed.empty() ? " none" : allowed,
                               probe.empty() ? " none" : probe, held.empty() ? " none" : held,
-                              refused.empty() ? "" : " | REFUSED:" + refused);
+                              refused.empty() ? "" : " | REFUSED:" + refused) +
+                  (not_ported.empty() ? std::string() : " | not ported to this build, native:" + not_ported);
     }
     log::info("GuestXVeto (guest_x_stage_veto={}, guest_x_camera_veto={}{}, guest_x_ui_veto={}): {} | handlers: {} | "
               "acts only while this connection plays on the host, on a ClientSequencerStageManager (vtable exe+0x{:X}) "
               "that is not this connection's own character's: in guest_seq_play's XTable, or owned by another character",
               gxv::mode_name(static_cast<Mode>(g_stage.load())), gxv::mode_name(static_cast<Mode>(g_camera_asked.load())),
               g_camera_asked.load() == static_cast<uint8_t>(Mode::On) ? " (acts as probe)" : "",
-              gxv::mode_name(static_cast<Mode>(g_ui.load())), stage_line, fn_line, kVtStageManager);
+              gxv::mode_name(static_cast<Mode>(g_ui.load())), stage_line, fn_line, g_vt_mgr);
     return 0;
 }
 
@@ -743,6 +958,16 @@ DWORD WINAPI install_thread(LPVOID) {
 
 void guest_x_veto_start(const std::string& stage_mode, const std::string& camera_mode, const std::string& ui_mode,
                         const std::string& ui_allow, const std::string& route_mode) {
+    g_3576 = game::current_build() == game::Build::v3576;
+    g_3527 = game::current_build() == game::Build::v3527 || g_3576;
+    if (g_3527) {
+        g_points = g_3576 ? kFnPoints3576 : kFnPoints3527;
+        g_vt_mgr = g_3576 ? kVtStageManager3576 : kVtStageManager3527;
+        g_stage_data = 0x50;  // [[stage+0x50]+0x1B8]: SetInteraction 0x255D3F0
+        g_stage_proc = 0x60;
+        if (const auto* profile = game::reader_profile()) g_world_slot = profile->world_system;
+        if (g_3576) g_world_slot = 0x71C0100;  // core_globals_3576.json (no reader profile for 3576 yet)
+    }
     bool bad_s = false, bad_c = false, bad_u = false;
     Mode stage = gxv::parse_mode(stage_mode, &bad_s);
     const Mode cam_asked = gxv::parse_mode(camera_mode, &bad_c);

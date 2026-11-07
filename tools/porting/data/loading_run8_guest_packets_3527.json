@@ -1,0 +1,994 @@
+{
+  "role": "guest",
+  "bytes": 49384292,
+  "events": [
+    {
+      "t": 149491205162,
+      "d": 2,
+      "name": "MoveFieldAck",
+      "payload": "04780210a003000000770210900100000001000000780210a00000000000007a44000000000000000000000000000000000000803f0000803f0000803f0000803f0000000000000000",
+      "size": 78,
+      "session": 0
+    },
+    {
+      "t": 149505134878,
+      "d": 1,
+      "name": "MoveFieldCompleteReq",
+      "payload": "00",
+      "size": 6,
+      "session": 4
+    },
+    {
+      "t": 149505176031,
+      "d": 2,
+      "name": "MoveFieldCompleteAck",
+      "payload": "780210a00000000000007a440000000000000000180000000000000000000000000000000000000000000000000000dc0210b0",
+      "size": 56,
+      "session": 0
+    },
+    {
+      "t": 149505176032,
+      "d": 2,
+      "name": "MoveFieldCompletePostAck",
+      "payload": "780210a00000",
+      "size": 11,
+      "session": 0
+    },
+    {
+      "t": 149505191723,
+      "d": 2,
+      "name": "PlayAllPreLoadSequencerAck",
+      "payload": "780210a0",
+      "size": 9,
+      "session": 0
+    },
+    {
+      "t": 149521388419,
+      "d": 1,
+      "name": "LoadingCompleteReq",
+      "payload": "01",
+      "size": 6,
+      "session": 4
+    },
+    {
+      "t": 149521409120,
+      "d": 2,
+      "name": "LoadingCompleteAck",
+      "payload": "780210a0013dcd020000000000",
+      "size": 18,
+      "session": 0
+    },
+    {
+      "t": 149525520292,
+      "d": 1,
+      "name": "GameLoadingStartReq",
+      "payload": "",
+      "size": 5,
+      "session": 4
+    },
+    {
+      "t": 149525564729,
+      "d": 2,
+      "name": "MoveFieldAck",
+      "payload": "04780210a001000000770210900100000001000000780210a0df0b9fc57803ca431b3a93c50000000006ed77be000000002462783f0000803f0000803f0000803f0000000000000000",
+      "size": 78,
+      "session": 0
+    },
+    {
+      "t": 149537360334,
+      "d": 1,
+      "name": "MoveFieldCompleteReq",
+      "payload": "00",
+      "size": 6,
+      "session": 4
+    },
+    {
+      "t": 149537749964,
+      "d": 2,
+      "name": "MoveFieldCompleteAck",
+      "payload": "780210a0df0b9fc57803ca431b3a93c5920100000b000000310000003b000000c8020000030c00efdd0200000000006e0010b0",
+      "size": 56,
+      "session": 0
+    },
+    {
+      "t": 149537749968,
+      "d": 2,
+      "name": "MoveFieldCompletePostAck",
+      "payload": "780210a00000",
+      "size": 11,
+      "session": 0
+    }
+  ],
+  "counts": [
+    {
+      "d": 1,
+      "name": "1001",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ConnectToServerAck",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "ConnectCryptogramToServerReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ConnectCryptogramToServerAck",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "LoginUserToFieldServerReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ServerTimeInfoAck",
+      "count": 74
+    },
+    {
+      "d": 2,
+      "name": "MainUserDataStartAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CharacterLobbyDataAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "MainUserDataEndAck",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "LoginCharacterToFieldServerReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ClearCharacterLobbyDataForSinglePlayAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ApplyBuffAck",
+      "count": 4924
+    },
+    {
+      "d": 2,
+      "name": "DataDefinedRegenerateValueAck",
+      "count": 254
+    },
+    {
+      "d": 2,
+      "name": "UnapplyBuffAck",
+      "count": 1342
+    },
+    {
+      "d": 2,
+      "name": "VaryHPAck",
+      "count": 8
+    },
+    {
+      "d": 2,
+      "name": "FactionManagementUpdateAck",
+      "count": 46
+    },
+    {
+      "d": 2,
+      "name": "3114",
+      "count": 35
+    },
+    {
+      "d": 2,
+      "name": "VaryDataDefinedStaticStatAck",
+      "count": 1515
+    },
+    {
+      "d": 2,
+      "name": "UpdateChangeBuffLevelAck",
+      "count": 38
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionConquerDataAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "MainPlayerDataStartAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CharacterStatAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CharacterDataDefinedRegenerateStatAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CharacterDataDefinedStatAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CharacterCustomizationAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SetFieldNPCSaveDataKeyAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SubLevelInfoListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "AddDonationItemCountToCampListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "EquipmentListOnLoginAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ChangeUseItemReserveSlotAck",
+      "count": 13
+    },
+    {
+      "d": 2,
+      "name": "RoyalSupplyDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateDiscoveredLevelGimmickSceneObjectDataAck",
+      "count": 18
+    },
+    {
+      "d": 2,
+      "name": "EntitlementDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFieldGimmickSaveDescListAck",
+      "count": 9
+    },
+    {
+      "d": 2,
+      "name": "ActivateContentsPhaseGamePlayTriggerInfoListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "2477",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "VaryExpandedInventorySlotAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "AddItemToInventoryAck",
+      "count": 29
+    },
+    {
+      "d": 2,
+      "name": "ItemChangedInventoryDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateItemSharedCoolTimeAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "AddHousingGimmickAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ToggleFoldItemGroupAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ChangeInventoryItemListSortTypeAck",
+      "count": 3
+    },
+    {
+      "d": 2,
+      "name": "ChangeBankInformationAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "BankHistoryListAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "StoreDataListAck",
+      "count": 519
+    },
+    {
+      "d": 2,
+      "name": "VaryExpandedFarmSlotAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateMercenaryExpandedSlotListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "2443",
+      "count": 12
+    },
+    {
+      "d": 2,
+      "name": "ChangeMercenaryFactionInfoAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "MercenaryDataListAck",
+      "count": 67
+    },
+    {
+      "d": 2,
+      "name": "MercenaryEquipmentListAck",
+      "count": 6
+    },
+    {
+      "d": 2,
+      "name": "UpdateQuestListAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "UpdateQuestGaugeListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "FriendlyDataListAck",
+      "count": 3
+    },
+    {
+      "d": 2,
+      "name": "JournalDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "LearnKnowledgeListAck",
+      "count": 4
+    },
+    {
+      "d": 2,
+      "name": "SendSkillPointDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "FollowLearnedKnowledgeDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "RefreshSkillPointAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateKnowledgeLearnDelayStackCountListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SetTimeWrapCoolEndTimeAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "FogDataAck",
+      "count": 47
+    },
+    {
+      "d": 2,
+      "name": "MiniGameRecordListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ExecutedGameAdviceInfoKeyListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "AlertHistoryListAck",
+      "count": 16
+    },
+    {
+      "d": 2,
+      "name": "UpdateGamePlayVariableDataListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateSelfDestinationAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateMiniGameLeaderboardDataAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "AddHousingPlacedFieldGimmickSaveKeyListAck",
+      "count": 3
+    },
+    {
+      "d": 2,
+      "name": "2973",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SyncHousingPlacedSceneObjectListAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "2506",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "ShareKnowledgeSeedAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "PendGameEventListRefreshAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SetExecuteTimeQuestDialogAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionLeaderDataAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionRelationDataAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionOwnedItemDataAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionBlockDataAck",
+      "count": 4
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionDataAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionSubInnerGimmickAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionEnableSubInnerAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionNodeEnableAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ManagementSetWorkerAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "2137",
+      "count": 4
+    },
+    {
+      "d": 2,
+      "name": "2216",
+      "count": 4
+    },
+    {
+      "d": 2,
+      "name": "PrivateActorMoveAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SetMoveFieldAck",
+      "count": 5
+    },
+    {
+      "d": 2,
+      "name": "MainPlayerDataEndAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "MoveFieldAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "GlobalGameEventUpdateAck",
+      "count": 78
+    },
+    {
+      "d": 1,
+      "name": "2640",
+      "count": 148
+    },
+    {
+      "d": 1,
+      "name": "MoveFieldCompleteReq",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "VaryExpandedNoSaveInventorySlotAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "RegistPlayGuideListAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "GlobalGameEventVaryTradeItemPriceAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ActorLoadDataAck",
+      "count": 953
+    },
+    {
+      "d": 2,
+      "name": "SyncSceneObjectAck",
+      "count": 4922
+    },
+    {
+      "d": 2,
+      "name": "MoveFieldCompleteAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "MoveFieldCompletePostAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "OpenPartyAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFactionDependencyDataAck",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "StartActionReq",
+      "count": 549
+    },
+    {
+      "d": 1,
+      "name": "ProcessAfterBeginFrameEventReq",
+      "count": 551
+    },
+    {
+      "d": 1,
+      "name": "SceneLevelLoadCompleteSyncSceneObjectListReq",
+      "count": 85
+    },
+    {
+      "d": 2,
+      "name": "ChangedAutoSpawnCloseFilterStateAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "PlayAllPreLoadSequencerAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UpdateFieldGimmickSaveDataToResetAck",
+      "count": 34
+    },
+    {
+      "d": 1,
+      "name": "GimmickBranchStateReq",
+      "count": 11
+    },
+    {
+      "d": 1,
+      "name": "GimmickExecuteFrameEventReq",
+      "count": 89
+    },
+    {
+      "d": 1,
+      "name": "UpdateGimmickReq",
+      "count": 263
+    },
+    {
+      "d": 1,
+      "name": "ChangeDrowningStateReq",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "SyncFieldGimmickSavedByGimmickStateAck",
+      "count": 562
+    },
+    {
+      "d": 1,
+      "name": "OnDemandEquipDockingGimmickSpawnReq",
+      "count": 197
+    },
+    {
+      "d": 1,
+      "name": "ChangeAIStateReq",
+      "count": 18
+    },
+    {
+      "d": 1,
+      "name": "UpdateSequencerGamePlayDataEventReq",
+      "count": 6
+    },
+    {
+      "d": 1,
+      "name": "UpdateGimmickBodyMotionTypeReq",
+      "count": 60
+    },
+    {
+      "d": 1,
+      "name": "GamePlayTriggerInOutReq",
+      "count": 671
+    },
+    {
+      "d": 2,
+      "name": "SyncFieldGimmickSavedByCoolTimeAck",
+      "count": 172
+    },
+    {
+      "d": 1,
+      "name": "SyncWeatherStateReq",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "MoveActorReq",
+      "count": 2
+    },
+    {
+      "d": 1,
+      "name": "RotateActorReq",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "LoadingCompleteReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "LoadingCompleteAck",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "LoginCharacterToGameReq",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "GameLoadingStartReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "UnloadSyncSceneObjectAck",
+      "count": 474
+    },
+    {
+      "d": 2,
+      "name": "UpdateFieldGimmickSaveDataKeyAck",
+      "count": 471
+    },
+    {
+      "d": 1,
+      "name": "2445",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "SyncStageCandidatePostionReq",
+      "count": 75
+    },
+    {
+      "d": 1,
+      "name": "ClientCacheReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "ChangeAIStateAck",
+      "count": 7973
+    },
+    {
+      "d": 2,
+      "name": "ChangeGameLevelStateAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "ClientCacheAck",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "RefreshMercenaryDataAck",
+      "count": 6
+    },
+    {
+      "d": 2,
+      "name": "SetMinStatRateAck",
+      "count": 6
+    },
+    {
+      "d": 2,
+      "name": "JoinPartyAck",
+      "count": 6
+    },
+    {
+      "d": 2,
+      "name": "UpdateElementalAck",
+      "count": 4256
+    },
+    {
+      "d": 2,
+      "name": "ClearAllyGroupDataAck",
+      "count": 305
+    },
+    {
+      "d": 1,
+      "name": "RegionInOutReq",
+      "count": 2507
+    },
+    {
+      "d": 2,
+      "name": "UpdateDisabledLevelOriginSceneObjectsAck",
+      "count": 304
+    },
+    {
+      "d": 2,
+      "name": "MoveActorAck",
+      "count": 36658
+    },
+    {
+      "d": 2,
+      "name": "StartActionAck",
+      "count": 14535
+    },
+    {
+      "d": 1,
+      "name": "TransformSyncSceneObjectReq",
+      "count": 7946
+    },
+    {
+      "d": 2,
+      "name": "DeletePartyMemberAck",
+      "count": 87
+    },
+    {
+      "d": 2,
+      "name": "RemoveActorAck",
+      "count": 754
+    },
+    {
+      "d": 1,
+      "name": "SetQuestDialogReq",
+      "count": 39
+    },
+    {
+      "d": 2,
+      "name": "SetQuestDialogAck",
+      "count": 39
+    },
+    {
+      "d": 1,
+      "name": "StartAIFunctionReq",
+      "count": 4
+    },
+    {
+      "d": 1,
+      "name": "ReleaseActionPointReq",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "StartSpawnActionAck",
+      "count": 333
+    },
+    {
+      "d": 1,
+      "name": "OnDemandEquipDockingGimmickUnspawnReq",
+      "count": 27
+    },
+    {
+      "d": 2,
+      "name": "StageOnBranchEventAck",
+      "count": 47
+    },
+    {
+      "d": 2,
+      "name": "StageBranchStateAck",
+      "count": 53
+    },
+    {
+      "d": 2,
+      "name": "UpdateStageChartEventAck",
+      "count": 94
+    },
+    {
+      "d": 2,
+      "name": "UpdateOnDemandEquipDockingNak",
+      "count": 192
+    },
+    {
+      "d": 1,
+      "name": "WetnessReq",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "UnapplySkillFromCollideObjectReq",
+      "count": 2
+    },
+    {
+      "d": 1,
+      "name": "SceneLevelOnDemandGimmickSpawnReq",
+      "count": 203
+    },
+    {
+      "d": 2,
+      "name": "SpawnOnDemandGimmickNak",
+      "count": 138
+    },
+    {
+      "d": 2,
+      "name": "UpdateOnDemandGimmickAck",
+      "count": 125
+    },
+    {
+      "d": 1,
+      "name": "OnDemandDockingGimmickSpawnReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CreateNPCScheduleStageAck",
+      "count": 7
+    },
+    {
+      "d": 2,
+      "name": "ReserveSchedulePointAck",
+      "count": 15
+    },
+    {
+      "d": 2,
+      "name": "AttachDockingChildActorAck",
+      "count": 11
+    },
+    {
+      "d": 2,
+      "name": "MoveForceAck",
+      "count": 23
+    },
+    {
+      "d": 2,
+      "name": "UpdateStageListAck",
+      "count": 1
+    },
+    {
+      "d": 1,
+      "name": "SceneLevelOnDemandGimmickUnspawnReq",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "UnspawnOnDemandGimmickNak",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "CreateProjectileAck",
+      "count": 4
+    },
+    {
+      "d": 2,
+      "name": "GimmickCatcherUpdateAck",
+      "count": 2
+    },
+    {
+      "d": 2,
+      "name": "RemoveProjectileAck",
+      "count": 3
+    },
+    {
+      "d": 1,
+      "name": "OnFailedToCreateProjectileReq",
+      "count": 2
+    },
+    {
+      "d": 1,
+      "name": "UpdateGimmickConstraintDataReq",
+      "count": 30
+    },
+    {
+      "d": 1,
+      "name": "OnHitGroundProjectileReq",
+      "count": 38
+    },
+    {
+      "d": 1,
+      "name": "BreakSceneObjectReq",
+      "count": 1
+    },
+    {
+      "d": 2,
+      "name": "SyncFieldGimmickByDecreaseDropRollCountAck",
+      "count": 1
+    }
+  ]
+}

@@ -15,6 +15,7 @@
 #include <string_view>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/offsets.h"
 #include "mod/game/player_reader.h"
@@ -32,7 +33,45 @@ namespace {
 namespace g2976 = game::build_2976;
 using tbl::Mode;
 
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+constexpr uintptr_t kCodeBegin = 0x1000;
+// Where everything is, per build (tree_bend_logic.h). Log lines and comments keep the 2976 names (the research is written
+// against that build); the addresses they print are this build's.
+struct Addrs {
+    uintptr_t code_end;
+    uintptr_t vf2, vf2_slot, apply, apply_call, set_bend, set_bend_call, tick, tick_jump, get_target, find_tree;
+    uintptr_t client_vtbl, main_thread_id;
+    uint32_t control_f6, state_base, state_dir;
+    std::span<const uint8_t> apply_call_bytes, set_bend_call_bytes, tick_jump_bytes;
+};
+const Addrs kAddrs2976{0x51EB000,
+                       tbl::kVf2, tbl::kVf2Slot, tbl::kApply, tbl::kApplyCall, tbl::kSetBend, tbl::kSetBendCall, tbl::kTick,
+                       tbl::kTickJump, tbl::kGetTarget, tbl::kFindTree,
+                       tbl::kClientRemoteCatchVtbl, tbl::kMainThreadId,
+                       tbl::kControl_F6, tbl::kStateBase, tbl::kState_Dir,
+                       tbl::kApplyCallBytes, tbl::kSetBendCallBytes, tbl::kTickJumpBytes};
+const Addrs kAddrs3527{tbl::kCodeEnd3527,
+                       tbl::kVf23527, tbl::kVf2Slot3527, tbl::kApply3527, tbl::kApplyCall3527, tbl::kSetBend3527,
+                       tbl::kSetBendCall3527, tbl::kTick3527, tbl::kTickJump3527, tbl::kGetTarget3527, tbl::kFindTree3527,
+                       tbl::kClientRemoteCatchVtbl3527, tbl::kMainThreadId3527,
+                       tbl::kControl_F63527, tbl::kStateBase3527, tbl::kState_Dir3527,
+                       tbl::kApplyCallBytes3527, tbl::kSetBendCallBytes3527, tbl::kTickJumpBytes3527};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): tree_bend_logic.h's 3576 table; 3527's data offsets.
+const Addrs kAddrs3576{tbl::kCodeEnd3576,
+                       tbl::kVf23576, tbl::kVf2Slot3576, tbl::kApply3576, tbl::kApplyCall3576, tbl::kSetBend3576,
+                       tbl::kSetBendCall3576, tbl::kTick3576, tbl::kTickJump3576, tbl::kGetTarget3576, tbl::kFindTree3576,
+                       tbl::kClientRemoteCatchVtbl3576, tbl::kMainThreadId3576,
+                       tbl::kControl_F63527, tbl::kStateBase3527, tbl::kState_Dir3527,
+                       tbl::kApplyCallBytes3527, tbl::kSetBendCallBytes3576, tbl::kTickJumpBytes3576};
+const Addrs& addrs() noexcept {
+    static const Addrs& a = game::current_build() == game::Build::v3576   ? kAddrs3576
+                            : game::current_build() == game::Build::v3527 ? kAddrs3527
+                                                                          : kAddrs2976;
+    return a;
+}
+// tbl::slot_state with this build's base.
+uintptr_t slot_state(uintptr_t comp, uint8_t slot) noexcept {
+    return comp + addrs().state_base + slot * tbl::kStateStride;
+}
 constexpr uint32_t kLoopMs = 10;
 constexpr uint64_t kWorldTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;
@@ -121,7 +160,7 @@ Mode mode() { return static_cast<Mode>(g_mode.load(std::memory_order_relaxed)); 
 uint64_t now_ms() { return p8_now_us() / 1000; }
 uint32_t next_seq() { return g_seq.fetch_add(1, std::memory_order_relaxed) + 1; }
 bool main_thread() {
-    const auto id = game::fast<uint32_t>(g_base + tbl::kMainThreadId);
+    const auto id = game::fast<uint32_t>(g_base + addrs().main_thread_id);
     return id && *id == GetCurrentThreadId();
 }
 uint64_t pack2(float lo, float hi) {
@@ -196,7 +235,7 @@ tbl::SlotView read_slot(uintptr_t comp, uint8_t slot) noexcept {
     tbl::SlotView v;
     if (!comp) return v;
     const auto kind = game::fast<uint8_t>(tbl::slot_target(comp, slot) + tbl::kSlot_Kind);
-    const auto state = game::fast<uint8_t>(tbl::slot_state(comp, slot));
+    const auto state = game::fast<uint8_t>(slot_state(comp, slot));
     if (!kind || !state || !game::fast_read(tbl::slot_target(comp, slot) + tbl::kSlot_Scene, v.scene, 16)) return v;
     v.kind = *kind;
     v.state = *state;
@@ -207,7 +246,7 @@ tbl::SlotView read_slot(uintptr_t comp, uint8_t slot) noexcept {
 // the client's and the lock object's vtable entries are the game's code (as remote_rope's release_safe).
 bool client_comp_ok(uintptr_t comp) noexcept {
     const auto vt = game::fast<uint64_t>(comp);
-    if (!vt || *vt != g_base + tbl::kClientRemoteCatchVtbl) return false;
+    if (!vt || *vt != g_base + addrs().client_vtbl) return false;
     const auto actor = game::fast_ptr(comp + tbl::kComp_Owner);
     const auto lock = actor ? game::fast_ptr(*actor + tbl::kActor_LockObj) : std::nullopt;
     const auto lvt = lock ? game::fast_ptr(*lock) : std::nullopt;
@@ -237,7 +276,7 @@ void m1_fn(safetyhook::Context& ctx) {
     const auto a = control ? game::fast_ptr(*control + tbl::kControl_F6a) : std::nullopt;
     const auto b = a ? game::fast_ptr(*a + tbl::kControl_F6b) : std::nullopt;
     if (b) {
-        if (const auto v = game::fast<uint8_t>(*b + tbl::kControl_F6)) f6 = *v;
+        if (const auto v = game::fast<uint8_t>(*b + addrs().control_f6)) f6 = *v;
     }
     s->ctl.store(ctl, std::memory_order_relaxed);
     const uint64_t calls = s->m1_calls.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -291,7 +330,7 @@ void m3_fn(safetyhook::Context& ctx) {
     const uintptr_t dirp = ctx.rdx;
     const float amount = ctx.xmm2.f32[0];
     const ApplyCtx c = t_ctx;
-    const bool matched = c.state && dirp == c.state + tbl::kState_Dir;
+    const bool matched = c.state && dirp == c.state + addrs().state_dir;
     float dir[3] = {0.0f, 0.0f, 0.0f};
     (void)game::fast_read(dirp, dir, sizeof dir);
     uint8_t scene[16] = {};
@@ -380,9 +419,10 @@ void push_apply(tbl::KeyStats* s, uint32_t key, tbl::Outcome o, bool main, const
 // Mode 1's native calls (the ones 0x1190FD0 uses), under SEH (S29 guard): 0 applied, 1 no object, 2 no TreeComponent,
 // -1 a fault (`code` = the exception). No C++ object with a destructor in here.
 int apply_native(uint64_t comp, const float* dir, float amount, uint32_t& code) noexcept {
-    const auto get_target = reinterpret_cast<GetTargetFn>(g_base + tbl::kGetTarget);
-    const auto find_tree = reinterpret_cast<FindTreeFn>(g_base + tbl::kFindTree);
-    const auto set_bend = reinterpret_cast<SetBendFn>(g_base + tbl::kSetBend);
+    const Addrs& ad = addrs();
+    const auto get_target = reinterpret_cast<GetTargetFn>(g_base + ad.get_target);
+    const auto find_tree = reinterpret_cast<FindTreeFn>(g_base + ad.find_tree);
+    const auto set_bend = reinterpret_cast<SetBendFn>(g_base + ad.set_bend);
     int r = -1;
     __try {
         const uint64_t obj = get_target(comp, 0);
@@ -503,6 +543,7 @@ bool qword_at(uintptr_t rva, uint64_t expected) {
 }
 
 bool install_hooks() {
+    const Addrs& ad = addrs();
     std::vector<gad::Section> secs;
     if (!p8_exe_sections(g_base, secs)) {
         log::error("TreeBend: the exe's sections are unreadable; REFUSED, nothing written");
@@ -510,13 +551,13 @@ bool install_hooks() {
     }
     g_code_n = 0;
     for (const auto& s : secs) {
-        const std::string_view n(s.name);
-        if ((n == ".rsrc" || n == ".xtls") && g_code_n < std::size(g_code)) {
+        // Every executable section: the real code and the protected RWX one, where vtable entries may also be.
+        if ((s.flags & gad::kScnExecute) && g_code_n < std::size(g_code)) {
             g_code[g_code_n++] = {g_base + s.va, g_base + s.va + s.size};
         }
     }
     const auto in_rsrc = [&](uintptr_t rva, size_t n) {
-        return rva >= kCodeBegin && rva + n <= kCodeEnd &&
+        return rva >= kCodeBegin && rva + n <= ad.code_end &&
                gad::in_real_code(secs, static_cast<uint32_t>(rva), static_cast<uint32_t>(n));
     };
     struct Check {
@@ -525,34 +566,35 @@ bool install_hooks() {
         const char* what;
     };
     const Check checks[] = {
-        {tbl::kVf2, tbl::kVf2Head, "RemoteCatchFunctions vf2 0x117F7E0's entry"},
-        {tbl::kApply, tbl::kApplyHead, "the bend's apply 0x1190FD0's entry"},
-        {tbl::kApplyCall, tbl::kApplyCallBytes, "vf2's call 0x117F911 (call 0x1190FD0)"},
-        {tbl::kSetBend, tbl::kSetBendHead, "TreeComponent::SetBend 0x349EA10's entry"},
-        {tbl::kSetBendCall, tbl::kSetBendCallBytes, "the apply's call 0x1191532 (call SetBend)"},
-        {tbl::kTick, tbl::kTickHead, "the RemoteCatch tick 0x59C0D0's entry"},
-        {tbl::kTickJump, tbl::kTickJumpBytes, "the remote actors' job 0x8A5DA0 (jmp 0x59C0D0)"},
-        {tbl::kGetTarget, tbl::kGetTargetHead, "FUN_1405b1600's entry (the slot's scene object)"},
-        {tbl::kFindTree, tbl::kFindTreeHead, "FUN_140491ac0's entry (its TreeComponent)"},
+        {ad.vf2, tbl::kVf2Head, "RemoteCatchFunctions vf2 0x117F7E0's entry"},
+        {ad.apply, tbl::kApplyHead, "the bend's apply 0x1190FD0's entry"},
+        {ad.apply_call, ad.apply_call_bytes, "vf2's call 0x117F911 (call 0x1190FD0)"},
+        {ad.set_bend, tbl::kSetBendHead, "TreeComponent::SetBend 0x349EA10's entry"},
+        {ad.set_bend_call, ad.set_bend_call_bytes, "the apply's call 0x1191532 (call SetBend)"},
+        {ad.tick, tbl::kTickHead, "the RemoteCatch tick 0x59C0D0's entry"},
+        {ad.tick_jump, ad.tick_jump_bytes, "the remote actors' job 0x8A5DA0 (jmp 0x59C0D0)"},
+        {ad.get_target, tbl::kGetTargetHead, "FUN_1405b1600's entry (the slot's scene object)"},
+        {ad.find_tree, tbl::kFindTreeHead, "FUN_140491ac0's entry (its TreeComponent)"},
     };
     for (const Check& c : checks) {
         if (!in_rsrc(c.rva, c.bytes.size()) || !bytes_at(c.rva, c.bytes)) {
-            log::error("TreeBend: {} (exe+0x{:X}, {} bytes) is not build 2976's; REFUSED, nothing written", c.what, c.rva,
-                       c.bytes.size());
+            log::error("TreeBend: {} (exe+0x{:X}, {} bytes) is not this build's expected code; REFUSED, nothing written",
+                       c.what, c.rva, c.bytes.size());
             return false;
         }
     }
-    if (!qword_at(tbl::kVf2Slot, g_base + tbl::kVf2)) {
-        log::error("TreeBend: the vtable slot 0x56FFB58 does not hold 0x117F7E0; REFUSED, nothing written");
+    if (!qword_at(ad.vf2_slot, g_base + ad.vf2)) {
+        log::error("TreeBend: the vtable slot exe+0x{:X} does not hold exe+0x{:X}; REFUSED, nothing written", ad.vf2_slot,
+                   ad.vf2);
         return false;
     }
-    if (!game::fast<uint32_t>(g_base + tbl::kMainThreadId)) {
-        log::error("TreeBend: the main thread's id 0x6A652D4 is unreadable; REFUSED, nothing written");
+    if (!game::fast<uint32_t>(g_base + ad.main_thread_id)) {
+        log::error("TreeBend: the main thread's id exe+0x{:X} is unreadable; REFUSED, nothing written", ad.main_thread_id);
         return false;
     }
     // M4 first prepared (disabled), then the three mid hooks, then M4 enabled: any failure puts everything back.
     auto h = game::prepare_inline(
-        g_base + tbl::kTick, reinterpret_cast<void*>(&m4_detour),
+        g_base + ad.tick, reinterpret_cast<void*>(&m4_detour),
         [](const std::vector<uint8_t>& o) {
             return o.size() == tbl::kTickPatch[0] && std::memcmp(o.data(), tbl::kTickHead, o.size()) == 0;
         },
@@ -569,11 +611,11 @@ bool install_hooks() {
         return false;
     }
     const bool mids =
-        p8_install_mid(g_base, secs, tbl::kSetBend, tbl::kSetBendPatch, tbl::kSetBendHead, m3_fn, g_m3, "TreeBend",
+        p8_install_mid(g_base, secs, ad.set_bend, tbl::kSetBendPatch, tbl::kSetBendHead, m3_fn, g_m3, "TreeBend",
                        "TreeComponent::SetBend 0x349EA10 (M3)") &&
-        p8_install_mid(g_base, secs, tbl::kApply, tbl::kApplyPatch, tbl::kApplyHead, m2_fn, g_m2, "TreeBend",
+        p8_install_mid(g_base, secs, ad.apply, tbl::kApplyPatch, tbl::kApplyHead, m2_fn, g_m2, "TreeBend",
                        "the bend's apply 0x1190FD0 (M2)") &&
-        p8_install_mid(g_base, secs, tbl::kVf2, tbl::kVf2Patch, tbl::kVf2Head, m1_fn, g_m1, "TreeBend",
+        p8_install_mid(g_base, secs, ad.vf2, tbl::kVf2Patch, tbl::kVf2Head, m1_fn, g_m1, "TreeBend",
                        "RemoteCatchFunctions vf2 0x117F7E0 (M1)");
     if (!mids) {
         g_m1 = {};
@@ -592,9 +634,10 @@ bool install_hooks() {
         return false;
     }
     g_hooks_on.store(true);
-    log::info("TreeBend: hooked at their entries (5/7/5/5 bytes patched): exe+0x117F7E0 (RemoteCatchFunctions vf2, M1), "
-              "exe+0x1190FD0 (the bend's apply, M2), exe+0x349EA10 (TreeComponent::SetBend, M3: the thrower's values, "
-              "sent), exe+0x59C0D0 (the RemoteCatch tick, M4: the observer {})",
+    log::info("TreeBend: hooked at their entries (5/7/5/5 bytes patched): exe+0x{:X} (RemoteCatchFunctions vf2, M1), "
+              "exe+0x{:X} (the bend's apply, M2), exe+0x{:X} (TreeComponent::SetBend, M3: the thrower's values, "
+              "sent), exe+0x{:X} (the RemoteCatch tick, M4: the observer {})",
+              ad.vf2, ad.apply, ad.set_bend, ad.tick,
               mode() == Mode::On ? "APPLIES the remote thrower's bend after the original"
                                  : "logs what it would apply; nothing of the game is written");
     return true;
@@ -603,10 +646,8 @@ bool install_hooks() {
 // ---------------------------------------------------------------- the module's thread
 
 bool build_ok() {
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;
+    const game::Build b = game::current_build();
+    return g_base == g2976::kImageBase && (b == game::Build::v2976 || b == game::Build::v3527 || b == game::Build::v3576);
 }
 
 std::string ctl_text(uint8_t ctl) {
@@ -1051,16 +1092,17 @@ void tree_bend_start(const std::string& raw, bool guest) {
     if (g_started.exchange(true)) return;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (!build_ok()) {
-        log::error("TreeBend: unsupported game build (not 1.0.0.2976); tree_bend stays off");
+        log::error("TreeBend: unsupported game build (not 1.0.0.2976, 1.0.0.3527 or 1.0.0.3576); tree_bend stays off");
         return;
     }
     g_guest.store(guest);
     g_mode.store(static_cast<uint8_t>(p.mode));
     log::info("TreeBend ON ({}, tree_bend={}): once the world is up, hooks at the entries of RemoteCatchFunctions vf2 "
-              "0x117F7E0 (M1), the bend's apply 0x1190FD0 (M2), TreeComponent::SetBend 0x349EA10 (M3) and the "
-              "RemoteCatch tick 0x59C0D0 (M4). This client's own bends are sent through the tunnel (control state 15, "
+              "exe+0x{:X} (M1), the bend's apply exe+0x{:X} (M2), TreeComponent::SetBend exe+0x{:X} (M3) and the "
+              "RemoteCatch tick exe+0x{:X} (M4). This client's own bends are sent through the tunnel (control state 15, "
               "<= 20 Hz, End after 150 ms); the other player's are {} (docs/research/s25/gancho-cuerda.md section 14)",
-              guest ? "guest" : "host", tbl::mode_name(p.mode),
+              guest ? "guest" : "host", tbl::mode_name(p.mode), addrs().vf2, addrs().apply, addrs().set_bend,
+              addrs().tick,
               p.mode == Mode::On ? "APPLIED to the same tree here (FUN_1405b1600 -> FUN_140491ac0 -> SetBend)"
                                  : "logged with what would be applied (probe: nothing of the game is written)");
     if (HANDLE h = CreateThread(nullptr, 0, worker_thread, nullptr, 0, nullptr)) CloseHandle(h);

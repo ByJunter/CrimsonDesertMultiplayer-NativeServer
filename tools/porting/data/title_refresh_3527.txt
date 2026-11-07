@@ -1,0 +1,34 @@
+
+=== 19B2080: 0x19B2080 range=None section=.rsrc ===
+019B2080 e93b29d909               jmp      0xb7449c0
+019B2085 193e                     sbb      dword ptr [rsi], edi
+019B2087 e03d                     loopne   0x19b20c6
+019B2089 5a                       pop      rdx
+019B208A e9daef9101               jmp      0x32d1069
+019B208F 2375f9                   and      esi, dword ptr [rbp - 7]
+019B2092 8e8be3ffc2bd             mov      cs, word ptr [rbx - 0x423d001d]
+019B2098 663273f4                 xor      dh, byte ptr [rbx - 0xc]
+019B209C 034a38                   add      ecx, dword ptr [rdx + 0x38]
+019B209F 0f8cff2bf400             jl       0x28f4ca4
+019B20A5 99                       cdq      
+019B20A6 d1850f8ac839             rol      dword ptr [rbp + 0x39c88a0f], 1
+019B20AC 90                       nop      
+019B20AD fe0f                     dec      byte ptr [rdi]
+019B20AF 83dedd                   sbb      esi, -0x23
+019B20B2 90                       nop      
+019B20B3 017957                   add      dword ptr [rcx + 0x57], edi
+019B20B6 cc                       int3     
+019B20B7 56                       push     rsi
+019B20B8 6afd                     push     -3
+019B20BA cd0f                     int      0xf
+019B20BC 83cb5c                   or       ebx, 0x5c
+019B20BF b0ff                     mov      al, 0xff
+019B20C1 7f37                     jg       0x19b20fa
+019B20C3 a5                       movsd    dword ptr [rdi], dword ptr [rsi]
+019B20C4 0f8d5d2f9001             jge      0x32b5027
+019B20CA 1bb6160f8b36             sbb      esi, dword ptr [rsi + 0x368b0f16]
+019B20D0 0a1f                     or       bl, byte ptr [rdi]
+019B20D2 000f                     add      byte ptr [rdi], cl
+019B20D4 8d33                     lea      esi, [rbx]
+019B20D6 51                       push     rcx
+019B20D7 50                       push     rax

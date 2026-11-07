@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-11-05T00:37:50.0656229+04:00",
+  "build": "1.0.0.3527",
+  "asi_sha256": "A9191A1EBF4DA937CA7939186A1D2048188E3BBFE57F803BEF5DAB58C3919023",
+  "fixed_guest_dump": "backups/guest-control-crash-3527-20261105-0023/cdmp_crash.guest_20261105-002258_57692_1.dmp",
+  "phase_sites": [
+    "94F7F0 movement",
+    "B0B230 action query"
+  ],
+  "native_assertions": 61,
+  "ctest_passed": 88,
+  "ctest_total": 88,
+  "log": "build/port-3527-character-phase-final-ctest.log",
+  "selected_state_regression_passed": true,
+  "source_review_passed": true,
+  "full_guard_admission_required": true,
+  "synchronous_local_identity": true,
+  "live_join_verified": false
+}

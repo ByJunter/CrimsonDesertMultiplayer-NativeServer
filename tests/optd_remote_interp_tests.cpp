@@ -726,6 +726,52 @@ void test_pair_ramp() {
 
 }  // namespace
 
+// 2026-11-05, the players' class: the other player's character follows how late its samples arrive.
+void test_players_class() {
+    using namespace cdmp::session2;
+    CHECK(rip::decay_peak(rip::to_fix(100), 0) == rip::to_fix(100));
+    CHECK(rip::decay_peak(rip::to_fix(100), 12800) == rip::to_fix(50));  // 1/16 ms per 16 ms
+    CHECK(rip::decay_peak(rip::to_fix(100), 30000) == 0);
+    CHECK(rip::player_target(0, 200) == 200);       // nothing late yet: the floor
+    CHECK(rip::player_target(60, 200) == 200);      // 110: clamped to the floor
+    CHECK(rip::player_target(320, 200) == 380);
+    CHECK(rip::player_target(2000, 200) == rip::kPlayerMax);
+    CHECK(rip::player_target(100, 300) == 300);    // a raised game value is never undercut
+    rip::Slot s;
+    s.reinit(0xA0100001, 1000);
+    CHECK(rip::note_lateness(s, 1000, 120) == 120);
+    CHECK(rip::note_lateness(s, 1100, 60) == rip::from_fix(rip::to_fix(120) - 100 / rip::kLateDecayDiv));  // the peak decays
+    CHECK(rip::note_lateness(s, 1200, 400) == 400);
+    CHECK(rip::note_lateness(s, 1300, 9000) == rip::from_fix(rip::to_fix(400) - 100 / rip::kLateDecayDiv));  // a pause is not lateness
+    // The delay rises towards the target without a jump (0.5 ms per ms, steps of at most 100 ms).
+    uint32_t d = rip::update_player(s, 2000, 200);
+    CHECK(d == 200);  // first step: from the game's value, dt 0
+    d = rip::update_player(s, 2100, 200);
+    CHECK(d == 250);
+    for (uint64_t t = 2200; t <= 4000; t += 100) d = rip::update_player(s, t, 200);
+    CHECK(d >= 200 && d <= rip::kPlayerMax);
+    CHECK(s.updated.load() == 1);
+    // A hitch: the next sample (33 ms later in the character's time) came 300 ms after the previous one's, past 200.
+    CHECK(rip::player_hitch(10300, 200, 10000, 10033) == 100);
+    CHECK(rip::player_hitch(10150, 200, 10000, 10033) == 0);   // still within the delay
+    CHECK(rip::player_hitch(20000, 200, 10000, 19500) == 0);   // it had stopped: a new walk, not a hitch
+    CHECK(rip::player_hitch(10300, 200, 0, 10033) == 0);
+    CHECK(rip::player_hitch(10300, 400, 10000, 10033) == 0);   // a longer delay covers it
+    // decide_delay: a character only with players on.
+    rip::DelayIn in;
+    in.mode = rip::Mode::On;
+    in.applying = true;
+    in.cls = rip::KeyClass::Character;
+    in.have_slot = true;
+    in.updated = true;
+    in.d_fix = rip::to_fix(320);
+    in.game_delay = 200;
+    CHECK(!rip::decide_delay(in).replaced);
+    in.players = true;
+    const auto o = rip::decide_delay(in);
+    CHECK(o.replaced && o.value == 320);
+}
+
 int main() {
     test_keys_and_target();
     test_approach();

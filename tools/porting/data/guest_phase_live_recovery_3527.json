@@ -1,0 +1,38 @@
+[
+  {
+    "key": "0xB0100363",
+    "present": false
+  },
+  {
+    "key": "0xB0100364",
+    "present": true,
+    "selected_layer": 0,
+    "current": "0x3C2EE6C0C28",
+    "playback": "0x3C2E81E6F00"
+  },
+  {
+    "key": "0xB0100365",
+    "present": true,
+    "selected_layer": 0,
+    "current": "0x3C2EE6C0C28",
+    "playback": "0x3C2E81E6F00"
+  },
+  {
+    "key": "0xB010035F",
+    "present": false
+  },
+  {
+    "key": "0xA0100001",
+    "present": true,
+    "selected_layer": 0,
+    "current": "0x3C20CFAE948",
+    "playback": "0x3C254C4E980"
+  },
+  {
+    "key": "0xA0100278",
+    "present": true,
+    "selected_layer": 0,
+    "current": "0x3C2C058FB20",
+    "playback": "0x3C2C01AA680"
+  }
+]

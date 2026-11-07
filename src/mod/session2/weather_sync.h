@@ -1,9 +1,11 @@
 #pragma once
-// P8 session 25, weather (docs/research/noche/clima-sincronizar.md §5, section "Implementado"). Build 1.0.0.2976.
+// P8 session 25, weather (docs/research/noche/clima-sincronizar.md §5, section "Implementado"). Builds 1.0.0.2976
+// and 1.0.0.3549 (docs/research/s25/clima-3549.md); 1.0.0.3527 refuses (its PE was not read for this module).
 //
 // The guest shows the host's weather through the game's own "Weather Viewer" mode (weather_sync_logic.h has the
-// verified addresses): byte X+0x31 of the scene weather system X makes the guest's simulators and mixer stand still
-// and the update 0x3DC4730 use the values written into X's holder.
+// verified addresses per build): byte X+0x31 of the scene weather system X makes the guest's simulators and mixer
+// stand still and X's update (2976 0x3DC4730, 3549 0x40C2580; "the update" below) use the values written into X's
+// holder. The offsets below are 2976's; 3549's are in weather_sync_logic.h (kGame3549, kLayout3549).
 //
 // [session2] weather_sync = 0 (default) | probe | selftest | 1, both PCs (each role does its part):
 //   probe     HOST and GUEST, read only (guarded reads, no hook, no call, no write): every 5 s one
@@ -12,14 +14,14 @@
 //             A+0x198.., float sanity, the server tick and tick % 60000; a 'WeatherSync ... X changed' line on any
 //             change of X / holder / A / B / C (sampled at 5 Hz), a 'target changed' line with tick % 60000 when
 //             A+0x12C/+0x130/+0x134 change, and the B block's raw words once a minute.
-//   selftest  HOST only, one PC (P1): the probe, plus an inline hook at the entry of 0x3DC4730 (installed once the
+//   selftest  HOST only, one PC (P1): the probe, plus an inline hook at the entry of the update (installed once the
 //             local player has been in the world for 3 s). 15 s after the world is ready, for 30 s, on the game's
 //             thread right before the update: X+0x31 = 1 and A+0x12C = 1.0 every frame (the rest as it is); then
 //             X+0x31 and A+0x12C/+0x160/+0x164/+0x168/+0x16C go back to what they were. Aborted (and restored) if
 //             the world leaves, X changes or a read/write fails. Lines 'WeatherSync selftest: ...'.
 //   1         HOST: the probe's 5 Hz read becomes a sample; the network thread sends it as tunnel control state 12
 //             (weather_sync_logic.h) only to a guest that announced caps 0x04 and while user 2 is in the world.
-//             GUEST: announces caps 0x04; keeps the newest samples (lock-free double buffer); the hook at 0x3DC4730
+//             GUEST: announces caps 0x04; keeps the newest samples (lock-free double buffer); the hook at the update
 //             (as above) writes the interpolated host values in viewer mode while a sample is fresh (< 1 s) and the
 //             gates pass (playing on the host, in the world 3 s, within weather_sync_radius_m of the host, with a
 //             margin); else it puts back the holder words it kept at its first write and X+0x31, and the guest's own

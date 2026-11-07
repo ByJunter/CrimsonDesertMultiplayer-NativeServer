@@ -3,6 +3,7 @@
 #include <safetyhook.hpp>
 
 #include <atomic>
+#include <array>
 #include <deque>
 
 #include <share.h>
@@ -20,6 +21,8 @@
 
 #include "common/byte_ring.h"
 #include "common/capture_file.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 #include "mod/log_ring.h"
 #include "mod/role.h"
 #include "mod/game/offsets.h"
@@ -30,10 +33,12 @@
 #include "mod/game/game_fault.h"
 #include "mod/net/local_capture.h"
 #include "mod/net/remote_puppet.h"
+#include "mod/session2/profile_s2.h"
 
 namespace cdmp::net {
 namespace {
 namespace off = game::build_2976;
+namespace transport_profile = session2::profile;
 
 enum class Dir : uint8_t { ClientToServer = 1, ServerToClient = 2 };
 
@@ -142,7 +147,7 @@ void capture(Dir dir, uint32_t session, const uint8_t* pkt, uint64_t rsp) {
 // ours can be posted the same way.
 using PostPacketFn = void(__fastcall*)(void*, int*, uint32_t, const uint8_t*, uint16_t, uint8_t, uint16_t);
 PostPacketFn g_post_fn = nullptr;
-std::atomic<uint32_t> g_post_args[4096];  // bit31 seen | flags << 8 | channel
+std::atomic<uint32_t> g_post_args[65536];  // logical opcode; bit31 seen | flags << 8 | channel
 std::atomic<uint32_t> g_post_args_any{0};  // last seen for any opcode
 SRWLOCK g_c2s_lock = SRWLOCK_INIT;
 struct QueuedC2S {
@@ -188,7 +193,8 @@ void on_post_packet(safetyhook::Context& ctx) {
         return;
     }
     const uint32_t packed = 0x80000000u | (static_cast<uint32_t>(flags) << 8) | channel;
-    if (op < 4096) g_post_args[op].store(packed, std::memory_order_relaxed);
+    if (const auto logical = native_opcode::decode(game::current_build(), op))
+        g_post_args[*logical].store(packed, std::memory_order_relaxed);
     g_post_args_any.store(packed, std::memory_order_relaxed);
 
     // Our own packets go in before this real one, on the same thread.
@@ -204,10 +210,15 @@ void on_post_packet(safetyhook::Context& ctx) {
             log::info("Inject C>S: opcode {} dropped, it waited {} ms", pop, now - queued_ms);
             continue;
         }
-        const uint32_t a = pop < 4096 && g_post_args[pop].load() ? g_post_args[pop].load() : packed;
+        const uint32_t a = g_post_args[pop].load() ? g_post_args[pop].load() : packed;
+        const auto native = native_opcode::encode_copy(game::current_build(), pkt, troc::Dir::ToHostServer);
+        if (!native) {
+            log::error("Inject C>S: logical opcode {} is invalid for this game build", pop);
+            continue;
+        }
         t_posting = true;
         const bool ok = guarded_post(reinterpret_cast<void*>(ctx.rcx), static_cast<uint32_t>(ctx.r8),
-                                     pkt.data(), static_cast<uint16_t>(pkt.size()),
+                                     native->data(), static_cast<uint16_t>(native->size()),
                                      static_cast<uint8_t>(a & 0xFF), static_cast<uint16_t>((a >> 8) & 0xFFFF));
         t_posting = false;
         log::info("Inject C>S: opcode {} ({} bytes, channel {}, flags 0x{:X}) {}", pop, pkt.size(),
@@ -256,24 +267,40 @@ void on_recv_packet(safetyhook::Context& ctx) {
     // P8 D1 (session2/ride_filter.h): after the capture, before the game reads the packet; the callback
     // guards its own accesses. The size is the 5th argument, as capture() reads it. Never on a packet the mod
     // itself injects (experiment 4c, t_injecting): those are the dev tools' own, not the server's.
-    if (const RecvRewrite rw = g_rewrite.load(std::memory_order_acquire); rw && ctx.r9 && !t_injecting) {
-        uint16_t size = 0;
-        if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size)) {
-            rw(reinterpret_cast<uint8_t*>(ctx.r9), size);
-        }
+    const RecvRewrite rw = g_rewrite.load(std::memory_order_acquire);
+    const RecvExtra ex = g_extra.load(std::memory_order_acquire);
+    std::array<uint8_t, troc::kMaxPacketSize> logical;
+    uint16_t logical_size = 0;
+    bool have_logical = false;
+    if ((rw || ex) && ctx.r9 && !t_injecting &&
+        guarded_copy(&logical_size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset),
+                     sizeof logical_size) && logical_size <= logical.size() &&
+        guarded_copy(logical.data(), reinterpret_cast<const void*>(ctx.r9), logical_size)) {
+        have_logical = native_opcode::decode_packet(game::current_build(),
+            std::span(logical.data(), logical_size), troc::Dir::ToGuestClient);
+    }
+    if (rw && have_logical) {
+        // Callbacks see only logical IDs. The game-owned buffer always retains native IDs,
+        // including while a callback re-enters another hook.
+        rw(logical.data(), logical_size);
+        auto bytes = std::span(logical.data(), logical_size);
+        have_logical = native_opcode::encode_packet(game::current_build(), bytes, troc::Dir::ToGuestClient) &&
+                       guarded_copy(reinterpret_cast<void*>(ctx.r9), logical.data(), logical_size) &&
+                       native_opcode::decode_packet(game::current_build(), bytes, troc::Dir::ToGuestClient);
     }
     // P8 mount ride (session2/horse_follow.h): at most one extra packet derived from this one, delivered before it
     // through the same function and thread (4c's path); the mod's stack buffer, nothing allocated.
-    if (const RecvExtra ex = g_extra.load(std::memory_order_acquire); ex && ctx.r9 && !t_injecting && g_on_recv_fn) {
-        uint16_t size = 0;
-        if (guarded_copy(&size, reinterpret_cast<const void*>(ctx.rsp + off::kHookArgSizeStackOffset), sizeof size)) {
+    if (ex && have_logical && g_on_recv_fn) {
+        {
             alignas(8) uint8_t extra[kExtraCap];
             // The callback always runs (both PCs read the riders' Acks); only the delivery needs injection on
             // (the opcode table checked at install, and not stopped by an earlier fault of experiment 4c).
-            const size_t n = ex(reinterpret_cast<const uint8_t*>(ctx.r9), size, extra, sizeof extra);
-            if (n >= 5 && n <= sizeof extra && !g_injection_enabled) {
+            const size_t n = ex(logical.data(), logical_size, extra, sizeof extra);
+            const bool encodable = n >= 5 && n <= sizeof extra &&
+                native_opcode::encode_packet(game::current_build(), std::span(extra, n), troc::Dir::ToGuestClient);
+            if (n >= 5 && n <= sizeof extra && (!g_injection_enabled || !encodable)) {
                 g_extra_refused.fetch_add(1, std::memory_order_relaxed);
-            } else if (n >= 5 && n <= sizeof extra) {
+            } else if (encodable) {
                 t_injecting = true;
                 t_extra = true;
                 deliver_extra(reinterpret_cast<void*>(ctx.rcx), reinterpret_cast<void*>(ctx.rdx), ctx.r8, extra,
@@ -291,10 +318,16 @@ void on_recv_packet(safetyhook::Context& ctx) {
     // again (and gets captured) but t_injecting stops the recursion.
     std::vector<uint8_t> pkt;
     while (puppet_take_injection(pkt)) {
+        const auto native = native_opcode::encode_copy(game::current_build(), pkt, troc::Dir::ToGuestClient);
+        if (!native) {
+            g_injection_enabled = false;
+            log::error("Inject: packet cannot be encoded for this game build; injection disabled");
+            break;
+        }
         t_injecting = true;
         const bool ok = guarded_inject(reinterpret_cast<void*>(ctx.rcx),
-                                       reinterpret_cast<void*>(ctx.rdx), ctx.r8, pkt.data(),
-                                       static_cast<uint16_t>(pkt.size()));
+                                       reinterpret_cast<void*>(ctx.rdx), ctx.r8, native->data(),
+                                       static_cast<uint16_t>(native->size()));
         t_injecting = false;
         const uint16_t op = static_cast<uint16_t>(pkt[0] | (pkt[1] << 8));
         if (ok) {
@@ -332,7 +365,8 @@ std::map<uint16_t, std::string> g_name_by_opcode;
 // Walks the static handler instances and reads (opcode, kind, RTTI name).
 // Resolved at runtime because opcodes shift between game builds.
 void load_troc_names(uintptr_t base) {
-    for (uintptr_t a = base + off::kTrocInstancesBegin; a < base + off::kTrocInstancesEnd; a += 8) {
+    for (uintptr_t a = base + transport_profile::rva(off::kTrocInstancesBegin);
+         a < base + transport_profile::rva(off::kTrocInstancesEnd); a += 8) {
         auto vt = game::read_ptr(a);
         if (!vt || *vt < base || *vt >= base + 0x10000000) continue;
         const std::string decorated = game::rtti_name_of_vtable(*vt);
@@ -351,6 +385,28 @@ const std::string& name_for(uint16_t op) {
     static const std::string unknown = "?";
     auto it = g_name_by_opcode.find(op);
     return it == g_name_by_opcode.end() ? unknown : it->second;
+}
+
+// The whole packet of a housing message, as hex, appended to cdmp_housing_<pid>.txt (the game's folder).
+void dump_housing(bool c2s, uint16_t op, const uint8_t* data, size_t n, uint64_t t_us) {
+    static FILE* f = nullptr;
+    static int count = 0;
+    if (count >= 400) return;
+    if (!f) {
+        char path[64];
+        std::snprintf(path, sizeof path, "cdmp_housing_%lu.txt", GetCurrentProcessId());
+        f = _fsopen(path, "ab", _SH_DENYNO);  // readable while the game runs
+        if (!f) return;
+    }
+    ++count;
+    std::fprintf(f, "%.3f %s %s %u len %zu\n", static_cast<double>(t_us) / 1e6, c2s ? "C>S" : "S>C", name_for(op).c_str(),
+                 op, n);
+    for (size_t i = 0; i < n; i += 32) {
+        std::fprintf(f, "  %05zx ", i);
+        for (size_t k = i; k < n && k < i + 32; ++k) std::fprintf(f, "%02X", data[k]);
+        std::fprintf(f, "\n");
+    }
+    std::fflush(f);
 }
 
 // ---------------------------------------------------------------- writer
@@ -492,23 +548,26 @@ struct Writer {
         ++packets;
         const uint16_t op = static_cast<uint16_t>(data[0] | (data[1] << 8));
         const int slot = static_cast<int8_t>(data[2]);
-        const uint16_t payload_len = static_cast<uint16_t>(data[3] | (data[4] << 8));
+        const uint16_t payload_len = h.copied >= 5 ? static_cast<uint16_t>(data[3] | (data[4] << 8)) : 0;
         const bool c2s = h.dir == Dir::ClientToServer;
         // P8 mount ride: a packet the mod itself delivered (recv-extra) is not the server's traffic: no tap (the
         // host's scene / seq-copy / owner_fanout ledgers) and no co-op observer; marked in the capture.
         const bool mod_extra = (h.flags & kRecModExtra) != 0;
         (c2s ? window_c2s : window_s2c)[op]++;
         (c2s ? total_c2s : total_s2c)[op]++;
-        if (const PacketTap tap = g_tap.load(std::memory_order_acquire); tap && h.copied == h.size && !mod_extra) {
-            tap(data, h.copied, h.t_us, !c2s);
-        }
-        if (!text) {  // not recording: only feed co-op
-            if (h.copied == h.size && !mod_extra) {
-                if (c2s) capture_observe_c2s(data, h.copied);
-                else capture_observe_s2c(data, h.copied);
+        // Captures retain the executable's native bytes and native name table. Mod
+        // observers receive a separate logical copy, exactly once at this boundary.
+        if (h.copied == h.size && !mod_extra) {
+            const auto logical = native_opcode::decode_copy(game::current_build(), {data, h.copied},
+                c2s ? troc::Dir::ToHostServer : troc::Dir::ToGuestClient);
+            if (logical) {
+                if (const PacketTap tap = g_tap.load(std::memory_order_acquire))
+                    tap(logical->data(), logical->size(), h.t_us, !c2s);
+                if (c2s) capture_observe_c2s(logical->data(), logical->size());
+                else capture_observe_s2c(logical->data(), logical->size());
             }
-            return;
         }
+        if (!text) return;
 
         // Hex preview through a lookup table: formatting used to be the
         // bottleneck that made v1 drop packets during loading bursts.
@@ -528,14 +587,9 @@ struct Writer {
             op, slot, payload_len, payload_len + 5u == h.size ? "" : " (size mismatch)",
             mod_extra ? " [mod: derived, not the server's]" : "", hex);
         if (len > 0) disk_text(line, std::min<size_t>(len, sizeof line - 1));
-
-        if (h.copied == h.size && !mod_extra) {
-            if (c2s) {
-                capture_observe_c2s(data, h.copied);
-            } else {
-                capture_observe_s2c(data, h.copied);
-            }
-        }
+        // Housing research (2026-11-06): these are rare and large (login burst), and the .bin loses them; written
+        // whole, synchronously, to cdmp_housing_<pid>.txt next to the game.
+        if (name_for(op).find("Housing") != std::string::npos) dump_housing(c2s, op, data, h.copied, h.t_us - t0_us);
 
         const BinRecord r{h.t_us, static_cast<uint8_t>(h.dir), static_cast<uint8_t>(mod_extra ? kRecModExtra : 0),
                           h.size, h.copied, 0, h.session, h.thread};
@@ -749,16 +803,21 @@ RecvExtraStats sniffer_recv_extra_stats() noexcept {
 
 bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    if (!transport_profile::supported_build() || !game::validate_native_catalog()) {
         log::warn("Sniffer: unsupported game build, not installed");
         return false;
     }
-    const uintptr_t post = base + off::kClientPostPacket;
-    const uintptr_t recv = base + off::kClientOnRecvPacket;
-    if (!head_matches(post, off::kClientPostPacketHead, sizeof off::kClientPostPacketHead) ||
-        !head_matches(recv, off::kClientOnRecvPacketHead, sizeof off::kClientOnRecvPacketHead)) {
+    const auto dos = game::read<IMAGE_DOS_HEADER>(base);
+    if (!dos || dos->e_lfanew < 0x40 || dos->e_lfanew > 0x100000) return false;
+    const auto nt = game::read<IMAGE_NT_HEADERS64>(base + dos->e_lfanew);
+    if (!nt) return false;
+    const uintptr_t post = base + transport_profile::rva(off::kClientPostPacket);
+    const uintptr_t recv = base + transport_profile::rva(off::kClientOnRecvPacket);
+    const auto post_head = transport_profile::signature(off::kClientPostPacket, off::kClientPostPacketHead);
+    const auto recv_head = transport_profile::signature(off::kClientOnRecvPacket, off::kClientOnRecvPacketHead);
+    if (post_head.empty() || recv_head.empty() ||
+        !head_matches(post, post_head.data(), post_head.size()) ||
+        !head_matches(recv, recv_head.data(), recv_head.size())) {
         log::error("Sniffer: function prologues don't match the expected bytes, not installed");
         return false;
     }
@@ -778,8 +837,9 @@ bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
     };
     g_injection_enabled = true;
     for (const auto& [op, name] : expected) {
-        if (name_for(op) != name) {
-            log::warn("Sniffer: opcode {} is '{}' in this game, expected '{}'", op, name_for(op), name);
+        const auto native = native_opcode::encode(game::current_build(), op);
+        if (!native || name_for(*native) != name) {
+            log::warn("Sniffer: logical opcode {} does not map to expected '{}' in this game", op, name);
             g_injection_enabled = false;
         }
     }
@@ -807,7 +867,7 @@ bool sniffer_install(const std::wstring& dir, HANDLE stop, bool record) {
     if (HANDLE t = CreateThread(nullptr, 0, writer_thread, args, 0, nullptr)) CloseHandle(t);
     log::info("Sniffer v2: hooked ClientNet::PostPacket (exe+0x{:X}) and ClientNet::OnRecvPacket "
               "(exe+0x{:X}); full packets up to {} bytes; writing cdmp_packets_<date-time>.log/.bin",
-              off::kClientPostPacket, off::kClientOnRecvPacket, kMaxCopy);
+              post - base, recv - base, kMaxCopy);
     return true;
 }
 

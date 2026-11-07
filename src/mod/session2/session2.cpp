@@ -25,6 +25,7 @@
 #include "mod/session2/companion_probe.h"
 #include "mod/session2/fast_travel.h"
 #include "mod/session2/field_share.h"
+#include "mod/session2/interaction_condition.h"
 #include "mod/session2/guest_lifecycle.h"
 #include "mod/session2/horse_follow.h"
 #include "mod/session2/host_scene_diag.h"
@@ -32,11 +33,13 @@
 #include "mod/session2/identity_probe.h"
 #include "mod/session2/guest_save_host.h"
 #include "mod/session2/guest_save_tunnel.h"
+#include "mod/session2/focus_follow.h"
 #include "mod/session2/mount_sync.h"
 #include "mod/session2/observer_hold_acks.h"
 #include "mod/session2/observer_milestone.h"
 #include "mod/session2/observer_scene_copy.h"
 #include "mod/session2/observer_seq_copy.h"
+#include "mod/session2/housing_share.h"
 #include "mod/session2/rope_probe.h"
 #include "mod/session2/tree_bend.h"
 #include "mod/session2/docked_gimmicks.h"
@@ -54,6 +57,7 @@
 #include "mod/session2/owner_fanout.h"
 #include "mod/session2/reannounce_logic.h"
 #include "mod/session2/rejoin_logic.h"
+#include "mod/session2/remote_visible.h"
 #include "mod/session2/report_guard.h"
 #include "mod/session2/ride_filter.h"
 #include "mod/session2/host_save_export.h"
@@ -94,6 +98,7 @@ constexpr uint32_t kLinkLostMs = 15000;  // longer than the session's own 5 s pe
 
 // C4, reconnect=1 (guest_lifecycle.h). Network thread only, like the above.
 bool g_reconnect = false;  // written by install() before the tunnel opens
+uint32_t g_ready_reset_link = ~0u;  // the connection whose reset in READY was logged (network thread)
 GuestLifecycle g_lc{GuestLifecycle::Config{10000, 60000, 500, kMaxGuestEpochs}};
 DepartedSnap g_snap;          // user 2 of this epoch, captured while valid
 FieldSnap g_baseline;         // the host's field before user 2 came in (this epoch; check c's information only, S29)
@@ -213,6 +218,7 @@ void sniffer_fanout(const uint8_t* packet, size_t size, uint64_t t_us, bool serv
                       std::span<const uint8_t>(packet, size), t_us); // El módulo ignora este tap en el invitado.
     if (g_tap_scene_diag.load(std::memory_order_relaxed)) host_scene_diag_sniffed(packet, size, t_us, server_to_client);
     if (g_tap_seq_copy.load(std::memory_order_relaxed)) observer_seq_copy_sniffed(packet, size, t_us, server_to_client);
+    if (housing_share_wanted()) housing_share_sniffed(packet, size, server_to_client);  // the host's houses for user 2
     if (g_tap_owner_fanout.load(std::memory_order_relaxed)) owner_fanout_sniffed(packet, size, server_to_client);
     // P8 S16 (travel_probe.h): the host client's 2661/2981/2322 burst after user 2's 2873 (counts only).
     if (g_tap_travel.load(std::memory_order_relaxed)) travel_probe_host_sniffed(packet, size, t_us, server_to_client);
@@ -456,6 +462,7 @@ void push_outgoing(troc::TrocLink& link) {
     auto out = server_take_outgoing();
     std::vector<uint8_t> f;
     while (mount_sync_pop_outbound(f)) link.push(f);
+    if (focus_follow_pop_outbound(f)) link.push(f);  // which character the host plays (state 16)
     // P8 S29 (tree_bend.h): the host's own tree bends (state 15), in this conversation only.
     while (tree_bend_pop_outbound(f)) link.push(f);
     for (auto& p : out) link.push(p);
@@ -465,6 +472,7 @@ void discard_mount_events() {
     while (mount_sync_pop_outbound(f)) {
     }
     tree_bend_discard_outbound();  // P8 S29: no conversation for the host's bends
+    focus_follow_discard_outbound();
 }
 
 // Keeps a Req that could not be offered now, in order. Past the bound the
@@ -692,7 +700,9 @@ void barrier_tick(uint32_t now) {
             log::info("Session2 C4: logout complete epoch={} ({})", epoch,
                       g_lc.handed() ? "native logout finished: " + g_last_barrier
                                     : std::string("nothing of it had reached the server"));
-            if (g_lc.make_ready(g_link ? g_link->session_epoch() : 0)) {
+            // A guest that reconnected during the logout is already newer than the epoch it left: it may start the next.
+            if (const uint32_t link_now = g_link ? g_link->session_epoch() : 0;
+                g_lc.make_ready(g_lc.bound_link() && *g_lc.bound_link() < link_now ? *g_lc.bound_link() : link_now)) {
                 log::info("Session2 C4: reconnect epoch={} ready (a NEW guest connection starts it)", epoch + 1);
             } else {
                 log::error("Session2 C4: QUARANTINED: {}; no more logins in this run, the host goes on",
@@ -719,12 +729,29 @@ void tunnel_tick_reconnect(troc::TrocLink& link, uint32_t now_ms) {
         if (g_lc.state() == GuestState::Active) {
             if (!g_lc.conversation()) {
                 link.reset();  // nobody had said anything yet: nothing to lose
+                // The guest that asked for this epoch is gone and a new process took its place. The epoch is now that
+                // process's, however long it stays at the title: giving it up would leave READY waiting for a
+                // connection newer than the one already here, and nobody would ever start the next epoch.
+                g_rejoin_started_for = 0;
             } else if (*g_lc.bound_link() != le) {
                 kill_tunnel("the guest's connection restarted");
             }
-        } else if (g_lc.state() == GuestState::Ready && link.connected() && g_lc.may_start(le)) {
-            start_epoch(le);
         }
+    }
+    // Every tick: the connection may have come during the logout or come later. Stays broken on a failed identity.
+    if (g_lc.link_reset_due(link.broken())) {
+        link.reset();
+        if (!link.broken() && g_ready_reset_link != le) {
+            g_ready_reset_link = le;
+            log::info("Session2 C4: the broken link starts over in READY (connection {}): the next guest's identity can "
+                      "arrive",
+                      le);
+        }
+    }
+    // Every tick, not only the one that saw the new epoch: connected() also needs the peer's identity, a round trip
+    // later. Nothing else would start it: the guest sends nothing until READY, and READY needs an active epoch.
+    if (g_lc.state() == GuestState::Ready && link.connected() && g_lc.may_start(le)) {
+        start_epoch(le);
     }
     // Review of c4367f8, 1: an epoch begun for a re-entry that nobody used (the guest's client went to its own server,
     // or the guest closed the game) is given up: its logout finds nothing of it on the server and C4 is READY again.
@@ -837,6 +864,13 @@ void end_tick(const troc::TrocLink& link) {
               g_slow_tick_lines == kSlowTickLines ? " (last such line)" : "");
 }
 
+// 3527's layout (3527, 3549 and 3576): the join stages below that 3527 requires, 3576 requires as well. A module of
+// those not ported to 3576 refuses it, and then the tunnel stays closed, as on 3527.
+bool layout_3527() noexcept {
+    const auto b = game::current_build();
+    return b == game::Build::v3527 || b == game::Build::v3576;
+}
+
 }  // namespace
 
 bool install(const Options& opt) {
@@ -865,8 +899,13 @@ bool install(const Options& opt) {
     if (writes && !report_guard_install()) return false;
     // P8 S35 phase E (host_save_export.h): host_save=export|probe archives the previous sandbox before the rebuild.
     if (writes) {
+        const bool v3527 = game::current_build() == game::Build::v3527;
+        const bool v3549 = game::is_3549();
+        const bool v3576 = game::is_3576();
         host_save_configure({loaded_config().s2_host_save, loaded_config().s2_host_save_dir,
-                             loaded_config().s2_host_save_keep});
+                             loaded_config().s2_host_save_keep,
+                             v3576 ? "1.0.0.3576" : v3549 ? "1.0.0.3549" : v3527 ? "1.0.0.3527" : "",
+                             v3576 ? "0x6AED2E85" : v3549 ? "0x6AEB7D59" : v3527 ? "0x6AEA07A6" : ""});
     }
     if (writes && !save_hooks_install(opt.save_guard)) return false;
     if (opt.block_save_trocs) {
@@ -919,6 +958,7 @@ bool install(const Options& opt) {
             log::error("Session2: the C2 identity fix could not be installed; option D REFUSES user 2's logins "
                        "(LoginUserToFieldServerReq / LoginCharacterToFieldServerReq) instead of sharing the host's "
                        "characterNo");
+            return false;
         }
     }
     if (!opt.identity_fix && opt.create_session) {
@@ -961,7 +1001,17 @@ bool install(const Options& opt) {
     // E3b: without it user 2 keeps its own field (E3); a failure here leaves
     // the rest of option D as it was.
     if (opt.share_field && !opt.create_session) log::warn("Session2: share_field needs create_session=1; off");
-    if (opt.share_field && opt.create_session && field_share_install()) {
+    if (opt.share_field && opt.create_session) {
+        if (!interaction_condition_install()) {
+            log::error("Session2: required interaction serializer fix unavailable; the tunnel stays closed");
+            return false;
+        }
+        if (!field_share_install()) {
+            log::error("Session2: shared-field hooks could not be installed; the tunnel stays closed");
+            return false;
+        }
+        // Not a reason to close the tunnel: the players would still share a world, just unseen (logged).
+        (void)remote_visible_install();
         // C1: user 2's character reaches the host's client with an action
         // chart but no action, and animating it crashed (exe+0x1F63FE6). The
         // co-op's guards: 0x2329700 skips the layer update of the keys they
@@ -970,14 +1020,16 @@ bool install(const Options& opt) {
         // 0x1F63F70 advances nothing on ANY layer with no playback, the state
         // in which the original would crash reading [0+0x10].
         if (!net::puppet_install_layer_guards()) {
-            log::warn("Session2 E3b: the action-layer crash guards could not be installed");
+            log::error("Session2 E3b: the action-layer crash guards could not be installed; the tunnel stays closed");
+            return false;
         }
         // C1b/C1d: the guards above held, then the movement update crashed
         // (0x88F832, called only from CharacterControl::PostUpdate 0x860D30).
         // The co-op's containment skips the whole character update (0x85FBA0)
         // and post-update (0x860D30) of a copy while it has no action.
         if (!net::horse_diag_install(/*contain=*/true)) {
-            log::warn("Session2 E3b: the character-update containment could not be installed");
+            log::error("Session2 E3b: the character-update containment could not be installed; the tunnel stays closed");
+            return false;
         }
     }
     // D-53 (pendientes/companeros-publicacion.md §3): the root fix of the
@@ -1163,18 +1215,31 @@ bool install(const Options& opt) {
             attach_follow_configure(lc.s2_attach_follow);
         }
     }
-    const bool milestone_wanted = lc.s2_observer_milestone || lc.s2_observer_milestone_send;
+    // Run8 on 3527 completed the private park-field load but never released
+    // the shared-field loading screen: the native owner-only path omits the
+    // observer's PlayAllPreLoadSequencerAck. This is a required join stage,
+    // checked synchronously before install() can admit the guest tunnel.
+    const bool milestone_required = layout_3527() && opt.create_session && opt.share_field;
+    const bool milestone_wanted = milestone_required || lc.s2_observer_milestone || lc.s2_observer_milestone_send;
     if (milestone_wanted && !opt.create_session) {
         log::warn("Session2: observer_milestone{} needs create_session=1; off",
                   lc.s2_observer_milestone_send ? "_send" : "");
     }
     const oms::Mode milestone = milestone_wanted && opt.create_session
-                                    ? observer_milestone_configure(lc.s2_observer_milestone, lc.s2_observer_milestone_send)
+                                    ? observer_milestone_configure(lc.s2_observer_milestone || milestone_required,
+                                                                   lc.s2_observer_milestone_send || milestone_required)
                                     : oms::Mode::Off;
     if (milestone != oms::Mode::Off) {
         log::info("Session2: observer_milestone {} (observer_milestone={}, observer_milestone_send={}){}",
-                  oms::mode_name(milestone), lc.s2_observer_milestone ? 1 : 0, lc.s2_observer_milestone_send ? 1 : 0,
-                  lc.s2_observer_stage_sync ? "" : "; observer_stage's hooks go in in measure mode for its entry hook");
+                  oms::mode_name(milestone), lc.s2_observer_milestone || milestone_required ? 1 : 0,
+                  lc.s2_observer_milestone_send || milestone_required ? 1 : 0,
+                  layout_3527()
+                      ? "; synchronous verified loading-completion hook"
+                      : lc.s2_observer_stage_sync ? "" : "; observer_stage's hooks go in in measure mode for its entry hook");
+        if (layout_3527() && !observer_milestone_install_current()) {
+            log::error("Session2: required observer loading-completion hook unavailable; the tunnel stays closed");
+            return false;
+        }
     }
     // P8 S16 (observer_milestone.h): user 2's reload trips (its 2873 and the 2322 for its character). After the above:
     // it needs observer_milestone's verified emitter and thread.
@@ -1262,6 +1327,17 @@ bool install(const Options& opt) {
             }
         }
     }
+    // housing_share (housing_share.h): the host client's housing Acks (the tap) replace user 2's own (take_frame).
+    if (lc.s2_housing_share != "0" && !lc.s2_housing_share.empty()) {
+        if (!opt.create_session || !loaded_config().sniffer_enabled) {
+            log::warn("Session2: housing_share needs create_session=1 and [sniffer] enabled=1; off");
+        } else {
+            housing_share_configure(lc.s2_housing_share, lc.s2_housing_share_live_ops, lc.s2_housing_share_edits,
+                                    lc.s2_housing_share_guest_spawn, lc.s2_housing_share_rekey,
+                                    lc.s2_housing_share_drop_gimmicks);
+            if (housing_share_wanted()) net::sniffer_set_tap(&sniffer_fanout);
+        }
+    }
     if (lc.s2_observer_sched_copy && !observer_sched_copy_wanted()) {
         log::warn("Session2: observer_sched_copy=1 needs observer_seq_copy=probe or 1 (with create_session=1 and "
                   "[sniffer] enabled=1); off");
@@ -1286,7 +1362,7 @@ bool install(const Options& opt) {
         }
     }
     if (const uint32_t oss = lc.s2_observer_stage_sync;
-        oss || milestone != oms::Mode::Off || scene_copy || scene_diag) {
+        oss || (milestone != oms::Mode::Off && !layout_3527()) || scene_copy || scene_diag) {
         if (!opt.create_session) {
             log::warn("Session2: observer_stage_sync needs create_session=1; off");
         } else {
@@ -1580,6 +1656,8 @@ void tunnel_on_packet(std::vector<uint8_t>&& packet, uint32_t link_epoch, uint32
     }
     // P8 S29 (tree_bend.h): user 2's tree bend (state 15), never a server Req; only here, inside the conversation.
     if (tree_bend_on_frame(packet, link_epoch)) return;
+    // Which character user 2 plays (focus_follow.h, state 16), never a server Req.
+    if (focus_follow_on_frame(packet, link_epoch)) return;
     // P8 mounts (mount_sync.h): user 2's MountBegin / MountCommit / MountDetach, never a server Req. A Commit may
     // end a hold: the held Req go on at the next drain.
     if (mount_sync_on_frame(packet, link_epoch)) return;
@@ -1683,7 +1761,13 @@ std::string describe() {
     std::string s = std::format("Session2: save guard {} | report guard {} (not sent {}) | {}", guard,
                                 report_guard_active() ? "on" : "off", report_guard_dropped(), server_describe());
     if (save_hooks_tracing()) s += " | save trace: " + save_hooks_trace_describe();
-    if (field_share_active()) s += " | " + field_share_describe();
+    if (field_share_active()) {
+        s += " | " + field_share_describe();
+        if (layout_3527()) {
+            s += " | " + interaction_condition_describe();
+            s += " | " + remote_visible_describe();
+        }
+    }
     if (clock_gate_active()) s += " | " + clock_gate_describe();
     if (const std::string m = clock_push_describe(); !m.empty()) s += " | " + m;
     if (g_block_weather || g_weather_blocked) s += std::format(" | guest weather Req 2560 dropped {}", g_weather_blocked);
@@ -1697,6 +1781,7 @@ std::string describe() {
     if (const std::string m = observer_scene_copy_describe(); !m.empty()) s += " | " + m;
     if (const std::string m = host_scene_diag_describe(); !m.empty()) s += " | " + m;
     if (const std::string m = observer_seq_copy_describe(); !m.empty()) s += " | " + m;
+    if (housing_share_wanted()) s += " | " + housing_share_describe();
     if (const std::string m = owner_fanout_describe(); !m.empty()) s += " | " + m;
     if (const std::string m = world_anchor_describe(); !m.empty()) s += " | " + m;
     s += " | " + fast_travel_host_describe();

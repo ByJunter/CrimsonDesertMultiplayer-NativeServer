@@ -15,7 +15,8 @@
 //    of a level ANOTHER user still has loaded is skipped (mode 1), only when the name's hash is proven equal to the
 //    packet's in this process.
 //
-// Build 1.0.0.2976 only (PE 0x6AB28F00, base 0x140000000): every address and byte below.
+// Builds 1.0.0.2976 (PE 0x6AB28F00), 1.0.0.3527 (PE 0x6AEA07A6) and 1.0.0.3576 (PE 0x6AED2E85), base 0x140000000. The
+// addresses named in the comments are 2976's unless they say otherwise; 3527's and 3576's tables are in their sections.
 
 #include "mod/session2/guest_sched_load_logic.h"  // gsl::hashlittle, kNameHashInit, base_without_ext
 
@@ -122,6 +123,73 @@ inline constexpr uint32_t kMapMaxWalk = 4096;
 // yet); [S+0xC] u32 cdmp_HashLittle of the name (-1: not computed yet).
 inline constexpr uintptr_t kStrLen = 8, kStrHash = 0xC;
 inline constexpr size_t kNameMax = 255;
+
+// ---------------------------------------------------------------- build 1.0.0.3527 [V capstone on the installed PE]
+
+// PE 0x6AEA07A6. pa::ServerField's vtable from RTTI (rtti_3527.json). Every offset in the sections above is the same:
+// the gate reads [rcx+0x210], [rdx+0xA0], [rax+0x60], [r8+0x180]; the 3527 walk is below.
+inline constexpr uint32_t kPeTimestamp3527 = 0x6AEA07A6;
+inline constexpr uint32_t kVtServerField3527 = 0x5EF0908;
+// A: 0x2A77180 (.pdata [0x2A77180, 0x2A7765D)), same registers (0x2A771A5 mov rdi,r9; 0x2A771A8 mov r13,rcx; 0x2A771AB
+// mov r8,[rcx+0x210]). Its ready write: 0x2A77301 mov byte [rax+0x30],1 with rax = node+0x10. Callers: 0x2A7D2C9 (Resync,
+// handler 0x2C413C0 -> 0x2A7D0E0) and 0xE31EFEA (2598, handler 0x2C41B10 -> 0x2A74890 jmp 0xE31EE80, only after the name
+// is not yet registered). The signature is once in the exe; no branch of the function lands in 0x2A771CE..0x2A771D3.
+inline constexpr uint32_t kGateFnBegin3527 = 0x2A77180, kGateFnEnd3527 = 0x2A7765D;
+inline constexpr uint32_t kGateRva3527 = 0x2A771CD;
+inline constexpr uint32_t kGateSigRva3527 = 0x2A771B2;
+inline constexpr std::array<uint8_t, 40> kGateSig3527{
+    0x48, 0x8B, 0x82, 0xA0, 0x00, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x0F, 0x84, 0x80, 0x04, 0x00, 0x00, 0x8B, 0x40, 0x60, 0x85,
+    0xC0, 0x0F, 0x84, 0x75, 0x04, 0x00, 0x00, 0x41, 0x39, 0x80, 0x80, 0x01, 0x00, 0x00, 0x0F, 0x85, 0x68, 0x04, 0x00, 0x00};
+static_assert(kGateRva3527 - kGateSigRva3527 == kGateSigPatchAt);
+// B: 0x2A70A10 (.pdata [0x2A70A10, 0x2A715C2)), the same 16-byte head (kDeleteHead). Direct callers that matter:
+//   0x2C4355A in the 2834 handler 0x2C43250 (vtable 0x5EEBAD8 slot 2); after it `nop ; jmp` and it frees the name itself;
+//   0x2A7D06F in 0x2A7CE10 (2976's 0x2836110: walks +0x84 / +0x98, stamp +0x8C, node +0x40 / +0x10, then clears +0x238 and
+//   +0x258, the owner's load, DL != 0); 0x2AD113B in 0x2AD1100 (2976's 0x2876420, the field loader's unload event).
+// The rest (0x2A61224, 0x2AD1E84, 0x2D2F893, 0xE301157) are other callers: never changed.
+inline constexpr uint32_t kDeleteRva3527 = 0x2A70A10, kDeleteEnd3527 = 0x2A715C2;
+inline constexpr uint32_t kRet28343527 = 0x2C4355F, kRetOwnerLoad3527 = 0x2A7D074, kRetLoader3527 = 0x2AD1140;
+// The 2834 handler's frame at its call (0x2C43250: 7 pushes, lea rbp,[rsp-0x70], sub rsp,0x180, again rbp = C + 0x110):
+//   0x2C4350D mov r8d,[rbp-0x28]   the packet's u32 hash (C + 0xE8), parsed at 0x2C4337C, only read up to the call
+//   0x2C4354C mov r9b,1 ; lea r8,[rbp-0x78] (C + 0x98 = &type) ; lea rdx,[rbp+0x40] (C + 0x150 = &name) ; call
+inline constexpr uint32_t kFrameSiteRva3527 = 0x2C43260;
+inline constexpr std::array<uint8_t, 12> kFrameSite3527{0x48, 0x8D, 0x6C, 0x24, 0x90, 0x48, 0x81, 0xEC, 0x80, 0x01, 0x00, 0x00};
+inline constexpr uint32_t kCallSiteRva3527 = 0x2C4350D;
+inline constexpr std::array<uint8_t, 82> kCallSite3527{
+    0x44, 0x8B, 0x45, 0xD8, 0x48, 0x8D, 0x55, 0x38, 0x48, 0x8B, 0x8B, 0x10, 0x02, 0x00, 0x00, 0xE8, 0x4F, 0x63, 0x66, 0xFF,
+    0x90, 0x83, 0x7D, 0x38, 0x00, 0x74, 0x3A, 0x48, 0x8B, 0x45, 0x40, 0x48, 0x8B, 0x10, 0x48, 0x85, 0xD2, 0x74, 0x2E, 0x80,
+    0x3A, 0x00, 0x74, 0x29, 0x44, 0x88, 0x75, 0x88, 0x40, 0x88, 0x74, 0x24, 0x30, 0xC6, 0x44, 0x24, 0x28, 0x00, 0xC6, 0x44,
+    0x24, 0x20, 0x00, 0x41, 0xB1, 0x01, 0x4C, 0x8D, 0x45, 0x88, 0x48, 0x8D, 0x55, 0x40, 0x48, 0x8B, 0xCB, 0xE8, 0xB1, 0xD4,
+    0xE2, 0xFF};
+inline constexpr uintptr_t kFrameName3527 = 0x150, kFrameType3527 = 0x98, kFrameHash3527 = 0xE8;
+
+// ---------------------------------------------------------------- build 1.0.0.3576 (static, 2026-11-06; not yet run)
+
+// PE 0x6AED2E85. pa::ServerField 0x5EF0908 -> 0x5EF2B10 (vtable_map_3549_3576.json). The functions moved whole:
+// A's 0x2A77180 -> 0x2A77DD0 (+0xC50, .pdata size 0x4DD; the 40-byte signature is at 0x2A77E02, once in the exe, the 3527
+// bytes); B's 0x2A70A10 -> 0x2A71660 (+0xC50, size 0xBB2, the same head). Its callers' return addresses: the 2834 handler
+// 0x2C43250 -> 0x2C43EC0 (+0xC70) returns at 0x2C441CF; 0x2A7CE10 -> 0x2A7DA60 (+0xC50, still walks +0x84 / +0x98 /
+// +0x8C and clears +0x238 / +0x258) at 0x2A7DCC4; 0x2AD1100 -> 0x2AD1D50 (+0xC50) at 0x2AD1D90. Each is the return of a
+// call to 0x2A71660. The 2834 frame site has the 3527 bytes at 0x2C43ED0; its call site 0x2C4417D differs only in two
+// rel32s (0x22A9870 -> 0x22AA4B0, +0xC40; the delete 0x2A70A10 -> 0x2A71660). Frame offsets unchanged.
+inline constexpr uint32_t kPeTimestamp3576 = 0x6AED2E85;
+inline constexpr uint32_t kVtServerField3576 = 0x5EF2B10;
+inline constexpr uint32_t kGateFnBegin3576 = 0x2A77DD0, kGateFnEnd3576 = 0x2A782AD;
+inline constexpr uint32_t kGateRva3576 = 0x2A77E1D;
+inline constexpr uint32_t kGateSigRva3576 = 0x2A77E02;
+static_assert(kGateRva3576 - kGateSigRva3576 == kGateSigPatchAt);
+inline constexpr uint32_t kDeleteRva3576 = 0x2A71660, kDeleteEnd3576 = 0x2A72212;
+inline constexpr uint32_t kRet28343576 = 0x2C441CF, kRetOwnerLoad3576 = 0x2A7DCC4, kRetLoader3576 = 0x2AD1D90;
+inline constexpr uint32_t kFrameSiteRva3576 = 0x2C43ED0;
+inline constexpr uint32_t kCallSiteRva3576 = 0x2C4417D;
+inline constexpr std::array<uint8_t, 82> kCallSite3576{
+    0x44, 0x8B, 0x45, 0xD8, 0x48, 0x8D, 0x55, 0x38, 0x48, 0x8B, 0x8B, 0x10, 0x02, 0x00, 0x00, 0xE8, 0x1F, 0x63, 0x66, 0xFF,
+    0x90, 0x83, 0x7D, 0x38, 0x00, 0x74, 0x3A, 0x48, 0x8B, 0x45, 0x40, 0x48, 0x8B, 0x10, 0x48, 0x85, 0xD2, 0x74, 0x2E, 0x80,
+    0x3A, 0x00, 0x74, 0x29, 0x44, 0x88, 0x75, 0x88, 0x40, 0x88, 0x74, 0x24, 0x30, 0xC6, 0x44, 0x24, 0x28, 0x00, 0xC6, 0x44,
+    0x24, 0x20, 0x00, 0x41, 0xB1, 0x01, 0x4C, 0x8D, 0x45, 0x88, 0x48, 0x8D, 0x55, 0x40, 0x48, 0x8B, 0xCB, 0xE8, 0x91, 0xD4,
+    0xE2, 0xFF};
+inline bool frame_matches(uintptr_t frame, uintptr_t name_arg, uintptr_t type_arg, uintptr_t name_off, uintptr_t type_off) {
+    return frame && name_arg == frame + name_off && type_arg == frame + type_off;
+}
 
 // ---------------------------------------------------------------- packets (C->S, payload after the 5-byte header)
 
@@ -491,6 +559,13 @@ inline Caller caller_of(uint32_t ret_rva) {
     return ret_rva == kRet2834 ? Caller::Unload2834
            : ret_rva == kRetOwnerLoad ? Caller::OwnerLoad
            : ret_rva == kRetLoader ? Caller::Loader
+                                   : Caller::Other;
+}
+// The same, with the build's return addresses.
+inline Caller caller_of(uint32_t ret_rva, uint32_t ret_2834, uint32_t ret_owner_load, uint32_t ret_loader) {
+    return ret_rva == ret_2834 ? Caller::Unload2834
+           : ret_rva == ret_owner_load ? Caller::OwnerLoad
+           : ret_rva == ret_loader ? Caller::Loader
                                    : Caller::Other;
 }
 inline const char* caller_name(Caller c) {

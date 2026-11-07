@@ -1,4 +1,5 @@
 #include "mod/session2/ride_filter.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -112,7 +113,7 @@ rfl::Route route_of(Mode mode, rfl::Outcome& o) noexcept {
 // receive buffer: read and written only under SEH (no C++ objects in this frame).
 bool guarded_filter(Mode mode, uint8_t* packet, uint16_t size, uint32_t remote_key, rfl::Outcome* out) {
     __try {
-        *out = rfl::filter_packet(mode, packet, size, remote_key, 0);
+        *out = rfl::filter_packet(mode, packet, size, remote_key, 0, game::current_build());
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -120,7 +121,7 @@ bool guarded_filter(Mode mode, uint8_t* packet, uint16_t size, uint32_t remote_k
 }
 bool guarded_rewrite(uint8_t* packet, rfl::Kind kind, bool* out) {
     __try {
-        *out = rfl::rewrite(packet + rfl::kHeader, rfl::kAckSize, kind);
+        *out = rfl::rewrite(packet + rfl::kHeader, movement::payload_size(game::current_build(), 2991), kind, game::current_build());
         return true;
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
@@ -129,7 +130,7 @@ bool guarded_rewrite(uint8_t* packet, rfl::Kind kind, bool* out) {
 
 void host_recv(uint8_t* packet, uint16_t size) noexcept {
     const auto mode = static_cast<Mode>(g_mode.load(std::memory_order_relaxed));
-    if (mode == Mode::Off || size != rfl::kHeader + rfl::kAckSize) return;
+    if (mode == Mode::Off || size != rfl::kHeader + movement::payload_size(game::current_build(), 2991)) return;
     const uint32_t remote = server_user2_player_key();  // user 2's character (0 = not logged in yet)
     if (!remote) {
         c_no_key.fetch_add(1, std::memory_order_relaxed);
@@ -246,10 +247,10 @@ void ride_filter_on_guest_packet(std::vector<uint8_t>& packet, uint64_t connecti
         return;
     }
     rfl::Outcome o = rfl::filter_packet(decide_mode(mode), packet.data(), packet.size(), remote,
-                                        g_local_key.load(std::memory_order_relaxed));
+                                        g_local_key.load(std::memory_order_relaxed), game::current_build());
     switch (route_of(mode, o)) {
         case rfl::Route::Defer: o.deferred = true; break;
-        case rfl::Route::Rewrite: o.rewritten = rfl::rewrite(packet.data() + rfl::kHeader, rfl::kAckSize, o.kind); break;
+        case rfl::Route::Rewrite: o.rewritten = rfl::rewrite(packet.data() + rfl::kHeader, packet.size() - rfl::kHeader, o.kind, game::current_build()); break;
         case rfl::Route::Pass: o.passed = mode == Mode::On && o.remote && o.kind != Kind::None; break;
     }
     note(o, mode);

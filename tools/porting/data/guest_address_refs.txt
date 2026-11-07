@@ -1,0 +1,88 @@
+72:constexpr uint64_t kNoEpoch = 0x7FFFFFFFFFFFFFFFull;  // what PostPacket writes without a session
+83:// into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
+84:constexpr uintptr_t kServerFrameworkMode = 0x6A65564;
+146:// 0x35BAD4), at most gin::kMaxPerTurn per turn, oldest first.
+185:// loaded, the local answer crashed the client at exe+0x2045A6A (its own user,
+505:        if (!peek(pb + off::kPb_FramePtr, frame) || frame != pb || !peek(pb + off::kPb_Base, base) || base != pb ||
+506:            !peek(pb + off::kPb_Len2, flen) || flen < off::kFrameOverhead + troc::kInternalHeaderSize ||
+507:            flen - off::kFrameOverhead > troc::kMaxPacketSize) {
+510:        // With the session's crypto on, the frame would already be encrypted (0x35BF99).
+511:        if (peek(self + off::kSession_Crypto, crypto) && crypto && peek(crypto + 0x24, crypto_on) && crypto_on) {
+514:        std::vector<uint8_t> p(flen - off::kFrameOverhead);
+516:        if (!guarded_copy(p.data(), pb + off::kFrameHeader, p.size()) ||
+570:        if (!game::safe_read(g_base + off::kClientNetSlot, &net, sizeof net) || !net ||
+571:            !game::safe_read(net + off::kClientNet_FreeC2S, &q3, sizeof q3) || !q3 ||
+635:             character_no == 0x7FFFFFFFFFFFF002ull   ? "F002: the host's identity fix, as expected"
+636:             : character_no == 0x7FFFFFFFFFFFFFFFull ? "7FFF...FFFF: the single-player constant, NOT the host's F002"
+693:// The busy byte under the save manager's own lock, as 0x2A22492..0x2A224B4
+694:// (take) and 0x2A224D3..0x2A224EF (release) do it, reloading the lock from
+699:        void* lock = *reinterpret_cast<void* const*>(g + off::kSaveMgr_Lock);
+702:        auto* busy = reinterpret_cast<volatile uint8_t*>(g + off::kSaveMgr_Busy);
+718:// 0x1870C20(g): 0, or the code of the exception that stopped it.
+722:        reinterpret_cast<SaveMgrFn>(g_base + off::kSaveMgrRefreshSlots)(reinterpret_cast<void*>(g));
+737:        {off::kSlotRefreshReqSequence, off::kSlotRefreshReqSequenceBytes, "SaveDataSlotRefreshReq's sequence"},
+738:        {off::kSaveMgrRefreshSlots, off::kSaveMgrRefreshSlotsHead, "the refresh thunk 0x1870C20"},
+739:        {off::kTitlePlayReadsSaveMgr, off::kTitlePlayReadsSaveMgrBytes, "the title's read of [WorldSystem+0x88]"},
+740:        {off::kWindowsLockVf1, off::kWindowsLockVf1Head, "WindowsLock vf1 (lock)"},
+741:        {off::kWindowsLockVf2, off::kWindowsLockVf2Head, "WindowsLock vf2 (unlock)"},
+755:    if (!game::safe_read(g_base + off::kWindowsLock3Vtable + 8, &vf1, sizeof vf1) ||
+756:        !game::safe_read(g_base + off::kWindowsLock3Vtable + 16, &vf2, sizeof vf2) ||
+757:        vf1 != g_base + off::kWindowsLockVf1 || vf2 != g_base + off::kWindowsLockVf2) {
+758:        why = std::format("WindowsLock<3>'s vtable (exe+0x{:X}) has vf1 0x{:X} vf2 0x{:X}", off::kWindowsLock3Vtable,
+765:// The table as the title reads it (no lock, like 0x9096890).
+770:    if (!game::safe_read(g + off::kSaveMgr_Count, &count, sizeof count) ||
+771:        !game::safe_read(g + off::kSaveMgr_Capacity, &capacity, sizeof capacity) ||
+772:        !game::safe_read(g + off::kSaveMgr_Slots, &data, sizeof data) || !data || count > capacity) {
+781:// One try of the native refresh (SaveDataSlotRefreshReq 0x2A22380 without its
+789:    const auto ws = game::read_ptr(g_base + off::kWorldSystemSlot);
+790:    const auto g = ws ? game::read_ptr(*ws + off::kWorldSystem_SaveManager) : std::nullopt;
+795:    const auto storage = game::read_ptr(*g + off::kSaveMgr_Storage);
+796:    const auto lock = game::read_ptr(*g + off::kSaveMgr_Lock);
+801:    if (*lock != *g + off::kSaveMgr_LockObj || !game::has_vtable(*lock, g_base + off::kWindowsLock3Vtable)) {
+805:    // The server's pointer to the manager (what 0x2A22380 uses): the same
+807:    const auto lookup = game::read_ptr(g_base + off::kServerActorLookupSlot);
+808:    const auto server_g = lookup ? game::read_ptr(*lookup + off::kServerActorLookup_SaveManager) : std::nullopt;
+826:    (void)game::safe_read(*storage + off::kSaveStorage_FolderCount, &folders, sizeof folders);
+844:                          off::kSaveMgrRefreshSlots, took, released == 0 ? "released" : "NOT released: fault");
+854:    (void)game::safe_read(*g + off::kSaveMgr_Busy, &busy_now, 1);
+943:                  tid, g_net_owner.owner(), off::kNetLoopPump);
+954:    if (!pb || !peek(pb + 0x8020, epoch) || epoch == kNoEpoch) peek(s + off::kSyncSession_Epoch, epoch);
+976:        if (pb) peek(pb + off::kFrameHeader, op);
+991:        if (uint16_t op = 0; pb && peek(pb + off::kFrameHeader, op)) {
+1097:        // The buffer goes back as the server would after reading it (0x27735E4):
+1102:    // Always 0: anything else makes FlushSendQueue disconnect (0x35C490).
+1111:// it (0x35BB53), so its copy of each packet uses this thread's own heap. The
+1117:        if (!peek(net + off::kClientNet_Session, session) || !session) return;
+1119:        if (!peek(session + off::kSyncSession_Epoch, epoch) || epoch != g_epoch.load()) return;
+1179:        if (!peek(net + off::kClientNet_Session, session) || !session) return;
+1180:        if (!peek(session + off::kSyncSession_Epoch, epoch) || epoch != g_epoch.load()) return;
+1199:// before the field and crash at exe+0x2045A6A (sessions 5 and 6). The log is
+1207:        // [[[exe+0x6D69190]+0x60]+0xC0]) and its state byte [P+0x15C].
+1210:        const bool have_p = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
+1216:                   "field (session 6: crash at exe+0x2045A6A 22 ms later), so the game ENDS NOW (TerminateProcess, "
+1263:// Once: which thread turns at 0x35BAD4 (the one the game uses for OnRecvPacket
+1277:                      g_net_owner.owner(), off::kNetLoopPump, off::kClientOnRecvPacket, gin::kMaxPerTurn,
+1278:                      off::kQueuePush, gin::kLimits.max_packets, gin::kLimits.max_bytes >> 20);
+1282:                      off::kNetLoopPump, GetCurrentThreadId(), g_net_owner.owner());
+1339:                                  "(it would crash at exe+0x2045A6A): the client keeps waiting for its 2002",
+1360:    auto slot4 = game::read<uintptr_t>(net + off::kClientNet_Slot4);
+1365:    auto session = game::read_ptr(net + off::kClientNet_Session);
+1366:    auto e = session ? game::read<uint64_t>(*session + off::kSyncSession_Epoch) : std::nullopt;
+1374:    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+1382:        heads = head_matches(off::kSyncSessionSend, off::kSyncSessionSendHead, sizeof off::kSyncSessionSendHead) &&
+1383:                head_matches(off::kNetLoopPump, off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob) &&
+1384:                head_matches(off::kClientOnRecvPacket, off::kClientOnRecvPacketHead,
+1385:                             sizeof off::kClientOnRecvPacketHead) &&
+1386:                head_matches(off::kQueuePush, off::kQueuePushHead, sizeof off::kQueuePushHead);
+1387:        auto n = game::read_ptr(g_base + off::kClientNetSlot);
+1407:    g_on_recv = reinterpret_cast<OnRecvFn>(g_base + off::kClientOnRecvPacket);
+1408:    g_push = reinterpret_cast<PushFn>(g_base + off::kQueuePush);
+1417:    g_send_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + off::kSyncSessionSend),
+1422:        p8_install_mid(g_base, secs, off::kNetLoopPump, off::kNetLoopPumpPatch,
+1423:                       std::span<const uint8_t>(off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob), guest_pump,
+1452:              "(exe+0x{:X}); mode {}", off::kSyncSessionSend, off::kNetLoopPump,
+1476:    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+1553:    // thread (it needs the local user key) and owns 0x85FBA0, so guest_s3 does not hook its first-Update point.
+1636:        const bool ok = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
+1908:    log::info("Session2 guest: child_reannounce ON ({}): each CreateOwnedActor failure (exe+0x8BDF7C) of a user's "
+2035:// owner (exe+0x8BDF7C, "Actor 생성에 실패했습니다"), counted by the game errors hook (its line shows only 10 times).

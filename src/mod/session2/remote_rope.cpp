@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/actor_lookup.h"
 #include "mod/game/offsets.h"
@@ -35,8 +36,91 @@ namespace {
 namespace g2976 = game::build_2976;
 using rrp::Mode;
 
-// Hooks only at verified function entries inside [0x1000, 0x51EB000) (.rsrc, never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+// Hooks only at verified function entries inside [0x1000, code_end) (.rsrc, never .xtls).
+constexpr uintptr_t kCodeBegin = 0x1000;
+// Where everything is, per build (remote_rope_logic.h). Log lines and comments keep the 2976 names (the research is
+// written against that build); the addresses they print are this build's.
+struct Addrs {
+    uintptr_t code_end;
+    uintptr_t apply, apply_call, apply_return, info_copy, map_site;
+    uintptr_t world_system, resolve, att_dtor, scope_attacher_vtbl;
+    uint32_t physics_vf_transform, state_base, flight_base, data_slot;
+    uintptr_t release, release_thread_check, main_thread_id, client_vtbl, apply_failed_err;
+    uintptr_t h2471, h2471_slot, h2471_release;
+    uintptr_t srv_release, srv_release_slot, srv_args;
+    uintptr_t writer, writer_site, to_near_vtbl, to_near_vf1, ts_owner_call;
+    uintptr_t act_release, server_vtbl, act_release_slot, srv_vf158_slot, slot_reset;
+    uintptr_t act_client_call, act_dispatch, act_keep_test, act_notify, act_self_release;
+    std::span<const uint8_t> apply_call_bytes, map_site_bytes, release_check_bytes, h2471_head, h2471_release_bytes;
+    std::span<const uint32_t> h2471_boundaries;
+    std::span<const uint8_t> srv_args_bytes, writer_site_bytes, act_client_call_bytes, act_dispatch_bytes;
+};
+const Addrs kAddrs2976{0x51EB000,
+                       rrp::kApply, rrp::kApplyCall, rrp::kApplyReturn, rrp::kInfoCopy, rrp::kMapSite,
+                       rrp::kWorldSystem, rrp::kResolve, rrp::kAttDtor, rrp::kScopeAttacherBaseVtbl,
+                       rrp::kPhysics_vfTransform, rrp::kStateBase, rrp::kFlightBase, rrp::kData_Slot,
+                       rrp::kRelease, rrp::kReleaseThreadCheck, rrp::kMainThreadId, rrp::kClientRemoteCatchVtbl,
+                       rrp::kApplyFailedErr,
+                       rrp::k2471Handler, rrp::k2471HandlerSlot, rrp::k2471Release,
+                       rrp::kSrvRelease, rrp::kSrvReleaseSlot, rrp::kSrvArgs,
+                       rrp::kWriter, rrp::kWriterSite, rrp::kToNearVtbl, rrp::kToNearVf1, rrp::kTsOwnerCall,
+                       rrp::kActRelease, rrp::kServerRemoteCatchVtbl, rrp::kActReleaseSlot, rrp::kSrvCompVf158Slot,
+                       rrp::kSlotReset,
+                       rrp::kActClientCall, rrp::kActDispatch, rrp::kActKeepTest, rrp::kActNotify, rrp::kActSelfRelease,
+                       rrp::kApplyCallBytes, rrp::kMapSiteBytes, rrp::kReleaseThreadCheckBytes, rrp::k2471HandlerHead,
+                       rrp::k2471ReleaseBytes, rrp::k2471HandlerBoundaries,
+                       rrp::kSrvArgsBytes, rrp::kWriterSiteBytes, rrp::kActClientCallBytes, rrp::kActDispatchBytes};
+const Addrs kAddrs3527{rrp::kCodeEnd3527,
+                       rrp::kApply3527, rrp::kApplyCall3527, rrp::kApplyReturn3527, rrp::kInfoCopy3527, rrp::kMapSite3527,
+                       rrp::kWorldSystem3527, rrp::kResolve3527, rrp::kAttDtor3527, rrp::kScopeAttacherBaseVtbl3527,
+                       rrp::kPhysics_vfTransform3527, rrp::kStateBase3527, rrp::kFlightBase3527, rrp::kData_Slot3527,
+                       rrp::kRelease3527, rrp::kReleaseThreadCheck3527, rrp::kMainThreadId3527,
+                       rrp::kClientRemoteCatchVtbl3527, rrp::kApplyFailedErr3527,
+                       rrp::k2471Handler3527, rrp::k2471HandlerSlot3527, rrp::k2471Release3527,
+                       rrp::kSrvRelease3527, rrp::kSrvReleaseSlot3527, rrp::kSrvArgs3527,
+                       rrp::kWriter3527, rrp::kWriterSite3527, rrp::kToNearVtbl3527, rrp::kToNearVf13527,
+                       rrp::kTsOwnerCall3527,
+                       rrp::kActRelease3527, rrp::kServerRemoteCatchVtbl3527, rrp::kActReleaseSlot3527,
+                       rrp::kSrvCompVf158Slot3527, rrp::kSlotReset3527,
+                       rrp::kActClientCall3527, rrp::kActDispatch3527, rrp::kActKeepTest3527, rrp::kActNotify3527,
+                       rrp::kActSelfRelease3527,
+                       rrp::kApplyCallBytes3527, rrp::kMapSiteBytes3527, rrp::kReleaseThreadCheckBytes3527,
+                       rrp::k2471HandlerHead3527, rrp::k2471ReleaseBytes3527, rrp::k2471HandlerBoundaries3527,
+                       rrp::kSrvArgsBytes3527, rrp::kWriterSiteBytes3527, rrp::kActClientCallBytes3527,
+                       rrp::kActDispatchBytes3527};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): remote_rope_logic.h's 3576 table; 3527's data offsets and the 3527
+// arrays that are byte-identical there (the 2471 head and boundaries, the server's argument reads, the dispatch).
+const Addrs kAddrs3576{rrp::kCodeEnd3576,
+                       rrp::kApply3576, rrp::kApplyCall3576, rrp::kApplyReturn3576, rrp::kInfoCopy3576, rrp::kMapSite3576,
+                       rrp::kWorldSystem3576, rrp::kResolve3576, rrp::kAttDtor3576, rrp::kScopeAttacherBaseVtbl3576,
+                       rrp::kPhysics_vfTransform3527, rrp::kStateBase3527, rrp::kFlightBase3527, rrp::kData_Slot3527,
+                       rrp::kRelease3576, rrp::kReleaseThreadCheck3576, rrp::kMainThreadId3576,
+                       rrp::kClientRemoteCatchVtbl3576, rrp::kApplyFailedErr3576,
+                       rrp::k2471Handler3576, rrp::k2471HandlerSlot3576, rrp::k2471Release3576,
+                       rrp::kSrvRelease3576, rrp::kSrvReleaseSlot3576, rrp::kSrvArgs3576,
+                       rrp::kWriter3576, rrp::kWriterSite3576, rrp::kToNearVtbl3576, rrp::kToNearVf13576,
+                       rrp::kTsOwnerCall3576,
+                       rrp::kActRelease3576, rrp::kServerRemoteCatchVtbl3576, rrp::kActReleaseSlot3576,
+                       rrp::kSrvCompVf158Slot3576, rrp::kSlotReset3576,
+                       rrp::kActClientCall3576, rrp::kActDispatch3576, rrp::kActKeepTest3576, rrp::kActNotify3576,
+                       rrp::kActSelfRelease3576,
+                       rrp::kApplyCallBytes3576, rrp::kMapSiteBytes3576, rrp::kReleaseThreadCheckBytes3576,
+                       rrp::k2471HandlerHead3527, rrp::k2471ReleaseBytes3576, rrp::k2471HandlerBoundaries3527,
+                       rrp::kSrvArgsBytes3527, rrp::kWriterSiteBytes3576, rrp::kActClientCallBytes3576,
+                       rrp::kActDispatchBytes3527};
+const Addrs& addrs() noexcept {
+    static const Addrs& a = game::current_build() == game::Build::v3576   ? kAddrs3576
+                            : game::current_build() == game::Build::v3527 ? kAddrs3527
+                                                                          : kAddrs2976;
+    return a;
+}
+// rrp::slot_state / rrp::slot_flight with this build's bases.
+uintptr_t slot_state(uintptr_t comp, uint8_t slot) noexcept {
+    return comp + addrs().state_base + slot * rrp::kStateStride;
+}
+uintptr_t slot_flight(uintptr_t comp, uint8_t slot) noexcept {
+    return comp + addrs().flight_base + slot * rrp::kStateStride;
+}
 constexpr uint32_t kTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;  // the local player read 6 ticks in a row (3 s) before the hooks go in
 constexpr uint64_t kMinuteMs = 60000;
@@ -183,7 +267,7 @@ bool call_writer(uintptr_t fn, uintptr_t actor, void* finder, const uint8_t* slo
     }
 }
 
-std::optional<uintptr_t> world_system() { return game::fast_ptr(g_base + rrp::kWorldSystem); }
+std::optional<uintptr_t> world_system() { return game::fast_ptr(g_base + addrs().world_system); }
 
 // This PC's handle of a scene object, by the thrower's own mapping (0x5947C7..0x59484E). The lookup's checks are
 // 0x5A5370's: a reference taken ([att+0x10]) and an object ([att+8]); every pointer is checked BEFORE it is used, and
@@ -209,7 +293,7 @@ rrp::Resolve resolve_local_handle(const uint8_t (&scene)[16], uint64_t& out, boo
     alignas(16) uint8_t att[0x40] = {};
     alignas(16) uint8_t id[16];
     std::memcpy(id, scene, sizeof id);
-    if (!call_resolve(g_base + rrp::kResolve, *mgr, att, id)) {
+    if (!call_resolve(g_base + addrs().resolve, *mgr, att, id)) {
         g_f1_faulted.store(true);
         fault_now = true;
         return rrp::Resolve::Faulted;
@@ -243,9 +327,9 @@ rrp::Resolve resolve_local_handle(const uint8_t (&scene)[16], uint64_t& out, boo
     }
     if (ref != 0) {
         // As the native does (0x594840..0x59484F): ScopeAttacherBase's vtable, then the dtor gives the reference back.
-        const uintptr_t vt = g_base + rrp::kScopeAttacherBaseVtbl;
+        const uintptr_t vt = g_base + addrs().scope_attacher_vtbl;
         std::memcpy(att, &vt, sizeof vt);
-        if (!call_dtor(g_base + rrp::kAttDtor, att)) {
+        if (!call_dtor(g_base + addrs().att_dtor, att)) {
             g_f1_faulted.store(true);
             fault_now = true;
             return rrp::Resolve::Faulted;
@@ -260,7 +344,7 @@ bool body_xf(uint64_t handle, rrp::Xf& xf, bool& fault_now) noexcept {
     const auto ws = world_system();
     const auto pw = ws ? game::fast_ptr(*ws + rrp::kWs_Physics) : std::nullopt;
     const auto vt = pw ? game::fast_ptr(*pw) : std::nullopt;
-    const auto fn = vt ? game::fast_ptr(*vt + rrp::kPhysics_vfTransform) : std::nullopt;
+    const auto fn = vt ? game::fast_ptr(*vt + addrs().physics_vf_transform) : std::nullopt;
     if (!fn || !in_code(*fn)) return false;
     xf = rrp::Xf{};
     alignas(16) uint8_t buf[64] = {};
@@ -276,7 +360,7 @@ bool body_xf(uint64_t handle, rrp::Xf& xf, bool& fault_now) noexcept {
 }
 
 bool main_thread() {
-    const auto id = game::fast<uint32_t>(g_base + rrp::kMainThreadId);
+    const auto id = game::fast<uint32_t>(g_base + addrs().main_thread_id);
     return id && *id == GetCurrentThreadId();
 }
 
@@ -286,7 +370,7 @@ uint32_t next_seq() { return g_seq.fetch_add(1, std::memory_order_relaxed) + 1; 
 // thrower's lock object has a vtable whose lock / unlock entries are the game's code. Checked first, never by SEH.
 bool release_safe(uintptr_t comp) noexcept {
     const auto vt = game::fast<uint64_t>(comp);
-    if (!vt || *vt != g_base + rrp::kClientRemoteCatchVtbl) return false;
+    if (!vt || *vt != g_base + addrs().client_vtbl) return false;
     const auto actor = game::fast_ptr(comp + rrp::kComp_Owner);
     const auto lock = actor ? game::fast_ptr(*actor + rrp::kActor_LockObj) : std::nullopt;
     const auto lvt = lock ? game::fast_ptr(*lock) : std::nullopt;
@@ -343,7 +427,7 @@ void before_apply(ApplyCtx& c, uintptr_t comp, uintptr_t p_slot, uintptr_t p_kin
     rrp::ApplyInputs& in = c.in;
     c.seq = next_seq();
     c.main = main_thread();
-    c.expected_caller = ret == g_base + rrp::kApplyReturn;
+    c.expected_caller = ret == g_base + addrs().apply_return;
     if (const auto actor = game::fast_ptr(comp + rrp::kComp_Owner)) {
         if (const auto k = game::fast<uint32_t>(*actor + rrp::kActor_Key)) c.key = *k;
         if (const auto ctl = game::fast<uint8_t>(*actor + rrp::kActor_Control)) {
@@ -369,7 +453,7 @@ void before_apply(ApplyCtx& c, uintptr_t comp, uintptr_t p_slot, uintptr_t p_kin
                 in.stale_actor = *a;
             }
         }
-        if (const auto s = game::fast<uint8_t>(rrp::slot_state(comp, in.slot))) {
+        if (const auto s = game::fast<uint8_t>(slot_state(comp, in.slot))) {
             c.state_before_ok = true;
             c.state_before = *s;
         }
@@ -401,7 +485,7 @@ void before_apply(ApplyCtx& c, uintptr_t comp, uintptr_t p_slot, uintptr_t p_kin
             c.f3 = kF3Skipped;
         } else if (!release_safe(comp)) {
             c.f3 = kF3Unsafe;
-        } else if (!call_release(g_base + rrp::kRelease, comp, in.slot, rrp::kStaleReason)) {
+        } else if (!call_release(g_base + addrs().release, comp, in.slot, rrp::kStaleReason)) {
             g_release_faulted.store(true);
             c.fault_now = true;
             c.f3 = kF3Faulted;
@@ -441,7 +525,7 @@ void after_apply(const ApplyCtx& c, uintptr_t comp, uintptr_t p_err, uintptr_t p
     std::optional<uint8_t> type_after, state_after;
     if (in.slot_ok && in.slot < rrp::kSlots) {
         type_after = game::fast<uint8_t>(rrp::slot_target(comp, in.slot) + rrp::kSlot_Kind);
-        state_after = game::fast<uint8_t>(rrp::slot_state(comp, in.slot));
+        state_after = game::fast<uint8_t>(slot_state(comp, in.slot));
     }
     g_tally.note_apply(in, c.d, c.write == kWriteOk, c.expected_caller);
     if (c.f3 == kF3Released) rrp::Tally::add(g_tally.stale_released);
@@ -494,7 +578,7 @@ Arg apply_detour(Arg comp, Arg err, Arg p_slot, Arg p_kind, Arg p3, Arg p_target
         // A fault inside one of this module's game calls: a lock may still be held, so this stack does not go into the
         // apply (which locks the same objects again). The 2763 fails as the native code fails it: its error in *err,
         // and 0x592340's return value (the error pointer).
-        const auto code = game::fast<uint32_t>(g_base + rrp::kApplyFailedErr);
+        const auto code = game::fast<uint32_t>(g_base + addrs().apply_failed_err);
         const uint32_t v = code && *code ? *code : rrp::kApplyFailedErrSeen;
         (void)seh_write32(err, v);
         after_apply(c, comp, err, p_speed);
@@ -547,7 +631,7 @@ void before_2471(H2471Ctx& c, uintptr_t pkt) noexcept {
         c.type_ok = true;
         c.type = *t;
     }
-    if (const auto s = game::fast<uint8_t>(rrp::slot_state(c.comp, c.p.slot))) {
+    if (const auto s = game::fast<uint8_t>(slot_state(c.comp, c.p.slot))) {
         c.state_ok = true;
         c.state = *s;
     }
@@ -561,7 +645,7 @@ void after_2471(const H2471Ctx& c) noexcept {
     std::optional<uint8_t> type_after, state_after;
     if (c.comp) {
         type_after = game::fast<uint8_t>(rrp::slot_target(c.comp, c.p.slot) + rrp::kSlot_Kind);
-        state_after = game::fast<uint8_t>(rrp::slot_state(c.comp, c.p.slot));
+        state_after = game::fast<uint8_t>(slot_state(c.comp, c.p.slot));
     }
     p8p::Event e;
     e.qpc_us = p8_now_us();
@@ -608,7 +692,7 @@ void before_srv(SrvCtx& c, uintptr_t ev, uintptr_t holder) noexcept {
     c.actor = actor;
     if (const auto k = game::fast<uint32_t>(actor + rrp::kActor_Key)) c.key = *k;
     uint8_t d[3] = {};
-    if (!seh_copy(data + rrp::kData_Slot, d, sizeof d)) return;
+    if (!seh_copy(data + addrs().data_slot, d, sizeof d)) return;
     c.in.slot = d[0];
     c.in.reason = d[1];
     c.extra = d[2];
@@ -661,11 +745,11 @@ uint8_t send_2471(uintptr_t actor, uint8_t slot, uint8_t reason) noexcept {
         return kWriteUnsafe;
     }
     alignas(16) uint8_t finder[0x20] = {};
-    const uintptr_t vt = g_base + rrp::kToNearVtbl;
+    const uintptr_t vt = g_base + addrs().to_near_vtbl;
     std::memcpy(finder, &vt, sizeof vt);
     finder[rrp::kFinder_Flag] = 1;
     std::memcpy(finder + rrp::kFinder_Actor, &actor, sizeof actor);
-    if (call_writer(g_base + rrp::kWriter, actor, finder, &slot, &reason)) return kWriteOk;
+    if (call_writer(g_base + addrs().writer, actor, finder, &slot, &reason)) return kWriteOk;
     g_writer_faulted.store(true);
     return kWriteFailed;
 }
@@ -727,7 +811,7 @@ struct ActCtx {
 
 void before_act(ActCtx& c, uintptr_t comp) noexcept {
     const auto vt = game::fast<uint64_t>(comp);
-    if (!vt || *vt != g_base + rrp::kServerRemoteCatchVtbl) return;
+    if (!vt || *vt != g_base + addrs().server_vtbl) return;
     c.server = true;
     for (uint8_t i = 0; i < rrp::kSlots; ++i) {
         rrp::ActionSlot& s = c.s[i];
@@ -853,6 +937,7 @@ bool prepare(uintptr_t rva, void* detour, std::span<const uint8_t> head, std::sp
 }
 
 bool install_hooks(bool host) {
+    const Addrs& ad = addrs();
     std::vector<gad::Section> secs;
     if (!p8_exe_sections(g_base, secs)) {
         log::error("RemoteRope: the exe's sections are unreadable; REFUSED, nothing written");
@@ -860,13 +945,13 @@ bool install_hooks(bool host) {
     }
     g_code_n = 0;
     for (const auto& s : secs) {
-        const std::string_view n(s.name);
-        if ((n == ".rsrc" || n == ".xtls") && g_code_n < std::size(g_code)) {
+        // Every executable section: the real code and the protected RWX one, where vtable entries may also be.
+        if ((s.flags & gad::kScnExecute) && g_code_n < std::size(g_code)) {
             g_code[g_code_n++] = {g_base + s.va, g_base + s.va + s.size};
         }
     }
     const auto in_rsrc = [&](uintptr_t rva, size_t n) {
-        return rva >= kCodeBegin && rva + n <= kCodeEnd &&
+        return rva >= kCodeBegin && rva + n <= ad.code_end &&
                gad::in_real_code(secs, static_cast<uint32_t>(rva), static_cast<uint32_t>(n));
     };
     struct Check {
@@ -875,75 +960,80 @@ bool install_hooks(bool host) {
         const char* what;
     };
     std::vector<Check> checks = {
-        {rrp::kApply, rrp::kApplyHead, "RemoteCatchComponent_Apply 0x592340's entry"},
-        {rrp::kApplyCall, rrp::kApplyCallBytes, "its only caller 0xB5BB7B (call 0x592340)"},
-        {rrp::kInfoCopy, rrp::kInfoCopyBytes, "the target block's copy 0x59238F..0x5923B4 (+0x18 = the handle)"},
-        {rrp::kMapSite, rrp::kMapSiteBytes, "the thrower's mapping 0x5947C7..0x59484E (scene id -> handle)"},
-        {rrp::kResolve, rrp::kResolveHead, "ResolveUuidLookup 0x1851010"},
-        {rrp::kAttDtor, rrp::kAttDtorHead, "the attacher dtor 0x1434880"},
-        {rrp::kRelease, rrp::kReleaseHead, "the release request 0x5A7A10"},
-        {rrp::kReleaseThreadCheck, rrp::kReleaseThreadCheckBytes, "its main-thread check 0x5A7A7D"},
-        {rrp::k2471Handler, rrp::k2471HandlerHead, "ReleaseRemoteCatchResultAck::vf2 0xB5BD60's entry"},
-        {rrp::k2471Release, rrp::k2471ReleaseBytes, "its release call 0xB5BF44..0xB5BF61"},
+        {ad.apply, rrp::kApplyHead, "RemoteCatchComponent_Apply 0x592340's entry"},
+        {ad.apply_call, ad.apply_call_bytes, "its only caller 0xB5BB7B (call 0x592340)"},
+        {ad.info_copy, rrp::kInfoCopyBytes, "the target block's copy 0x59238F..0x5923B4 (+0x18 = the handle)"},
+        {ad.map_site, ad.map_site_bytes, "the thrower's mapping 0x5947C7..0x59484E (scene id -> handle)"},
+        {ad.resolve, rrp::kResolveHead, "ResolveUuidLookup 0x1851010"},
+        {ad.att_dtor, rrp::kAttDtorHead, "the attacher dtor 0x1434880"},
+        {ad.release, rrp::kReleaseHead, "the release request 0x5A7A10"},
+        {ad.release_thread_check, ad.release_check_bytes, "its main-thread check 0x5A7A7D"},
+        {ad.h2471, ad.h2471_head, "ReleaseRemoteCatchResultAck::vf2 0xB5BD60's entry"},
+        {ad.h2471_release, ad.h2471_release_bytes, "its release call 0xB5BF44..0xB5BF61"},
     };
     if (host) {
-        checks.push_back({rrp::kSrvRelease, rrp::kSrvReleaseHead, "ServerFrameEventReleaseRemoteCatch::vf1 0x27D9110"});
-        checks.push_back({rrp::kSrvArgs, rrp::kSrvArgsBytes, "its argument reads 0x27D9134..0x27D914B"});
-        checks.push_back({rrp::kWriter, rrp::kWriterHead, "the 2471 writer 0x29688C0"});
-        checks.push_back({rrp::kWriterSite, rrp::kWriterSiteBytes, "0x2903950's ToNear call 0x2903A79..0x2903AB1"});
-        checks.push_back({rrp::kToNearVf1, rrp::kToNearVf1Bytes, "ToNear::vf1 0x2A75860 ([[actor+0x68]+0x1A0])"});
-        checks.push_back({rrp::kTsOwnerCall, rrp::kTsOwnerCallBytes, "0x2BC4F70's owner call 0x2BC4F92 ([ts+8]->vfE8)"});
-        checks.push_back({rrp::kActRelease, rrp::kActReleaseHead, "the remote catch component's vf140 0x1807390"});
-        checks.push_back({rrp::kActDispatch, rrp::kActDispatchBytes,
+        checks.push_back({ad.srv_release, rrp::kSrvReleaseHead, "ServerFrameEventReleaseRemoteCatch::vf1 0x27D9110"});
+        checks.push_back({ad.srv_args, ad.srv_args_bytes, "its argument reads 0x27D9134..0x27D914B"});
+        checks.push_back({ad.writer, rrp::kWriterHead, "the 2471 writer 0x29688C0"});
+        checks.push_back({ad.writer_site, ad.writer_site_bytes, "0x2903950's ToNear call 0x2903A79..0x2903AB1"});
+        checks.push_back({ad.to_near_vf1, rrp::kToNearVf1Bytes, "ToNear::vf1 0x2A75860 ([[actor+0x68]+0x1A0])"});
+        checks.push_back({ad.ts_owner_call, rrp::kTsOwnerCallBytes, "0x2BC4F70's owner call 0x2BC4F92 ([ts+8]->vfE8)"});
+        checks.push_back({ad.act_release, rrp::kActReleaseHead, "the remote catch component's vf140 0x1807390"});
+        checks.push_back({ad.act_dispatch, ad.act_dispatch_bytes,
                           "the action change's vf140 call 0x2328EE4..0x2328F02 ([[actor+0x68]+0x78])"});
         checks.push_back(
-            {rrp::kActClientCall, rrp::kActClientCallBytes, "the client's vf140 call 0x58B3D9 (call 0x1807390)"});
-        checks.push_back({rrp::kActKeepTest, rrp::kActKeepTestBytes, "0x1807390's keep-flag test 0x1807610"});
-        checks.push_back({rrp::kActNotify, rrp::kActNotifyBytes, "0x1807390's target vf148 call 0x1807646"});
-        checks.push_back({rrp::kActSelfRelease, rrp::kActSelfReleaseBytes, "0x1807390's own vf158 call 0x18076DF"});
+            {ad.act_client_call, ad.act_client_call_bytes, "the client's vf140 call 0x58B3D9 (call 0x1807390)"});
+        checks.push_back({ad.act_keep_test, rrp::kActKeepTestBytes, "0x1807390's keep-flag test 0x1807610"});
+        checks.push_back({ad.act_notify, rrp::kActNotifyBytes, "0x1807390's target vf148 call 0x1807646"});
+        checks.push_back({ad.act_self_release, rrp::kActSelfReleaseBytes, "0x1807390's own vf158 call 0x18076DF"});
     }
     for (const Check& c : checks) {
         if (!in_rsrc(c.rva, c.bytes.size()) || !bytes_at(c.rva, c.bytes)) {
-            log::error("RemoteRope: {} (exe+0x{:X}, {} bytes) is not build 2976's; REFUSED, nothing written", c.what,
-                       c.rva, c.bytes.size());
+            log::error("RemoteRope: {} (exe+0x{:X}, {} bytes) is not this build's expected code; REFUSED, nothing written",
+                       c.what, c.rva, c.bytes.size());
             return false;
         }
     }
-    if (!qword_at(rrp::k2471HandlerSlot, g_base + rrp::k2471Handler)) {
-        log::error("RemoteRope: the vtable slot 0x560BA60 does not hold 0xB5BD60; REFUSED, nothing written");
+    if (!qword_at(ad.h2471_slot, g_base + ad.h2471)) {
+        log::error("RemoteRope: the vtable slot exe+0x{:X} does not hold exe+0x{:X}; REFUSED, nothing written", ad.h2471_slot,
+                   ad.h2471);
         return false;
     }
-    if (host && !qword_at(rrp::kSrvReleaseSlot, g_base + rrp::kSrvRelease)) {
-        log::error("RemoteRope: the vtable slot 0x5B1D858 does not hold 0x27D9110; REFUSED, nothing written");
+    if (host && !qword_at(ad.srv_release_slot, g_base + ad.srv_release)) {
+        log::error("RemoteRope: the vtable slot exe+0x{:X} does not hold exe+0x{:X}; REFUSED, nothing written",
+                   ad.srv_release_slot, ad.srv_release);
         return false;
     }
-    if (host && (!qword_at(rrp::kActReleaseSlot, g_base + rrp::kActRelease) ||
-                 !qword_at(rrp::kSrvCompVf158Slot, g_base + rrp::kSlotReset))) {
-        log::error("RemoteRope: ServerRemoteCatchActorComponent's vtable 0x5B1F508 does not hold 0x1807390 (vf140) and "
-                   "0x1807C80 (vf158); REFUSED, nothing written");
+    if (host && (!qword_at(ad.act_release_slot, g_base + ad.act_release) ||
+                 !qword_at(ad.srv_vf158_slot, g_base + ad.slot_reset))) {
+        log::error("RemoteRope: ServerRemoteCatchActorComponent's vtable exe+0x{:X} does not hold exe+0x{:X} (vf140) and "
+                   "exe+0x{:X} (vf158); REFUSED, nothing written",
+                   ad.server_vtbl, ad.act_release, ad.slot_reset);
         return false;
     }
     uint64_t tonear = 0;
-    if (host && (!game::safe_read(g_base + rrp::kToNearVtbl, &tonear, sizeof tonear) || !in_code(tonear) ||
-                 !qword_at(rrp::kToNearVtbl + 8, g_base + rrp::kToNearVf1))) {
-        log::error("RemoteRope: ToNearSendTargetFinder's vtable 0x5B25418 does not point at code / its vf1 is not "
-                   "0x2A75860; REFUSED");
+    if (host && (!game::safe_read(g_base + ad.to_near_vtbl, &tonear, sizeof tonear) || !in_code(tonear) ||
+                 !qword_at(ad.to_near_vtbl + 8, g_base + ad.to_near_vf1))) {
+        log::error("RemoteRope: ToNearSendTargetFinder's vtable exe+0x{:X} does not point at code / its vf1 is not "
+                   "exe+0x{:X}; REFUSED",
+                   ad.to_near_vtbl, ad.to_near_vf1);
         return false;
     }
-    if (!game::fast<uint32_t>(g_base + rrp::kMainThreadId)) {
-        log::error("RemoteRope: the main thread's id 0x6A652D4 is unreadable; REFUSED, nothing written");
+    if (!game::fast<uint32_t>(g_base + ad.main_thread_id)) {
+        log::error("RemoteRope: the main thread's id exe+0x{:X} is unreadable; REFUSED, nothing written",
+                   ad.main_thread_id);
         return false;
     }
 
     std::vector<Prepared> ready;
-    if (!prepare(rrp::kApply, reinterpret_cast<void*>(&apply_detour), rrp::kApplyHead, rrp::kApplyBoundaries,
+    if (!prepare(ad.apply, reinterpret_cast<void*>(&apply_detour), rrp::kApplyHead, rrp::kApplyBoundaries,
                  "RemoteCatchComponent_Apply 0x592340", g_apply_hook, ready) ||
-        !prepare(rrp::k2471Handler, reinterpret_cast<void*>(&h2471_detour), rrp::k2471HandlerHead,
-                 rrp::k2471HandlerBoundaries, "ReleaseRemoteCatchResultAck::vf2 0xB5BD60", g_h2471_hook, ready) ||
-        (host && !prepare(rrp::kSrvRelease, reinterpret_cast<void*>(&srv_detour), rrp::kSrvReleaseHead,
+        !prepare(ad.h2471, reinterpret_cast<void*>(&h2471_detour), ad.h2471_head, ad.h2471_boundaries,
+                 "ReleaseRemoteCatchResultAck::vf2 0xB5BD60", g_h2471_hook, ready) ||
+        (host && !prepare(ad.srv_release, reinterpret_cast<void*>(&srv_detour), rrp::kSrvReleaseHead,
                           rrp::kSrvReleaseBoundaries, "ServerFrameEventReleaseRemoteCatch::vf1 0x27D9110", g_srv_hook,
                           ready)) ||
-        (host && !prepare(rrp::kActRelease, reinterpret_cast<void*>(&act_detour), rrp::kActReleaseHead,
+        (host && !prepare(ad.act_release, reinterpret_cast<void*>(&act_detour), rrp::kActReleaseHead,
                           rrp::kActReleaseBoundaries, "the remote catch component's vf140 0x1807390", g_act_hook,
                           ready))) {
         return false;
@@ -963,12 +1053,14 @@ bool install_hooks(bool host) {
         enabled.push_back(p.slot);
     }
     g_hooks_on.store(true);
-    log::info("RemoteRope: hooked at their entries ({} bytes patched): exe+0x592340 (RemoteCatchComponent_Apply, the "
-              "2763 apply; one caller 0xB5BB7B), exe+0xB5BD60 (the 2471 handler, log only){}; {}",
-              patched,
-              host ? ", exe+0x27D9110 (the server's release frame event), exe+0x1807390 (the remote catch "
-                     "component's vf140: the action change that frees the slot on a launch; the server's component only)"
-                   : "",
+    log::info("RemoteRope: hooked at their entries ({} bytes patched): exe+0x{:X} (RemoteCatchComponent_Apply, the "
+              "2763 apply; one caller exe+0x{:X}), exe+0x{:X} (the 2471 handler, log only){}; {}",
+              patched, ad.apply, ad.apply_call, ad.h2471,
+              host ? std::format(", exe+0x{:X} (the server's release frame event), exe+0x{:X} (the remote catch "
+                                 "component's vf140: the action change that frees the slot on a launch; the server's "
+                                 "component only)",
+                                 ad.srv_release, ad.act_release)
+                   : std::string(),
               mode() == Mode::On
                   ? "remote_rope=1: a remote thrower's tree handle translated, its stale slot released first; the host's "
                     "server sends the 2471 the tree release lacks"
@@ -979,10 +1071,8 @@ bool install_hooks(bool host) {
 // ---------------------------------------------------------------- the module's thread
 
 bool build_ok() {
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;
+    const game::Build b = game::current_build();
+    return g_base == g2976::kImageBase && (b == game::Build::v2976 || b == game::Build::v3527 || b == game::Build::v3576);
 }
 
 std::string b8(uint64_t f) { return rrp::opt8_ok(f) ? std::format("{}", rrp::opt8_val(f)) : std::string("?"); }
@@ -1029,11 +1119,11 @@ FlightRead read_flight(uint32_t key, uint8_t slot) {
     const auto comps = game::read_ptr(*actor + rrp::kActor_Comps);
     const auto comp = comps ? game::read_ptr(*comps + rrp::kComps_RemoteCatch) : std::nullopt;
     if (!comp) return r;
-    if (const auto st = game::read<uint8_t>(rrp::slot_state(*comp, slot))) {
+    if (const auto st = game::read<uint8_t>(slot_state(*comp, slot))) {
         r.state_ok = true;
         r.state = *st;
     }
-    if (const auto f = game::read<float>(rrp::slot_flight(*comp, slot))) {
+    if (const auto f = game::read<float>(slot_flight(*comp, slot))) {
         r.flight_ok = true;
         r.flight = *f;
     }
@@ -1090,7 +1180,7 @@ ClientSlot read_client_slot(uint32_t key, uint8_t slot) {
         r.kind_ok = true;
         r.kind = *k;
     }
-    if (const auto st = game::read<uint8_t>(rrp::slot_state(*comp, slot))) {
+    if (const auto st = game::read<uint8_t>(slot_state(*comp, slot))) {
         r.state_ok = true;
         r.state = *st;
     }
@@ -1359,16 +1449,18 @@ void remote_rope_start(const std::string& raw, bool guest) {
     if (g_started.exchange(true)) return;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (!build_ok()) {
-        log::error("RemoteRope: unsupported game build (not 1.0.0.2976); remote_rope stays off");
+        log::error("RemoteRope: unsupported game build (not 1.0.0.2976, 1.0.0.3527 or 1.0.0.3576); remote_rope stays off");
         return;
     }
     g_guest.store(guest);
     g_mode.store(static_cast<uint8_t>(p.mode), std::memory_order_release);
-    log::info("RemoteRope ON (remote_rope={}, {}): hooks at the entries of RemoteCatchComponent_Apply 0x592340 and the "
-              "2471 handler 0xB5BD60{} once the world is up; {} (docs/research/s25/gancho-cuerda.md)",
-              rrp::mode_name(p.mode), guest ? "guest" : "host",
-              guest ? "" : ", of the server's ServerFrameEventReleaseRemoteCatch::vf1 0x27D9110 and of the remote catch "
-                           "component's vf140 0x1807390 (the action change: the launch)",
+    log::info("RemoteRope ON (remote_rope={}, {}): hooks at the entries of RemoteCatchComponent_Apply exe+0x{:X} and the "
+              "2471 handler exe+0x{:X}{} once the world is up; {} (docs/research/s25/gancho-cuerda.md)",
+              rrp::mode_name(p.mode), guest ? "guest" : "host", addrs().apply, addrs().h2471,
+              guest ? std::string()
+                    : std::format(", of the server's ServerFrameEventReleaseRemoteCatch::vf1 exe+0x{:X} and of the remote "
+                                  "catch component's vf140 exe+0x{:X} (the action change: the launch)",
+                                  addrs().srv_release, addrs().act_release),
               p.mode == Mode::On ? "a remote thrower's tree handle is translated to this PC's and its stale slot "
                                    "released; the host's server sends the release 2471 for trees"
                                  : "every rope computed, logged and counted with native-equivalent reads (the "

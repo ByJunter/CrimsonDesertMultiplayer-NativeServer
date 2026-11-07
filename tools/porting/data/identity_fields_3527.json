@@ -1,0 +1,165 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "status": {
+    "old_number_pointer_offset": "0x70",
+    "number_pointer_offset": "0x90",
+    "name_offset": "0x98",
+    "owner_offset": 8,
+    "server_vtable": "0x5EE7610",
+    "native_constant_store": "0xE483B5F",
+    "mutation": "Change the aligned u64 pointed to by Status+0x90; never overwrite the pointer itself.",
+    "common_wire_unpack": "0x18C7C80",
+    "wire_identity_store": "0x18C7E93"
+  },
+  "unchanged_c2_fields": {
+    "actor_components": "0x68",
+    "status_component_slot": "0x20",
+    "actor_user": "0xA0",
+    "lobby_component_slot": "0x10",
+    "component_owner": "0x08",
+    "lobby_list": "0x18",
+    "list_data": "0x00",
+    "list_count": "0x08",
+    "lobby_entry_stride": "0xD0",
+    "lobby_entry_number": "0x00"
+  },
+  "phases": {
+    "old_entry": "0x2941020",
+    "entry": "0x2BB0D60",
+    "head": "44 89 4c 24 20 4c 89 44 24 18 53 55 56 57 41 54 41 56 41 57 48 81 ec 80 00 00 00 4c 8b fa 4c 8b 71 08 49 8b 7e 78",
+    "function": {
+      "begin": 45813088,
+      "end": 45814327,
+      "unwind": 110431252,
+      "offset": 0
+    },
+    "raw_incoming_to_first14bytes": [
+      {
+        "source": "0x327c55b",
+        "target": "0x2bb0d6c",
+        "kind": "rel32",
+        "source_pdata_function": null
+      },
+      {
+        "source": "0xe48a0c1",
+        "target": "0x2bb0d60",
+        "kind": "rel32",
+        "source_pdata_function": {
+          "begin": 239640480,
+          "end": 239640809,
+          "unwind": 110431204,
+          "offset": 289
+        }
+      }
+    ],
+    "clean_patch_boundary": 5,
+    "raw_chaff_caveat": "Raw0x327C55B encodes jl entry+12, outside the5-byte patch. Source has no .pdata range and is near packed thunk327C530, which jumps away. Actual executable flow from327C55B is unproven; do not claim14-byte raw scan clean.",
+    "caller": "0xE489FA0",
+    "call_site": "0xE48A0C1",
+    "preceding_load_slot_call": "0xE48A09E",
+    "abi": "int* __fastcall(component*,int*,register3,register4); no stack arguments. First two arguments consumed ascomponent andresult. Caller does not resetR8/R9 afterLoadSlot; forwarding old four-register signature is sufficient.",
+    "order": "Validate requested characterNo against user lobby; successful LoadSlot; invoke component phases; return result.",
+    "wrong_previous_candidate": {
+      "entry": "0x2E13FB0",
+      "reason": "Caller0x2E13F40 is named ServerKnowledgeActorComponent vtable0x5EF3048 slot+0x140, unrelated to Status login phases. Its nine-argument ABI must not be attributed to phases."
+    }
+  },
+  "assertions": [
+    {
+      "rva": "0x2bafa40",
+      "bytes": "e9bb408d0b",
+      "meaning": "Named ServerStatus load thunk to0xE483B00"
+    },
+    {
+      "rva": "0xe483b4e",
+      "bytes": "488b879000000048b9ffffffffffffff7f488908",
+      "meaning": "Load u64 pointer atStatus+0x90 and write native characterNo through it"
+    },
+    {
+      "rva": "0x18c7dc8",
+      "bytes": "488d9798000000488bcbe819b0d3ff",
+      "meaning": "Name is separate atStatus+0x98, passed to string reader"
+    },
+    {
+      "rva": "0x18c7e6d",
+      "bytes": "488bb790000000488b0341b808000000",
+      "meaning": "Common Status unpack obtains u64 pointer at+0x90 and reads8 bytes"
+    },
+    {
+      "rva": "0x18c7e8f",
+      "bytes": "488b4548488906",
+      "meaning": "Unpack stores received characterNo through the pointer"
+    },
+    {
+      "rva": "0xcba7a1a",
+      "bytes": "488b41184c8b108b40084c69d8d0000000",
+      "meaning": "Lobby+0x18 list; list+0 data,+8 count, stride0xD0"
+    },
+    {
+      "rva": "0xcba7a33",
+      "bytes": "498b00493902",
+      "meaning": "Lobby duplicate lookup compares entry+0 characterNo"
+    },
+    {
+      "rva": "0xe489fc2",
+      "bytes": "488b7108488b86a00000004c8b5068498b5a10",
+      "meaning": "Login validation follows Status+8 actor,actor+A0 user,user+68 components,table+10 lobby"
+    },
+    {
+      "rva": "0xe489ff5",
+      "bytes": "488b4b18488b018b49084869d1d0000000",
+      "meaning": "Login validation checks same lobby list+18,count8,strideD0"
+    },
+    {
+      "rva": "0xe48a00e",
+      "bytes": "498b0e483908",
+      "meaning": "Login validation compares requested characterNo to entry+0"
+    },
+    {
+      "rva": "0xe489fb2",
+      "bytes": "4883ec20",
+      "meaning": "Caller has only32-byte outgoing shadow space; no stack arguments"
+    },
+    {
+      "rva": "0xe48a09e",
+      "bytes": "e82d6952f3",
+      "meaning": "Caller first invokes LoadSlot0x19B09D0"
+    },
+    {
+      "rva": "0xe48a0be",
+      "bytes": "4889e9e89a6c72f4",
+      "meaning": "On successful LoadSlot, RCX=same Status and call true phases0x2BB0D60"
+    },
+    {
+      "rva": "0x2bb0d60",
+      "bytes": "44894c24204c89442418535556574154415641574881ec800000004c8bfa4c8b7108498b7e78",
+      "meaning": "True phases prologue; result inRDX,actor=[RCX+8],components=[actor+78]"
+    },
+    {
+      "rva": "0x2bb0d86",
+      "bytes": "418bae8000000048c1e504",
+      "meaning": "Component count actor+0x80, stride16"
+    },
+    {
+      "rva": "0x2bb0dc3",
+      "bytes": "ff5068",
+      "meaning": "First phase invokes each component vf+0x68"
+    },
+    {
+      "rva": "0x2bb1162",
+      "bytes": "ff5078",
+      "meaning": "Later phase invokes each component vf+0x78"
+    },
+    {
+      "rva": "0x2bb1222",
+      "bytes": "498bc7",
+      "meaning": "Return original int* result retained inR15"
+    }
+  ],
+  "limitations": [
+    "No runtime mutation or hook activation performed by this audit.",
+    "Source review confirms corrected offset readers and four-register phases hook, but deployment/build readiness belongs to root.",
+    "Global uniqueness scan for3527 remains disabled in current identity profile; this audit does not remap that optional scan."
+  ]
+}

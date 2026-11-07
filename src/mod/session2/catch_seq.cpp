@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/actor_lookup.h"
 #include "mod/game/offsets.h"
@@ -34,8 +35,25 @@ namespace {
 namespace g2976 = game::build_2976;
 using csq::Mode;
 
-// Hooks only at verified function entries inside [0x1000, 0x51EB000) (.rsrc, never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+// Hooks only at verified function entries inside [0x1000, code_end) (.rsrc, never .xtls).
+constexpr uintptr_t kCodeBegin = 0x1000;
+// Where the catch is, per build (catch_seq_logic.h). The entry's 25 bytes and every offset are the same in both.
+struct Addrs {
+    uintptr_t apply, call, ret, check, code_end;
+    std::span<const uint8_t> call_bytes, check_bytes;
+};
+const Addrs kAddrs2976{csq::kApply, csq::kApplyCall, csq::kApplyReturn, csq::kCheckSite, 0x51EB000,
+                       csq::kApplyCallBytes, csq::kCheckSiteBytes};
+const Addrs kAddrs3527{csq::kApply3527, csq::kApplyCall3527, csq::kApplyReturn3527, csq::kCheckSite3527, 0x5595000,
+                       csq::kApplyCallBytes3527, csq::kCheckSiteBytes3527};
+const Addrs kAddrs3576{csq::kApply3576, csq::kApplyCall3576, csq::kApplyReturn3576, csq::kCheckSite3576, 0x5597000,
+                       csq::kApplyCallBytes3576, csq::kCheckSiteBytes3576};
+const Addrs& addrs() noexcept {
+    static const Addrs& a = game::current_build() == game::Build::v3576   ? kAddrs3576
+                            : game::current_build() == game::Build::v3527 ? kAddrs3527
+                                                                          : kAddrs2976;
+    return a;
+}
 constexpr uint32_t kTickMs = 500;
 constexpr uint32_t kWorldTicks = 6;     // the local player read 6 ticks in a row (3 s) before the hook goes in
 constexpr uint64_t kMinuteMs = 60000;
@@ -139,7 +157,7 @@ void observe(uintptr_t comp, uintptr_t p_victim, uintptr_t p_c8, uintptr_t p_seq
     const csq::Decision d = csq::decide(mode(), in);
     bool wrote = false;
     if (d.write) wrote = seh_write8(p_seq, d.value);
-    const bool expected_caller = ret == g_base + csq::kApplyReturn;
+    const bool expected_caller = ret == g_base + addrs().ret;
     g_tally.note(in, d, wrote, expected_caller);
     p8p::Event e;
     e.qpc_us = p8_now_us();
@@ -179,29 +197,32 @@ bool bytes_at(uintptr_t rva, std::span<const uint8_t> expected) {
 }
 
 bool install_hook() {
+    const Addrs& ad = addrs();
     std::vector<gad::Section> secs;
     if (!p8_exe_sections(g_base, secs)) {
-        log::error("CatchSeq: the exe's sections are unreadable; the hook on 0x935DD0 is REFUSED, nothing written");
+        log::error("CatchSeq: the exe's sections are unreadable; the hook on exe+0x{:X} is REFUSED, nothing written",
+                   ad.apply);
         return false;
     }
     const auto in_code = [&](uintptr_t rva, size_t n) {
-        return rva >= kCodeBegin && rva + n <= kCodeEnd &&
+        return rva >= kCodeBegin && rva + n <= ad.code_end &&
                gad::in_real_code(secs, static_cast<uint32_t>(rva), static_cast<uint32_t>(n));
     };
-    if (!in_code(csq::kApply, sizeof csq::kApplyHead) || !bytes_at(csq::kApply, csq::kApplyHead)) {
-        log::error("CatchSeq: 0x935DD0 (exe+0x{:X}) is not build 2976's .rsrc entry 48 89 5C 24 08 48 89 74 24 10 48 89 "
-                   "7C 24 18 4C 89 4C 24 20 55 41 54 41 55; REFUSED, nothing written",
-                   csq::kApply);
+    if (!in_code(ad.apply, sizeof csq::kApplyHead) || !bytes_at(ad.apply, csq::kApplyHead)) {
+        log::error("CatchSeq: exe+0x{:X} is not the expected .rsrc entry 48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 4C "
+                   "89 4C 24 20 55 41 54 41 55; REFUSED, nothing written",
+                   ad.apply);
         return false;
     }
-    if (!in_code(csq::kApplyCall, sizeof csq::kApplyCallBytes) || !bytes_at(csq::kApplyCall, csq::kApplyCallBytes)) {
-        log::error("CatchSeq: its only caller 0xB58943 is not `call 0x935DD0` (E8 88 D4 DD FF); REFUSED, nothing "
-                   "written");
+    if (!in_code(ad.call, ad.call_bytes.size()) || !bytes_at(ad.call, ad.call_bytes)) {
+        log::error("CatchSeq: its only caller exe+0x{:X} is not `call exe+0x{:X}`; REFUSED, nothing written", ad.call,
+                   ad.apply);
         return false;
     }
-    if (!in_code(csq::kCheckSite, sizeof csq::kCheckSiteBytes) || !bytes_at(csq::kCheckSite, csq::kCheckSiteBytes)) {
-        log::error("CatchSeq: the comparison 0x935E43..0x935E9A (argument 17, argument 20, [[[[comp+8]+0x68]+0x40]+0x48]"
-                   "+0x93) is not the one this module mirrors; REFUSED, nothing written");
+    if (!in_code(ad.check, ad.check_bytes.size()) || !bytes_at(ad.check, ad.check_bytes)) {
+        log::error("CatchSeq: the comparison at exe+0x{:X} (argument 17, argument 20, [[[[comp+8]+0x68]+0x40]+0x48]"
+                   "+0x93) is not the one this module mirrors; REFUSED, nothing written",
+                   ad.check);
         return false;
     }
     const auto* b = std::begin(csq::kApplyBoundaries);
@@ -211,31 +232,31 @@ bool install_hook() {
                std::memcmp(o.data(), csq::kApplyHead, o.size()) == 0;
     };
     // P8 S26 (montura-regresion.md section 7.1): refused attempts logged and tried again (bounded), nothing written.
-    auto h = game::prepare_inline(g_base + csq::kApply, reinterpret_cast<void*>(&apply_detour), whole, "CatchSeq",
-                                  "ClientCatch_ApplyResult 0x935DD0");
+    auto h = game::prepare_inline(g_base + ad.apply, reinterpret_cast<void*>(&apply_detour), whole, "CatchSeq",
+                                  "ClientCatch_ApplyResult");
     if (!h) {
-        log::error("CatchSeq: the hook on 0x935DD0 could not be prepared ({}); REFUSED",
+        log::error("CatchSeq: the hook on exe+0x{:X} could not be prepared ({}); REFUSED", ad.apply,
                    game::inline_error_text(h.error()));
         return false;
     }
     const auto& orig = h->original_bytes();
     if (!whole(orig)) {
-        log::error("CatchSeq: the hook on 0x935DD0 would patch {} bytes, not whole verified instructions; REFUSED, "
+        log::error("CatchSeq: the hook on exe+0x{:X} would patch {} bytes, not whole verified instructions; REFUSED, "
                    "nothing written",
-                   orig.size());
+                   ad.apply, orig.size());
         return false;
     }
     const size_t patched = orig.size();  // `orig` belongs to *h: empty once it is moved
     g_hook = std::move(*h);
     if (!g_hook.enable()) {
-        log::error("CatchSeq: the hook on 0x935DD0 could not be enabled; REFUSED");
+        log::error("CatchSeq: the hook on exe+0x{:X} could not be enabled; REFUSED", ad.apply);
         g_hook = {};
         return false;
     }
     g_hook_on.store(true);
-    log::info("CatchSeq: exe+0x935DD0 (ClientCatch_ApplyResult, the 2156 apply; one caller 0xB58943) hooked at its "
+    log::info("CatchSeq: exe+0x{:X} (ClientCatch_ApplyResult, the 2156 apply; one caller exe+0x{:X}) hooked at its "
               "entry ({} bytes patched); {}",
-              patched,
+              ad.apply, ad.call, patched,
               mode() == Mode::On
                   ? "catch_seq=1: a REMOTE grabber's mismatching sequence is replaced by its byte here when the victim "
                     "is controlled here"
@@ -246,10 +267,9 @@ bool install_hook() {
 // ---------------------------------------------------------------- the module's thread
 
 bool build_ok() {
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    return g_base == g2976::kImageBase && game::safe_read(g_base, &dos, sizeof dos) &&
-           game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) && nt.FileHeader.TimeDateStamp == g2976::kPeTimestamp;
+    const game::Build b = game::current_build();
+    return g_base == g2976::kImageBase &&
+           (b == game::Build::v2976 || b == game::Build::v3527 || b == game::Build::v3576);
 }
 
 std::string byte_text(uint64_t v) { return v == kUnread ? std::string("unreadable") : std::format("0x{:02X}", v); }
@@ -277,10 +297,11 @@ void log_event(const p8p::Event& e) {
                     (pend & 2) ? std::format("0x{:02X}", (pend >> 8) & 0xFF) : std::string("unreadable"));
     const uintptr_t ret = static_cast<uintptr_t>(e.v[9]);
     const std::string from =
-        ret == g_base + csq::kApplyReturn
-            ? std::string("from exe+0xB58948 (the 2156 handler)")
-            : (ret >= g_base && ret < g_base + kCodeEnd ? std::format("from exe+0x{:X} (UNEXPECTED caller)", ret - g_base)
-                                                        : std::format("from 0x{:X} (UNEXPECTED caller)", ret));
+        ret == g_base + addrs().ret
+            ? std::format("from exe+0x{:X} (the 2156 handler)", addrs().ret)
+            : (ret >= g_base && ret < g_base + addrs().code_end
+                   ? std::format("from exe+0x{:X} (UNEXPECTED caller)", ret - g_base)
+                   : std::format("from 0x{:X} (UNEXPECTED caller)", ret));
     log::info("CatchSeq [{}] #{} {}: grabber 0x{:08X} ({}) -> victim {} ({}) | c8 {} | packet seq {} | grabber's byte "
               "[[[[comp+8]+0x68]+0x40]+0x48]+0x93 {} | {}{} | {} | {}",
               csq::mode_name(mode()), e.v[11], p8_when(e.qpc_us), e.v[0], control_text(e.v[2], "unreadable"),
@@ -362,13 +383,13 @@ void catch_seq_start(const std::string& raw, bool guest) {
     if (g_started.exchange(true)) return;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     if (!build_ok()) {
-        log::error("CatchSeq: unsupported game build (not 1.0.0.2976); catch_seq stays off");
+        log::error("CatchSeq: unsupported game build (not 1.0.0.2976, 3527 or 3576); catch_seq stays off");
         return;
     }
     g_mode.store(static_cast<uint8_t>(p.mode), std::memory_order_release);
-    log::info("CatchSeq ON (catch_seq={}, host): a hook at the entry of ClientCatch_ApplyResult 0x935DD0 once the world "
+    log::info("CatchSeq ON (catch_seq={}, host): a hook at the entry of ClientCatch_ApplyResult exe+0x{:X} once the world "
               "is up; {}",
-              csq::mode_name(p.mode),
+              csq::mode_name(p.mode), addrs().apply,
               p.mode == Mode::On
                   ? "every grab logged; a remote grabber's sequence byte is replaced by its value here when the victim "
                     "is controlled here (docs/research/s25/finisher-sigilo.md)"

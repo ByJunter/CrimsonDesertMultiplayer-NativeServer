@@ -65,5 +65,12 @@ void guest_seq_present_x_fn(size_t fn, uintptr_t proc) noexcept;
 // guest_seq_play's frame hook (0x8B6144, the main thread, once per frame): m = RAX (this client's M).
 void guest_seq_present_frame(uintptr_t m) noexcept;
 void guest_seq_present_tick() noexcept;  // the diagnostics thread, every 5 s
+// guest_shop_branch (guest_shop_branch.h): the scene `seq`'s processor gets the client vtable back (muted = false) or
+// the mod's table again (true), with the same compare-exchange as R-A; true when it carries the asked table now. Any
+// thread. False: R-A off, the scene unknown or gone, or its vptr is neither table.
+bool guest_seq_present_set_muted(uint64_t seq, bool muted) noexcept;
+// guest_shop_branch: the scene `seq` has started on this client (P1 seen) and its processor's branch table is there
+// ([[[stage+proc]+0x38]+8]: what the branch handler reads, exe+0xBA9DA6, live crash 2026-11-06 when a branch came first).
+bool guest_seq_present_stage_ready(uint64_t seq) noexcept;
 
 }  // namespace cdmp::session2

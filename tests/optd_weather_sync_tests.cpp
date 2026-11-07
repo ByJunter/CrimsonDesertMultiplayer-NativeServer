@@ -1,8 +1,9 @@
-// P8 session 25, weather (docs/research/noche/clima-sincronizar.md §5, "Implementado"): the pure logic of
-// weather_sync (src/mod/session2/weather_sync_logic.h): the field table and its block reads, the state-12 frame
-// byte for byte, sanity, interpolation (tick and receive-time bases, accumulator extrapolation, Raw words), the
-// precipitation command, the gates, the owned-X records, the selftest state machine, the modes and the lock-free
-// double buffer (including two threads).
+// P8 session 25, weather (docs/research/noche/clima-sincronizar.md §5, "Implementado"; build 3549:
+// docs/research/s25/clima-3549.md): the pure logic of weather_sync (src/mod/session2/weather_sync_logic.h): both
+// builds' field tables and their block reads, the state-12 frame byte for byte (wire versions 1 and 2), sanity,
+// interpolation (tick and receive-time bases, accumulator extrapolation, Raw words), the precipitation command, the
+// gates, the owned-X records, the selftest state machine, the modes, the game tables and the lock-free double buffer
+// (including two threads).
 
 #include <atomic>
 #include <cmath>
@@ -32,7 +33,10 @@ int g_failures = 0;
 
 bool near(float a, float b, float eps = 1e-4f) { return std::fabs(a - b) <= eps; }
 
-wsy::Snapshot sample(uint32_t seq, uint64_t tick, float base) {
+const wsy::Layout& L76 = wsy::kLayout2976;
+const wsy::Layout& L49 = wsy::kLayout3549;
+
+wsy::Snapshot sample(const wsy::Layout& L, uint32_t seq, uint64_t tick, float base) {
     wsy::Snapshot s;
     s.seq = seq;
     s.tick = tick;
@@ -40,82 +44,186 @@ wsy::Snapshot sample(uint32_t seq, uint64_t tick, float base) {
     s.pos[0] = 100.0f;
     s.pos[1] = 50.0f;
     s.pos[2] = -200.0f;
-    for (size_t i = 0; i < wsy::kFieldCount; ++i) s.w[i] = wsy::as_word(base * 0.01f + static_cast<float>(i) * 0.001f);
+    for (size_t i = 0; i < L.count(); ++i) s.w[i] = wsy::as_word(base * 0.01f + static_cast<float>(i) * 0.001f);
     return s;
 }
 
-void test_field_table() {
-    static_assert(wsy::kFieldCount == 61);
-    CHECK(wsy::kIdxPrecip == 0 && wsy::kFields[wsy::kIdxPrecip].off == 0x12C);
-    CHECK(wsy::kFields[wsy::kIdxRain].off == 0x16C && wsy::kFields[wsy::kIdxSnow].off == 0x168);
-    CHECK(wsy::kFields[wsy::kIdxCloudBase].block == wsy::Block::B && wsy::kFields[wsy::kIdxCloudBase].off == 0xA8);
-    CHECK(wsy::kFields[wsy::kIdxScrollX].kind == wsy::Kind::Accum && wsy::kFields[wsy::kIdxScrollZ].off == 0x128);
+void test_field_table_2976() {
+    const wsy::Layout& L = L76;
+    CHECK(L.count() == 61 && L.wire_version == 1);
+    CHECK(L.idx_precip == 0 && L[L.idx_precip].off == 0x12C);
+    CHECK(L[L.idx_rain].off == 0x16C && L[L.idx_snow].off == 0x168);
+    CHECK(L[L.idx_cloud_base].block == wsy::Block::B && L[L.idx_cloud_base].off == 0xA8);
+    CHECK(L[L.idx_scroll_x].kind == wsy::Kind::Accum && L[L.idx_scroll_z].off == 0x128);
     // Every B word from +0x64 to +0xF0, in order, no gap; the colours and the seed are Raw.
     size_t b = 0;
-    for (size_t i = 0; i < wsy::kFieldCount; ++i) {
-        if (wsy::kFields[i].block != wsy::Block::B) continue;
-        CHECK(wsy::kFields[i].off == 0x64 + 4 * b);
+    for (size_t i = 0; i < L.count(); ++i) {
+        if (L[i].block != wsy::Block::B) continue;
+        CHECK(L[i].off == 0x64 + 4 * b);
         ++b;
     }
     CHECK(b == 36);
     // Review 4: the seed and the angle are floats held from the newest sample; only the colours are Raw.
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xE8)].kind == wsy::Kind::Hold);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::A, 0x154)].kind == wsy::Kind::Hold);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::B, 0xEC)].kind == wsy::Kind::Raw);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::C, 0x1B4)].kind == wsy::Kind::Raw);
-    CHECK(wsy::kFields[wsy::index_of(wsy::Block::C, 0x178)].kind == wsy::Kind::Unknown);
+    CHECK(L[L.index(wsy::Block::B, 0xE8)].kind == wsy::Kind::Hold);
+    CHECK(L[L.index(wsy::Block::A, 0x154)].kind == wsy::Kind::Hold);
+    CHECK(L[L.index(wsy::Block::B, 0xEC)].kind == wsy::Kind::Raw);
+    CHECK(L[L.index(wsy::Block::C, 0x1B4)].kind == wsy::Kind::Raw);
+    CHECK(L[L.index(wsy::Block::C, 0x178)].kind == wsy::Kind::Unknown);
     // Review 6: B+0x78/7C/80 are of unknown type: logged, never written.
     for (uint16_t off : {uint16_t{0x78}, uint16_t{0x7C}, uint16_t{0x80}}) {
-        const size_t i = wsy::index_of(wsy::Block::B, off);
-        CHECK(wsy::kFields[i].kind == wsy::Kind::Unknown && !wsy::written(i, wsy::kKnownMask) &&
-              !wsy::kept_for_release(i));
+        const size_t i = L.index(wsy::Block::B, off);
+        CHECK(L[i].kind == wsy::Kind::Unknown && !wsy::written(L, i, wsy::kKnownMask) && !wsy::kept_for_release(L, i));
     }
-    CHECK(wsy::written(wsy::index_of(wsy::Block::A, 0x154), wsy::kHasA));
-    CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xEC), wsy::kHasB));
-    CHECK(wsy::index_of(wsy::Block::A, 0x140) == wsy::kFieldCount);  // not in the schema
+    CHECK(wsy::written(L, L.index(wsy::Block::A, 0x154), wsy::kHasA));
+    CHECK(wsy::written(L, L.index(wsy::Block::B, 0xEC), wsy::kHasB));
+    CHECK(L.index(wsy::Block::A, 0x140) == L.count());  // not in the schema
     // The rain/snow outputs are sent but never written; the precipitation command is.
-    CHECK(!wsy::written(wsy::kIdxRain, wsy::kKnownMask) && !wsy::written(wsy::kIdxSnow, wsy::kKnownMask));
-    CHECK(wsy::written(wsy::kIdxPrecip, wsy::kKnownMask));
-    CHECK(!wsy::written(wsy::index_of(wsy::Block::C, 0x178), wsy::kKnownMask));
-    CHECK(!wsy::written(wsy::kIdxPrecip, wsy::kHasB | wsy::kHasX));  // A absent
-    CHECK(wsy::written(wsy::index_of(wsy::Block::B, 0xE8), wsy::kHasB));
+    CHECK(!wsy::written(L, L.idx_rain, wsy::kKnownMask) && !wsy::written(L, L.idx_snow, wsy::kKnownMask));
+    CHECK(wsy::written(L, L.idx_precip, wsy::kKnownMask));
+    CHECK(!wsy::written(L, L.index(wsy::Block::C, 0x178), wsy::kKnownMask));
+    CHECK(!wsy::written(L, L.idx_precip, wsy::kHasB | wsy::kHasX));  // A absent
+    CHECK(wsy::written(L, L.index(wsy::Block::B, 0xE8), wsy::kHasB));
+    CHECK(!wsy::written(L, L.count(), wsy::kKnownMask) && !wsy::kept_for_release(L, L.count()));  // past the table
+    // The selftest's A words and the local sample stay 2976's.
+    const auto ra = wsy::restore_a(L);
+    CHECK(ra[0] == 0x12C && ra[1] == 0x160 && ra[2] == 0x164 && ra[3] == 0x168 && ra[4] == 0x16C);
+    CHECK(L.a_temp_sample == 0x198);
 }
 
-void test_extract() {
-    uint8_t a[wsy::kReadA.size], b[wsy::kReadB.size], c[wsy::kReadC.size], x[wsy::kReadX.size];
-    for (size_t i = 0; i < sizeof a; ++i) a[i] = static_cast<uint8_t>(i);
-    for (size_t i = 0; i < sizeof b; ++i) b[i] = static_cast<uint8_t>(0x80 + i);
-    for (size_t i = 0; i < sizeof c; ++i) c[i] = static_cast<uint8_t>(0x40 + i);
+// Build 3549: the names are the game's reflected properties (clima-3549.md §3).
+void test_field_table_3549() {
+    const wsy::Layout& L = L49;
+    CHECK(L.count() == 69 && L.wire_version == 2);
+    const auto at = [&](wsy::Block b, uint16_t off) { return L.index(b, off); };
+    // A: the old schema up to windDegree, then the new oceanWindDegree, altitudeWindRatio 4 bytes later, the outputs
+    // 4 bytes later and the wind direction 8 bytes later than 2976's.
+    CHECK(L.idx_precip == 0 && L[0].off == 0x12C);
+    CHECK(L[at(wsy::Block::A, 0x154)].kind == wsy::Kind::Hold && std::strcmp(L[at(wsy::Block::A, 0x154)].name, "windDegree") == 0);
+    CHECK(L[at(wsy::Block::A, 0x158)].kind == wsy::Kind::Hold &&
+          std::strcmp(L[at(wsy::Block::A, 0x158)].name, "oceanWindDegree") == 0);
+    CHECK(std::strcmp(L[at(wsy::Block::A, 0x15C)].name, "altitudeWindRatio") == 0);
+    CHECK(L[L.idx_rain].off == 0x170 && L[L.idx_snow].off == 0x16C && L.idx_snow == 14 && L.idx_rain == 15);
+    CHECK(L[at(wsy::Block::A, 0x164)].kind == wsy::Kind::Derived && L[at(wsy::Block::A, 0x168)].kind == wsy::Kind::Derived);
+    CHECK(L[at(wsy::Block::A, 0x198)].kind == wsy::Kind::Lerp && L[at(wsy::Block::A, 0x19C)].kind == wsy::Kind::Lerp);
+    CHECK(at(wsy::Block::A, 0x140) == L.count() && at(wsy::Block::A, 0x160) == L.count());  // not in the vector
+    // B: the new colour +0x30, then +0x64..+0xF4 with no gap; 4 mie floats, cloud fields 4 bytes later than 2976's.
+    CHECK(L[at(wsy::Block::B, 0x30)].kind == wsy::Kind::Raw);
+    size_t b = 0;
+    for (size_t i = at(wsy::Block::B, 0x64); i < L.count() && L[i].block == wsy::Block::B; ++i) {
+        CHECK(L[i].off == 0x64 + 4 * b);
+        ++b;
+    }
+    CHECK(b == 37);
+    CHECK(L[L.idx_cloud_base].off == 0xAC && std::strcmp(L[L.idx_cloud_base].name, "cloudBaseDensity") == 0);
+    CHECK(std::strcmp(L[at(wsy::Block::B, 0xB8)].name, "cloudScrollMultiplier") == 0);
+    CHECK(std::strcmp(L[at(wsy::Block::B, 0xBC)].name, "cloudAltitude") == 0);
+    CHECK(L[at(wsy::Block::B, 0xEC)].kind == wsy::Kind::Hold && std::strcmp(L[at(wsy::Block::B, 0xEC)].name, "cloudSeed") == 0);
+    CHECK(L[at(wsy::Block::B, 0xF0)].kind == wsy::Kind::Raw && L[at(wsy::Block::B, 0xF4)].kind == wsy::Kind::Raw);
+    for (uint16_t off : {uint16_t{0x78}, uint16_t{0x7C}, uint16_t{0x80}}) {
+        const size_t i = at(wsy::Block::B, off);
+        CHECK(L[i].kind == wsy::Kind::Unknown && !wsy::written(L, i, wsy::kKnownMask) && !wsy::kept_for_release(L, i));
+    }
+    // C: 2976's minus 0x108.
+    const uint16_t c76[] = {0x178, 0x1B0, 0x1B4, 0x1B8, 0x1D4, 0x1E0};
+    for (uint16_t off : c76) {
+        const size_t i76 = L76.index(wsy::Block::C, off), i49 = at(wsy::Block::C, static_cast<uint16_t>(off - 0x108));
+        CHECK(i49 < L.count() && L[i49].kind == L76[i76].kind);
+    }
+    // X: the 2976 scroll pair moved to +0x13C/+0x140; the new accumulators and the turning angle.
+    CHECK(L[L.idx_scroll_x].off == 0x13C && L[L.idx_scroll_z].off == 0x140);
+    for (uint16_t off : {uint16_t{0x13C}, uint16_t{0x140}, uint16_t{0x154}, uint16_t{0x158}, uint16_t{0x15C}, uint16_t{0x160}}) {
+        CHECK(L[at(wsy::Block::X, off)].kind == wsy::Kind::Accum);
+        CHECK(wsy::written(L, at(wsy::Block::X, off), wsy::kHasX) && !wsy::kept_for_release(L, at(wsy::Block::X, off)));
+    }
+    CHECK(L[at(wsy::Block::X, 0x14C)].kind == wsy::Kind::Hold && !wsy::kept_for_release(L, at(wsy::Block::X, 0x14C)));
+    CHECK(at(wsy::Block::X, 0x144) == L.count() && at(wsy::Block::X, 0x148) == L.count());  // recomputed by the game
+    // The selftest's A words and the local sample.
+    const auto ra = wsy::restore_a(L);
+    CHECK(ra[0] == 0x12C && ra[1] == 0x164 && ra[2] == 0x168 && ra[3] == 0x16C && ra[4] == 0x170);
+    CHECK(L.a_temp_sample == 0x1A0);
+    // Every word the guest may write is inside one guarded block read.
+    CHECK(wsy::fields_inside_ranges(L) && wsy::well_formed(L));
+    CHECK(L.read_a.off == 0x12C && L.read_a.size == 0x74 && L.read_b.off == 0x30 && L.read_b.size == 0xC8 &&
+          L.read_c.off == 0x70 && L.read_c.size == 0x6C && L.read_x.off == 0x13C && L.read_x.size == 0x28);
+}
+
+// The exe tables: what the hook and the reader use (clima-3549.md §2 for 3549).
+void test_game_tables() {
+    const wsy::GameAddrs& g = wsy::kGame3549;
+    CHECK(g.module_slot == 0x70D9FC0 && g.module_scene == 0x60 && g.scene_weather == 0xF70 && g.getter == 0x7AA9B0);
+    CHECK(g.client_slot == 0x71BDEF8 && g.client_hop1 == 0x48 && g.client_hop2 == 0x38);
+    CHECK(g.vt_weather_system == 0x611E330 && g.x_viewer == 0x31 && g.x_holder == 0x60 && g.x_wc_count == 0x88);
+    CHECK(g.holder_a == 0x20 && g.holder_b == 0x28 && g.holder_c == 0x30);
+    CHECK(g.update == 0x40C2580 && g.update_head.size() == 20 && g.update_call == 0x3DF5CB0);
+    CHECK(g.clock_base == 0x70D9E60 && g.clock_frac == 0x70D9E70 && g.clock_bias == 0x71BE198);
+    CHECK(g.update >= g.code_begin && g.update + g.update_head.size() <= g.code_end);
+    // The call at the end of update_call_bytes reaches the update: E8 rel32 from its own end.
+    const auto& cb = g.update_call_bytes;
+    CHECK(cb.size() == 12 && cb[7] == 0xE8);
+    const int32_t rel = static_cast<int32_t>(static_cast<uint32_t>(cb[8]) | (static_cast<uint32_t>(cb[9]) << 8) |
+                                             (static_cast<uint32_t>(cb[10]) << 16) | (static_cast<uint32_t>(cb[11]) << 24));
+    CHECK(g.update_call + cb.size() + static_cast<int64_t>(rel) == g.update);
+    const auto& c76 = wsy::kGame2976.update_call_bytes;
+    const int32_t rel76 = static_cast<int32_t>(static_cast<uint32_t>(c76[1]) | (static_cast<uint32_t>(c76[2]) << 8) |
+                                               (static_cast<uint32_t>(c76[3]) << 16) | (static_cast<uint32_t>(c76[4]) << 24));
+    CHECK(wsy::kGame2976.update_call + 5 + static_cast<int64_t>(rel76) == wsy::kGame2976.update);
+    // The relocated prologue: whole verified instructions only, never a cut one, never other bytes.
+    const std::vector<uint8_t> head(g.update_head.begin(), g.update_head.end());
+    for (size_t n = 0; n <= head.size(); ++n) {
+        const std::vector<uint8_t> part(head.begin(), head.begin() + static_cast<std::ptrdiff_t>(n));
+        const bool whole = n == 5 || n == 6 || n == 7 || n == 9 || n == 11 || n == 13 || n == 20;
+        CHECK(wsy::whole_head(g, part) == whole);
+    }
+    std::vector<uint8_t> five(head.begin(), head.begin() + 5);
+    five[4] = 0x90;
+    CHECK(!wsy::whole_head(g, five));
+    const std::vector<uint8_t> h76(wsy::kGame2976.update_head.begin(), wsy::kGame2976.update_head.end());
+    CHECK(wsy::whole_head(wsy::kGame2976, std::vector<uint8_t>(h76.begin(), h76.begin() + 5)));
+    CHECK(!wsy::whole_head(wsy::kGame2976, std::vector<uint8_t>(h76.begin(), h76.begin() + 9)));
+    CHECK(wsy::whole_head(wsy::kGame2976, h76));
+}
+
+void test_extract(const wsy::Layout& L) {
+    uint8_t a[wsy::kMaxRead] = {}, b[wsy::kMaxRead] = {}, c[wsy::kMaxRead] = {}, x[wsy::kMaxRead] = {};
+    for (size_t i = 0; i < L.read_a.size; ++i) a[i] = static_cast<uint8_t>(i);
+    for (size_t i = 0; i < L.read_b.size; ++i) b[i] = static_cast<uint8_t>(0x80 + i);
+    for (size_t i = 0; i < L.read_c.size; ++i) c[i] = static_cast<uint8_t>(0x40 + i);
     const float scroll[2] = {123.5f, -7.25f};
-    std::memcpy(x, scroll, sizeof x);
-    uint32_t w[wsy::kFieldCount];
-    wsy::extract(a, b, c, x, w);
-    // A+0x12C is the first 4 bytes of the A copy; A+0x16C is 0x40 further.
-    CHECK(w[wsy::kIdxPrecip] == 0x03020100u);
-    CHECK(w[wsy::kIdxRain] == 0x43424140u);
-    // B+0x64 = first word of the B copy; B+0xF0 its last.
-    CHECK(w[wsy::index_of(wsy::Block::B, 0x64)] == 0x83828180u);
-    const size_t last_b = wsy::index_of(wsy::Block::B, 0xF0);
-    uint32_t expect = 0;
-    std::memcpy(&expect, b + (0xF0 - 0x64), 4);
-    CHECK(w[last_b] == expect);
-    CHECK(w[wsy::index_of(wsy::Block::C, 0x178)] == 0x43424140u);
-    CHECK(near(wsy::as_float(w[wsy::kIdxScrollX]), 123.5f) && near(wsy::as_float(w[wsy::kIdxScrollZ]), -7.25f));
+    std::memcpy(x + (L[L.idx_scroll_x].off - L.read_x.off), scroll, sizeof scroll);
+    uint32_t w[wsy::kMaxFields];
+    wsy::extract(L, a, b, c, x, w);
+    const auto word_at = [](const uint8_t* blk, size_t o) {
+        uint32_t v = 0;
+        std::memcpy(&v, blk + o, 4);
+        return v;
+    };
+    // A+0x12C is the first 4 bytes of the A copy; the rain word wherever it sits.
+    CHECK(w[L.idx_precip] == 0x03020100u);
+    CHECK(w[L.idx_rain] == word_at(a, L[L.idx_rain].off - L.read_a.off));
+    for (size_t i = 0; i < L.count(); ++i) {
+        const wsy::Field& f = L[i];
+        const uint8_t* src = f.block == wsy::Block::A ? a : f.block == wsy::Block::B ? b : f.block == wsy::Block::C ? c : x;
+        CHECK(w[i] == word_at(src, f.off - L.read_range(f.block).off));
+    }
+    for (size_t i = L.count(); i < wsy::kMaxFields; ++i) CHECK(w[i] == 0);
+    CHECK(near(wsy::as_float(w[L.idx_scroll_x]), 123.5f) && near(wsy::as_float(w[L.idx_scroll_z]), -7.25f));
     // A missing block leaves zeros.
-    wsy::extract(a, nullptr, c, x, w);
-    CHECK(w[wsy::index_of(wsy::Block::B, 0x64)] == 0 && w[wsy::kIdxPrecip] == 0x03020100u);
+    wsy::extract(L, a, nullptr, c, x, w);
+    CHECK(w[L.index(wsy::Block::B, 0x64)] == 0 && w[L.idx_precip] == 0x03020100u);
 }
 
-void test_frame_bytes() {
+void test_frame_bytes_2976() {
+    const wsy::Layout& L = L76;
     wsy::Snapshot s;
     s.seq = 0x01020304;
     s.tick = 0x1122334455667788ull;
     s.mask = wsy::kHasA | wsy::kHasB | wsy::kHasX | wsy::kHasPos;
-    s.pos[0] = 1.0f;  // 0x3F800000
+    s.pos[0] = 1.0f;   // 0x3F800000
     s.pos[1] = -2.0f;  // 0xC0000000
-    s.pos[2] = 0.5f;  // 0x3F000000
-    for (size_t i = 0; i < wsy::kFieldCount; ++i) s.w[i] = 0xA0000000u + static_cast<uint32_t>(i);
-    const auto f = wsy::frame(s);
+    s.pos[2] = 0.5f;   // 0x3F000000
+    for (size_t i = 0; i < L.count(); ++i) s.w[i] = 0xA0000000u + static_cast<uint32_t>(i);
+    const wsy::Frame fr = wsy::frame(L, s);
+    const auto f = fr.bytes();
     CHECK(f.size() == 277);
     // u16 opcode 1 | i8 -1 | u16 272
     CHECK(f[0] == 0x01 && f[1] == 0x00 && f[2] == 0xFF && f[3] == 0x10 && f[4] == 0x01);
@@ -130,7 +238,7 @@ void test_frame_bytes() {
     CHECK(f[276] == 0xA0 && f[273] == 60);                                    // word 60
     // The tunnel takes it as a whole packet of opcode 1 (troc_frame.h kControlOpcode) in ToGuestClient batches.
     const auto v = troc::parse(f);
-    CHECK(v && v->opcode == troc::kControlOpcode && v->slot == -1 && v->payload.size() == wsy::kPayloadSize);
+    CHECK(v && v->opcode == troc::kControlOpcode && v->slot == -1 && v->payload.size() == wsy::payload_size(L));
     CHECK(troc::parse_wire(f, troc::Dir::ToGuestClient).has_value());
     static_assert(wsy::kControlWeather != troc::kControlHostReady && wsy::kControlWeather != troc::kControlHostDead &&
                   wsy::kControlWeather != troc::kControlHostCharacter);
@@ -138,159 +246,215 @@ void test_frame_bytes() {
     // Caps 0x04: neither the compression flag nor phase B's own-save flag (0x02, main worktree).
     static_assert(wsy::kCapsWeatherSync != troc::kCapsCompressed && wsy::kCapsWeatherSync != 0x02);
     // Round trip.
-    const auto d = wsy::decode(f);
+    const auto d = wsy::decode(L, f);
     CHECK(d && d->seq == s.seq && d->tick == s.tick && d->mask == s.mask && near(d->pos[1], -2.0f));
     CHECK(d && std::memcmp(d->w, s.w, sizeof s.w) == 0);
     // Exactly this form only.
-    auto bad = f;
+    std::vector<uint8_t> bad(f.begin(), f.end());
     bad[5] = 5;  // another state
-    CHECK(!wsy::is_frame(bad) && !wsy::decode(bad));
-    bad = f;
+    CHECK(!wsy::is_frame(L, bad) && !wsy::decode(L, bad));
+    bad.assign(f.begin(), f.end());
     bad[6] = 2;  // another version: still the frame (taken out), not decoded
-    CHECK(wsy::is_frame(bad) && !wsy::decode(bad));
-    bad = f;
+    CHECK(wsy::is_frame(L, bad) && !wsy::decode(L, bad));
+    bad.assign(f.begin(), f.end());
     bad[8] = 0x01;  // unknown mask bit 0x100
-    CHECK(!wsy::decode(bad));
+    CHECK(!wsy::decode(L, bad));
     std::vector<uint8_t> shorter(f.begin(), f.end() - 1);
     shorter[3] = 0x0F;
-    CHECK(!wsy::is_frame(shorter));
-    bad = f;
+    CHECK(!wsy::is_frame(L, shorter));
+    bad.assign(f.begin(), f.end());
     bad[2] = 0x00;  // slot 0
-    CHECK(!wsy::is_frame(bad));
+    CHECK(!wsy::is_frame(L, bad));
 }
 
-void test_sanity() {
-    wsy::Snapshot s = sample(1, 1000, 10.0f);
-    CHECK(wsy::check(s).ok() && wsy::applicable(s));
-    s.w[wsy::kIdxCloud] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
-    CHECK(wsy::check(s).nonfinite == 1 && !wsy::applicable(s));
-    s = sample(1, 1000, 10.0f);
-    s.w[wsy::index_of(wsy::Block::B, 0xA8)] = wsy::as_word(3.0e8f);
-    CHECK(wsy::check(s).huge == 1 && !wsy::check(s).ok());
-    // A colour word that is a NaN as a float is fine (Raw is not checked), nor are words of unknown type.
-    s = sample(1, 1000, 10.0f);
-    s.w[wsy::index_of(wsy::Block::B, 0xEC)] = 0xFFFFFFFFu;
-    s.w[wsy::index_of(wsy::Block::C, 0x178)] = 0xFFFFFFFFu;
-    s.w[wsy::index_of(wsy::Block::B, 0x7C)] = 0xFFFFFFFFu;
-    CHECK(wsy::check(s).ok());
+void test_frame_bytes_3549() {
+    const wsy::Layout& L = L49;
+    wsy::Snapshot s = sample(L, 0x0A0B0C0D, 0x0102030405060708ull, 5.0f);
+    for (size_t i = 0; i < L.count(); ++i) s.w[i] = 0xB0000000u + static_cast<uint32_t>(i);
+    const wsy::Frame fr = wsy::frame(L, s);
+    const auto f = fr.bytes();
+    // u16 opcode 1 | i8 -1 | u16 304 | u8 12 | u8 2 | ... | 69 words
+    CHECK(f.size() == 309 && wsy::frame_size(L) == 309 && wsy::payload_size(L) == 304);
+    CHECK(f[0] == 0x01 && f[1] == 0x00 && f[2] == 0xFF && f[3] == 0x30 && f[4] == 0x01);
+    CHECK(f[5] == 12 && f[6] == 2 && f[7] == 0x1F && f[8] == 0x00);
+    CHECK(f[33] == 0x00 && f[36] == 0xB0);                   // word 0
+    CHECK(f[33 + 4 * 68] == 68 && f[33 + 4 * 68 + 3] == 0xB0);  // word 68, the last
+    const auto v = troc::parse(f);
+    CHECK(v && v->opcode == troc::kControlOpcode && v->slot == -1 && v->payload.size() == 304);
+    CHECK(troc::parse_wire(f, troc::Dir::ToGuestClient).has_value());
+    const auto d = wsy::decode(L, f);
+    CHECK(d && d->seq == s.seq && d->tick == s.tick && d->mask == s.mask && std::memcmp(d->w, s.w, sizeof s.w) == 0);
+    // The two builds never take each other's frames: another size is not this layout's frame at all, and a frame of
+    // the right size with the other version is taken out but not decoded.
+    CHECK(!wsy::is_frame(L76, f) && !wsy::decode(L76, f));
+    const wsy::Frame old = wsy::frame(L76, sample(L76, 1, 1000, 1.0f));
+    CHECK(!wsy::is_frame(L, old.bytes()) && !wsy::decode(L, old.bytes()));
+    std::vector<uint8_t> v1(f.begin(), f.end());
+    v1[6] = 1;
+    CHECK(wsy::is_frame(L, v1) && !wsy::decode(L, v1));
+}
+
+void test_sanity(const wsy::Layout& L) {
+    wsy::Snapshot s = sample(L, 1, 1000, 10.0f);
+    CHECK(wsy::check(L, s).ok() && wsy::applicable(L, s));
+    s.w[L.idx_cloud] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
+    CHECK(wsy::check(L, s).nonfinite == 1 && !wsy::applicable(L, s));
+    s = sample(L, 1, 1000, 10.0f);
+    s.w[L.idx_cloud_base] = wsy::as_word(3.0e8f);
+    CHECK(wsy::check(L, s).huge == 1 && !wsy::check(L, s).ok());
+    // Colour words that are NaNs as floats are fine (Raw is not checked), nor are words of unknown type.
+    s = sample(L, 1, 1000, 10.0f);
+    for (size_t i = 0; i < L.count(); ++i) {
+        if (L[i].kind == wsy::Kind::Raw || L[i].kind == wsy::Kind::Unknown) s.w[i] = 0xFFFFFFFFu;
+    }
+    CHECK(wsy::check(L, s).ok());
     // Review 4: the Hold floats are checked.
-    s.w[wsy::index_of(wsy::Block::A, 0x154)] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
-    CHECK(!wsy::check(s).ok() && wsy::check(s).first_bad == static_cast<int>(wsy::index_of(wsy::Block::A, 0x154)));
-    s = sample(1, 1000, 10.0f);
-    s.w[wsy::index_of(wsy::Block::B, 0xE8)] = wsy::as_word(5.0e7f);
-    CHECK(wsy::check(s).huge == 1 && std::strcmp(wsy::field_name(wsy::check(s).first_bad), "cloudSeed") == 0);
+    const size_t deg = L.index(wsy::Block::A, 0x154);
+    s.w[deg] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
+    CHECK(!wsy::check(L, s).ok() && wsy::check(L, s).first_bad == static_cast<int>(deg));
+    s = sample(L, 1, 1000, 10.0f);
+    const size_t seed = L.index(wsy::Block::B, L.probe.seed);
+    s.w[seed] = wsy::as_word(5.0e7f);
+    CHECK(wsy::check(L, s).huge == 1 && std::strcmp(wsy::field_name(L, wsy::check(L, s).first_bad), "cloudSeed") == 0);
     // Review 8: +-FLT_MAX ("not set") passes and is counted apart.
-    s = sample(1, 1000, 10.0f);
-    s.w[wsy::kIdxCloudBase] = wsy::kFltMaxBits;
-    s.w[wsy::index_of(wsy::Block::C, 0x1B0)] = wsy::kNegFltMaxBits;
-    CHECK(wsy::check(s).ok() && wsy::check(s).unset == 2 && wsy::check(s).huge == 0 && wsy::applicable(s));
-    CHECK(wsy::check(s).first_bad == -1 && std::strcmp(wsy::field_name(-1), "-") == 0);
+    s = sample(L, 1, 1000, 10.0f);
+    s.w[L.idx_cloud_base] = wsy::kFltMaxBits;
+    s.w[L.index(wsy::Block::C, L.probe.c[0])] = wsy::kNegFltMaxBits;
+    CHECK(wsy::check(L, s).ok() && wsy::check(L, s).unset == 2 && wsy::check(L, s).huge == 0 && wsy::applicable(L, s));
+    CHECK(wsy::check(L, s).first_bad == -1 && std::strcmp(wsy::field_name(L, -1), "-") == 0);
     // Out of [0, 1] is counted, not fatal.
-    s.w[wsy::kIdxPrecip] = wsy::as_word(1.5f);
-    CHECK(wsy::check(s).outside_unit == 1 && wsy::check(s).ok());
+    s.w[L.idx_precip] = wsy::as_word(1.5f);
+    CHECK(wsy::check(L, s).outside_unit == 1 && wsy::check(L, s).ok());
     // A block that is absent is not looked at; A, B and X are needed to apply.
-    s = sample(1, 1000, 10.0f);
+    s = sample(L, 1, 1000, 10.0f);
     s.mask = wsy::kHasB | wsy::kHasX;
-    s.w[wsy::kIdxCloud] = wsy::as_word(std::numeric_limits<float>::infinity());
-    CHECK(wsy::check(s).ok() && !wsy::applicable(s));
+    s.w[L.idx_cloud] = wsy::as_word(std::numeric_limits<float>::infinity());
+    CHECK(wsy::check(L, s).ok() && !wsy::applicable(L, s));
     s.mask = wsy::kHasA | wsy::kHasB | wsy::kHasX;  // no C: still applicable
-    s.w[wsy::kIdxCloud] = wsy::as_word(0.5f);
-    CHECK(wsy::applicable(s));
+    s.w[L.idx_cloud] = wsy::as_word(0.5f);
+    CHECK(wsy::applicable(L, s));
     // A bad position.
     s.mask |= wsy::kHasPos;
     s.pos[0] = std::numeric_limits<float>::infinity();
-    CHECK(!wsy::check(s).ok() && std::strcmp(wsy::field_name(wsy::check(s).first_bad), "position") == 0);
+    CHECK(!wsy::check(L, s).ok() && std::strcmp(wsy::field_name(L, wsy::check(L, s).first_bad), "position") == 0);
+    // An accumulator of X is checked too (3549 has five).
+    s = sample(L, 1, 1000, 10.0f);
+    s.w[L.idx_scroll_z] = wsy::as_word(std::numeric_limits<float>::infinity());
+    CHECK(!wsy::check(L, s).ok());
 }
 
-void test_blend() {
-    wsy::Timed prev{sample(1, 10000, 0.0f), 50000};
-    wsy::Timed cur{sample(2, 10200, 0.0f), 50210};
-    // Lerp field: cloudiness 0.2 -> 0.4; Raw: the seed differs; Accum: scroll 100 -> 102.
-    prev.s.w[wsy::kIdxCloud] = wsy::as_word(0.2f);
-    cur.s.w[wsy::kIdxCloud] = wsy::as_word(0.4f);
-    const size_t seed = wsy::index_of(wsy::Block::B, 0xE8);
+void test_blend(const wsy::Layout& L) {
+    wsy::Timed prev{sample(L, 1, 10000, 0.0f), 50000};
+    wsy::Timed cur{sample(L, 2, 10200, 0.0f), 50210};
+    // Lerp field: cloudiness 0.2 -> 0.4; Hold: the seed differs; Accum: scroll 100 -> 102.
+    prev.s.w[L.idx_cloud] = wsy::as_word(0.2f);
+    cur.s.w[L.idx_cloud] = wsy::as_word(0.4f);
+    const size_t seed = L.index(wsy::Block::B, L.probe.seed);
     prev.s.w[seed] = 0x11111111u;
     cur.s.w[seed] = 0x22222222u;
-    prev.s.w[wsy::kIdxScrollX] = wsy::as_word(100.0f);
-    cur.s.w[wsy::kIdxScrollX] = wsy::as_word(102.0f);
-    uint32_t out[wsy::kFieldCount];
+    prev.s.w[L.idx_scroll_x] = wsy::as_word(100.0f);
+    cur.s.w[L.idx_scroll_x] = wsy::as_word(102.0f);
+    uint32_t out[wsy::kMaxFields];
     // now = cur's arrival + 200 ms: host now ~ 10400, render 10100 -> t = 0.5.
-    wsy::Blend b = wsy::blend(&prev, cur, 50410, out);
+    wsy::Blend b = wsy::blend(L, &prev, cur, 50410, out);
     CHECK(b.blended && !b.extrapolated && near(b.t, 0.5f));
-    CHECK(near(wsy::as_float(out[wsy::kIdxCloud]), 0.3f));
-    CHECK(out[seed] == 0x22222222u);  // Raw: the newest
-    CHECK(near(wsy::as_float(out[wsy::kIdxScrollX]), 101.0f));
+    CHECK(near(wsy::as_float(out[L.idx_cloud]), 0.3f));
+    CHECK(out[seed] == 0x22222222u);  // Hold: the newest
+    CHECK(near(wsy::as_float(out[L.idx_scroll_x]), 101.0f));
     // Right at cur's arrival: render 9900 -> before prev: t = 0.
-    b = wsy::blend(&prev, cur, 50210, out);
-    CHECK(b.blended && near(b.t, 0.0f) && near(wsy::as_float(out[wsy::kIdxCloud]), 0.2f));
+    b = wsy::blend(L, &prev, cur, 50210, out);
+    CHECK(b.blended && near(b.t, 0.0f) && near(wsy::as_float(out[L.idx_cloud]), 0.2f));
     // Late: 900 ms after cur arrived -> render 10800, 600 ms past cur: Lerp holds cur, Accum goes on (slope 10/s).
-    b = wsy::blend(&prev, cur, 51110, out);
-    CHECK(b.extrapolated && near(wsy::as_float(out[wsy::kIdxCloud]), 0.4f));
-    CHECK(near(wsy::as_float(out[wsy::kIdxScrollX]), 108.0f, 1e-3f));
+    b = wsy::blend(L, &prev, cur, 51110, out);
+    CHECK(b.extrapolated && near(wsy::as_float(out[L.idx_cloud]), 0.4f));
+    CHECK(near(wsy::as_float(out[L.idx_scroll_x]), 108.0f, 1e-3f));
     // Very late: extrapolation capped at 1000 ms past cur.
-    b = wsy::blend(&prev, cur, 60000, out);
-    CHECK(near(wsy::as_float(out[wsy::kIdxScrollX]), 112.0f, 1e-3f));
+    b = wsy::blend(L, &prev, cur, 60000, out);
+    CHECK(near(wsy::as_float(out[L.idx_scroll_x]), 112.0f, 1e-3f));
     // No prev / same seq / gap too large / tick not growing and receive times not either: cur as it is.
-    b = wsy::blend(nullptr, cur, 50410, out);
-    CHECK(!b.blended && out[wsy::kIdxCloud] == cur.s.w[wsy::kIdxCloud]);
-    wsy::Timed far_prev{sample(1, 7000, 0.0f), 47000};
-    b = wsy::blend(&far_prev, cur, 50410, out);
+    b = wsy::blend(L, nullptr, cur, 50410, out);
+    CHECK(!b.blended && out[L.idx_cloud] == cur.s.w[L.idx_cloud]);
+    wsy::Timed far_prev{sample(L, 1, 7000, 0.0f), 47000};
+    b = wsy::blend(L, &far_prev, cur, 50410, out);
     CHECK(!b.blended);
     // Ticks unreadable (0): receive times are the base (210 ms apart).
     wsy::Timed p0 = prev, c0 = cur;
     p0.s.tick = 0;
     c0.s.tick = 0;
-    b = wsy::blend(&p0, c0, 50210 + 300 + 105, out);  // render = c.recv + 405 - 300 = prev.recv + 315 -> t = 1.5 -> 1
+    b = wsy::blend(L, &p0, c0, 50210 + 300 + 105, out);  // render = c.recv + 405 - 300 = prev.recv + 315 -> t = 1.5 -> 1
     CHECK(b.blended && b.extrapolated);
-    b = wsy::blend(&p0, c0, 50210 + 195, out);  // render = prev.recv + 105 -> t = 0.5
-    CHECK(b.blended && near(b.t, 0.5f) && near(wsy::as_float(out[wsy::kIdxCloud]), 0.3f));
+    b = wsy::blend(L, &p0, c0, 50210 + 195, out);  // render = prev.recv + 105 -> t = 0.5
+    CHECK(b.blended && near(b.t, 0.5f) && near(wsy::as_float(out[L.idx_cloud]), 0.3f));
     wsy::Timed backwards = c0;
     backwards.recv_ms = p0.recv_ms - 1;
-    b = wsy::blend(&p0, backwards, 50410, out);
+    b = wsy::blend(L, &p0, backwards, 50410, out);
     CHECK(!b.blended);
     // A NaN in prev keeps cur's word for that field only.
     wsy::Timed pn = prev;
-    pn.s.w[wsy::kIdxCloud] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
-    b = wsy::blend(&pn, cur, 50410, out);
-    CHECK(out[wsy::kIdxCloud] == cur.s.w[wsy::kIdxCloud] && near(wsy::as_float(out[wsy::kIdxScrollX]), 101.0f));
+    pn.s.w[L.idx_cloud] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
+    b = wsy::blend(L, &pn, cur, 50410, out);
+    CHECK(out[L.idx_cloud] == cur.s.w[L.idx_cloud] && near(wsy::as_float(out[L.idx_scroll_x]), 101.0f));
     // FLT_MAX ("not set") on either side is never interpolated: cur's word as it is.
     wsy::Timed pu = prev, cu = cur;
-    pu.s.w[wsy::kIdxCloud] = wsy::kFltMaxBits;
-    b = wsy::blend(&pu, cur, 50410, out);
-    CHECK(out[wsy::kIdxCloud] == cur.s.w[wsy::kIdxCloud]);
-    cu.s.w[wsy::kIdxCloud] = wsy::kFltMaxBits;
-    b = wsy::blend(&prev, cu, 50410, out);
-    CHECK(out[wsy::kIdxCloud] == wsy::kFltMaxBits);
+    pu.s.w[L.idx_cloud] = wsy::kFltMaxBits;
+    b = wsy::blend(L, &pu, cur, 50410, out);
+    CHECK(out[L.idx_cloud] == cur.s.w[L.idx_cloud]);
+    cu.s.w[L.idx_cloud] = wsy::kFltMaxBits;
+    b = wsy::blend(L, &prev, cu, 50410, out);
+    CHECK(out[L.idx_cloud] == wsy::kFltMaxBits);
     // Hold: the newest, never mixed (the wind angle 350 -> 10 must not sweep through 180).
-    const size_t deg = wsy::index_of(wsy::Block::A, 0x154);
+    const size_t deg = L.index(wsy::Block::A, 0x154);
     wsy::Timed ph = prev, ch = cur;
     ph.s.w[deg] = wsy::as_word(350.0f);
     ch.s.w[deg] = wsy::as_word(10.0f);
-    b = wsy::blend(&ph, ch, 50410, out);
+    b = wsy::blend(L, &ph, ch, 50410, out);
     CHECK(b.blended && out[deg] == wsy::as_word(10.0f));
 }
 
-void test_precip_command() {
-    uint32_t w[wsy::kFieldCount] = {};
-    w[wsy::kIdxPrecip] = wsy::as_word(0.9f);  // the host's target: NOT what is written
-    w[wsy::kIdxRain] = wsy::as_word(0.35f);
-    w[wsy::kIdxSnow] = wsy::as_word(0.0f);
-    CHECK(near(wsy::precip_command(w), 0.35f));
-    CHECK(near(wsy::as_float(wsy::value_to_write(wsy::kIdxPrecip, w)), 0.35f));
-    w[wsy::kIdxSnow] = wsy::as_word(0.6f);
-    CHECK(near(wsy::precip_command(w), 0.6f));
-    w[wsy::kIdxRain] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
-    w[wsy::kIdxSnow] = wsy::as_word(3.0f);
-    CHECK(near(wsy::precip_command(w), 1.0f));
-    w[wsy::kIdxSnow] = wsy::as_word(-1.0f);
-    CHECK(near(wsy::precip_command(w), 0.0f));
+// 3549's new words: the ocean wind angle and X's turning angle are held, the new scroll pairs extrapolate.
+void test_blend_3549() {
+    const wsy::Layout& L = L49;
+    wsy::Timed prev{sample(L, 1, 10000, 0.0f), 50000};
+    wsy::Timed cur{sample(L, 2, 10200, 0.0f), 50210};
+    const size_t ocean = L.index(wsy::Block::A, 0x158), turn = L.index(wsy::Block::X, 0x14C),
+                 s2 = L.index(wsy::Block::X, 0x154), s3 = L.index(wsy::Block::X, 0x160);
+    prev.s.w[ocean] = wsy::as_word(355.0f);
+    cur.s.w[ocean] = wsy::as_word(5.0f);
+    prev.s.w[turn] = wsy::as_word(359.0f);
+    cur.s.w[turn] = wsy::as_word(1.0f);
+    prev.s.w[s2] = wsy::as_word(10.0f);
+    cur.s.w[s2] = wsy::as_word(12.0f);
+    prev.s.w[s3] = wsy::as_word(-4.0f);
+    cur.s.w[s3] = wsy::as_word(-6.0f);
+    uint32_t out[wsy::kMaxFields];
+    wsy::blend(L, &prev, cur, 50410, out);  // t = 0.5
+    CHECK(out[ocean] == wsy::as_word(5.0f) && out[turn] == wsy::as_word(1.0f));
+    CHECK(near(wsy::as_float(out[s2]), 11.0f) && near(wsy::as_float(out[s3]), -5.0f));
+    wsy::blend(L, &prev, cur, 51110, out);  // 600 ms past cur: the accumulators go on
+    CHECK(near(wsy::as_float(out[s2]), 18.0f, 1e-3f) && near(wsy::as_float(out[s3]), -12.0f, 1e-3f));
+}
+
+void test_precip_command(const wsy::Layout& L) {
+    uint32_t w[wsy::kMaxFields] = {};
+    w[L.idx_precip] = wsy::as_word(0.9f);  // the host's target: NOT what is written
+    w[L.idx_rain] = wsy::as_word(0.35f);
+    w[L.idx_snow] = wsy::as_word(0.0f);
+    CHECK(near(wsy::precip_command(L, w), 0.35f));
+    CHECK(near(wsy::as_float(wsy::value_to_write(L, L.idx_precip, w)), 0.35f));
+    w[L.idx_snow] = wsy::as_word(0.6f);
+    CHECK(near(wsy::precip_command(L, w), 0.6f));
+    w[L.idx_rain] = wsy::as_word(std::numeric_limits<float>::quiet_NaN());
+    w[L.idx_snow] = wsy::as_word(3.0f);
+    CHECK(near(wsy::precip_command(L, w), 1.0f));
+    w[L.idx_snow] = wsy::as_word(-1.0f);
+    CHECK(near(wsy::precip_command(L, w), 0.0f));
     // "Not set" is no rain (FLT_MAX must never become a downpour).
-    w[wsy::kIdxRain] = wsy::kFltMaxBits;
-    w[wsy::kIdxSnow] = wsy::as_word(0.2f);
-    CHECK(near(wsy::precip_command(w), 0.2f));
+    w[L.idx_rain] = wsy::kFltMaxBits;
+    w[L.idx_snow] = wsy::as_word(0.2f);
+    CHECK(near(wsy::precip_command(L, w), 0.2f));
     // Any other field is written as it is.
-    w[wsy::kIdxCloud] = 0x3F000000u;
-    CHECK(wsy::value_to_write(wsy::kIdxCloud, w) == 0x3F000000u);
+    w[L.idx_cloud] = 0x3F000000u;
+    CHECK(wsy::value_to_write(L, L.idx_cloud, w) == 0x3F000000u);
 }
 
 void test_gates() {
@@ -396,26 +560,28 @@ void test_fault_latch() {
     CHECK(g.blocked());
 }
 
-void test_restore_bits() {
-    // Kept: every holder word that may be written or that 0x382A1A0 rewrites; never the accumulators, never the
-    // words of unknown type.
-    CHECK(wsy::kept_for_release(wsy::kIdxPrecip) && wsy::kept_for_release(wsy::kIdxRain));
-    CHECK(wsy::kept_for_release(wsy::index_of(wsy::Block::B, 0xEC)) &&
-          wsy::kept_for_release(wsy::index_of(wsy::Block::A, 0x154)));
-    CHECK(!wsy::kept_for_release(wsy::kIdxScrollX) && !wsy::kept_for_release(wsy::index_of(wsy::Block::C, 0x178)));
-    uint64_t kept = 0, written = 0;
-    for (size_t i = 0; i < wsy::kFieldCount; ++i) {
-        if (wsy::kept_for_release(i)) kept |= wsy::field_bit(i);
-        if (wsy::written(i, wsy::kHasA | wsy::kHasB | wsy::kHasX)) written |= wsy::field_bit(i);
+void test_restore_bits(const wsy::Layout& L) {
+    // Kept: every holder word that may be written or that X's update rewrites; never X's words, never the words of
+    // unknown type.
+    CHECK(wsy::kept_for_release(L, L.idx_precip) && wsy::kept_for_release(L, L.idx_rain));
+    CHECK(wsy::kept_for_release(L, L.index(wsy::Block::B, 0xF0)) && wsy::kept_for_release(L, L.index(wsy::Block::A, 0x154)));
+    CHECK(!wsy::kept_for_release(L, L.idx_scroll_x) && !wsy::kept_for_release(L, L.index(wsy::Block::C, L.read_c.off)));
+    wsy::Bits kept, written;
+    for (size_t i = 0; i < L.count(); ++i) {
+        if (wsy::kept_for_release(L, i)) kept.set(i);
+        if (wsy::written(L, i, wsy::kHasA | wsy::kHasB | wsy::kHasX)) written.set(i);
     }
     // Written A/B words go back; C was never written (absent from the samples); the outputs only if the flag was ours.
-    const uint64_t r = wsy::restore_bits(kept, written, /*flag_was_ours=*/true);
-    CHECK((r & wsy::field_bit(wsy::kIdxPrecip)) && (r & wsy::field_bit(wsy::kIdxRain)) &&
-          (r & wsy::field_bit(wsy::kIdxCloudBase)));
-    CHECK(!(r & wsy::field_bit(wsy::index_of(wsy::Block::C, 0x1B0))) && !(r & wsy::field_bit(wsy::kIdxScrollX)));
-    const uint64_t r2 = wsy::restore_bits(kept, written, /*flag_was_ours=*/false);
-    CHECK(!(r2 & wsy::field_bit(wsy::kIdxRain)) && (r2 & wsy::field_bit(wsy::kIdxPrecip)));
-    CHECK(wsy::restore_bits(0, written, true) == 0);
+    const wsy::Bits r = wsy::restore_bits(L, kept, written, /*flag_was_ours=*/true);
+    CHECK(r.test(L.idx_precip) && r.test(L.idx_rain) && r.test(L.idx_cloud_base));
+    CHECK(!r.test(L.index(wsy::Block::C, L.probe.c[0])) && !r.test(L.idx_scroll_x));
+    const wsy::Bits r2 = wsy::restore_bits(L, kept, written, /*flag_was_ours=*/false);
+    CHECK(!r2.test(L.idx_rain) && r2.test(L.idx_precip));
+    CHECK(wsy::restore_bits(L, wsy::Bits{}, written, true).none());
+    CHECK(wsy::field_bit(L.count() - 1).test(L.count() - 1) && wsy::field_bit(L.count() - 1).count() == 1);
+    CHECK(wsy::field_bit(wsy::kMaxFields).none());
+    // Every bit of a table fits (3549 has more than 64 words).
+    CHECK(L.count() <= wsy::kMaxFields && kept.count() <= L.count());
 }
 
 void test_owned() {
@@ -431,7 +597,7 @@ void test_owned() {
     s.remove(0x1000);
     CHECK(!s.find(0x1000) && s.size() == 1);
     wsy::Owned* c = s.add(0x3000);
-    CHECK(c && !c->has_orig_a && c->orig_a[0] == 0 && c->kept == 0 && !c->flag_ours);  // a fresh record
+    CHECK(c && !c->has_orig_a && c->orig_a[0] == 0 && c->kept.none() && !c->flag_ours);  // a fresh record
     // Review 3: the records of any other X go (handed to the callback first), the current one stays.
     wsy::OwnedSet<4> t;
     t.add(0x1000)->flag_ours = true;
@@ -504,8 +670,8 @@ void test_modes() {
     CHECK(std::strcmp(wsy::mode_name(wsy::Mode::Selftest), "selftest") == 0);
 }
 
-void test_box() {
-    wsy::Timed t{sample(7, 0x123456789ull, 3.0f), 0xABCDEF012ull};
+void test_box(const wsy::Layout& L) {
+    wsy::Timed t{sample(L, 7, 0x123456789ull, 3.0f), 0xABCDEF012ull};
     uint32_t w[wsy::kBoxWords];
     wsy::pack(t, w);
     wsy::Timed u;
@@ -533,7 +699,9 @@ void test_box() {
     CHECK(!h.has_prev);
     h.push(t2, 3);
     CHECK(h.has_prev && h.prev.s.seq == 7 && h.cur.s.seq == 8 && h.seen == 3);
+}
 
+void test_box_threads() {
     // Two threads: every copy a reader keeps is one whole publish (all words carry the same value).
     constexpr size_t N = 64;
     wsy::DoubleBuffer<N> b2;
@@ -563,21 +731,28 @@ void test_box() {
 }  // namespace
 
 int main() {
-    test_field_table();
-    test_extract();
-    test_frame_bytes();
-    test_sanity();
-    test_blend();
-    test_precip_command();
+    test_field_table_2976();
+    test_field_table_3549();
+    test_game_tables();
+    for (const wsy::Layout* L : {&L76, &L49}) {
+        test_extract(*L);
+        test_sanity(*L);
+        test_blend(*L);
+        test_precip_command(*L);
+        test_restore_bits(*L);
+        test_box(*L);
+    }
+    test_frame_bytes_2976();
+    test_frame_bytes_3549();
+    test_blend_3549();
     test_gates();
     test_world_watch();
     test_line_gate();
     test_fault_latch();
-    test_restore_bits();
     test_owned();
     test_selftest();
     test_modes();
-    test_box();
+    test_box_threads();
     if (g_failures) {
         std::printf("%d check(s) failed\n", g_failures);
         return 1;

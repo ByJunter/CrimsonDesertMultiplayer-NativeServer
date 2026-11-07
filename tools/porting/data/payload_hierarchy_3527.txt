@@ -1,0 +1,93 @@
+
+=== B27F140: 0xB27F140 range={'begin': 187167040, 'end': 187167338, 'unwind': 330634720, 'offset': 0} section=.text ===
+0B27F140 48895c2418               mov      qword ptr [rsp + 0x18], rbx
+0B27F145 55                       push     rbp
+0B27F146 56                       push     rsi
+0B27F147 57                       push     rdi
+0B27F148 4156                     push     r14
+0B27F14A 4157                     push     r15
+0B27F14C 4883ec20                 sub      rsp, 0x20
+0B27F150 4889d7                   mov      rdi, rdx
+0B27F153 4889cd                   mov      rbp, rcx
+0B27F156 488d5118                 lea      rdx, [rcx + 0x18]
+0B27F15A 41bf01000000             mov      r15d, 1
+0B27F160 4589f8                   mov      r8d, r15d
+0B27F163 4889f9                   mov      rcx, rdi
+0B27F166 488b07                   mov      rax, qword ptr [rdi]
+0B27F169 ff5028                   call     qword ptr [rax + 0x28]
+0B27F16C 84c0                     test     al, al
+0B27F16E 0f84e3000000             je       0xb27f257
+0B27F174 488b07                   mov      rax, qword ptr [rdi]
+0B27F177 488d551c                 lea      rdx, [rbp + 0x1c]
+0B27F17B 41b804000000             mov      r8d, 4
+0B27F181 4889f9                   mov      rcx, rdi
+0B27F184 ff5028                   call     qword ptr [rax + 0x28]
+0B27F187 84c0                     test     al, al
+0B27F189 0f84c8000000             je       0xb27f257
+0B27F18F 488b07                   mov      rax, qword ptr [rdi]
+0B27F192 488d5530                 lea      rdx, [rbp + 0x30]
+0B27F196 4589f8                   mov      r8d, r15d
+0B27F199 4889f9                   mov      rcx, rdi
+0B27F19C ff5028                   call     qword ptr [rax + 0x28]
+0B27F19F 84c0                     test     al, al
+0B27F1A1 0f84b0000000             je       0xb27f257
+0B27F1A7 488b07                   mov      rax, qword ptr [rdi]
+0B27F1AA 488d542450               lea      rdx, [rsp + 0x50]
+0B27F1AF 4531f6                   xor      r14d, r14d
+0B27F1B2 41b802000000             mov      r8d, 2
+0B27F1B8 4889f9                   mov      rcx, rdi
+0B27F1BB 664489742450             mov      word ptr [rsp + 0x50], r14w
+0B27F1C1 ff5028                   call     qword ptr [rax + 0x28]
+0B27F1C4 84c0                     test     al, al
+0B27F1C6 0f848b000000             je       0xb27f257
+0B27F1CC 410fb7f6                 movzx    esi, r14w
+0B27F1D0 66443b742450             cmp      r14w, word ptr [rsp + 0x50]
+0B27F1D6 736a                     jae      0xb27f242
+0B27F1D8 0f1f840000000000         nop      dword ptr [rax + rax]
+0B27F1E0 488b07                   mov      rax, qword ptr [rdi]
+0B27F1E3 488d542458               lea      rdx, [rsp + 0x58]
+0B27F1E8 41b804000000             mov      r8d, 4
+0B27F1EE 4489742458               mov      dword ptr [rsp + 0x58], r14d
+0B27F1F3 4889f9                   mov      rcx, rdi
+0B27F1F6 ff5028                   call     qword ptr [rax + 0x28]
+0B27F1F9 84c0                     test     al, al
+0B27F1FB 745a                     je       0xb27f257
+0B27F1FD 8b4d28                   mov      ecx, dword ptr [rbp + 0x28]
+0B27F200 8b452c                   mov      eax, dword ptr [rbp + 0x2c]
+0B27F203 39c8                     cmp      eax, ecx
+0B27F205 7720                     ja       0xb27f227
+0B27F207 8d940001000000           lea      edx, [rax + rax + 1]
+0B27F20E 01c2                     add      edx, eax
+0B27F210 d1ea                     shr      edx, 1
+0B27F212 4439fa                   cmp      edx, r15d
+0B27F215 410f42d7                 cmovb    edx, r15d
+0B27F219 39d1                     cmp      ecx, edx
+0B27F21B 0f47d1                   cmova    edx, ecx
+0B27F21E 488d4d20                 lea      rcx, [rbp + 0x20]
+0B27F222 e8a9321cf5               call     0x4424d0
+0B27F227 8b5528                   mov      edx, dword ptr [rbp + 0x28]
+0B27F22A 66ffc6                   inc      si
+0B27F22D 488b4d20                 mov      rcx, qword ptr [rbp + 0x20]
+0B27F231 8b442458                 mov      eax, dword ptr [rsp + 0x58]
+0B27F235 890491                   mov      dword ptr [rcx + rdx*4], eax
+0B27F238 ff4528                   inc      dword ptr [rbp + 0x28]
+0B27F23B 663b742450               cmp      si, word ptr [rsp + 0x50]
+0B27F240 729e                     jb       0xb27f1e0
+0B27F242 410fb6c7                 movzx    eax, r15b
+0B27F246 488b5c2460               mov      rbx, qword ptr [rsp + 0x60]
+0B27F24B 4883c420                 add      rsp, 0x20
+0B27F24F 415f                     pop      r15
+0B27F251 415e                     pop      r14
+0B27F253 5f                       pop      rdi
+0B27F254 5e                       pop      rsi
+0B27F255 5d                       pop      rbp
+0B27F256 c3                       ret      
+0B27F257 488b5c2460               mov      rbx, qword ptr [rsp + 0x60]
+0B27F25C 30c0                     xor      al, al
+0B27F25E 4883c420                 add      rsp, 0x20
+0B27F262 415f                     pop      r15
+0B27F264 415e                     pop      r14
+0B27F266 5f                       pop      rdi
+0B27F267 5e                       pop      rsi
+0B27F268 5d                       pop      rbp
+0B27F269 c3                       ret      

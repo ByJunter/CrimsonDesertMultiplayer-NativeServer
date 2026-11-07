@@ -445,6 +445,7 @@ bool read_sections() {
         std::copy(std::begin(h.Name), std::end(h.Name), s.name);
         s.va = h.VirtualAddress;
         s.size = h.Misc.VirtualSize;
+        s.flags = h.Characteristics;
         g_secs.push_back(s);
     }
     return !g_secs.empty();

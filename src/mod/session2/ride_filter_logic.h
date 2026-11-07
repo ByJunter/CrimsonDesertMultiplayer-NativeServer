@@ -40,6 +40,7 @@
 #include <string_view>
 
 #include "mod/session2/user2_funnels_logic.h"
+#include "common/movement_layout.h"
 
 namespace cdmp::session2::rfl {
 
@@ -97,15 +98,16 @@ struct Ack {
     uint32_t target = 0;
 };
 
-inline Ack read_ack(const uint8_t* payload, size_t size) {
+inline Ack read_ack(const uint8_t* payload, size_t size, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
     Ack a;
-    if (!payload || size != kAckSize) return a;
+    if (!l || !payload || size != l->action) return a;
     a.ok = true;
     a.key = rd32(payload);
     a.a0 = rd32(payload + kA0 + kBlockHash);
     a.a1 = rd32(payload + kA1 + kBlockHash);
-    a.parent = rd64(payload + kParent);
-    a.target = rd32(payload + kTarget);
+    a.parent = rd64(payload + l->parent + movement::action_shift(true));
+    a.target = rd32(payload + 143 + l->action_target);
     return a;
 }
 
@@ -158,8 +160,9 @@ inline void put_block(uint8_t* dst, const std::array<uint8_t, kBlock>& src) {
 }
 
 // The rewrite, in place, on a payload read_ack() accepted. False: nothing to do.
-inline bool rewrite(uint8_t* payload, size_t size, Kind k) {
-    if (!payload || size != kAckSize) return false;
+inline bool rewrite(uint8_t* payload, size_t size, Kind k, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l || !payload || size != l->action) return false;
     switch (k) {
         case Kind::Mount:
             put_block(payload + kA0, kBlockFoot);
@@ -389,19 +392,20 @@ struct Outcome {
     bool gate = false;          // a 0x40 dismount action (gate_dismount)
     Ack ack;                    // as received (before any rewrite)
 };
-inline Outcome filter_packet(Mode mode, uint8_t* packet, size_t size, uint32_t remote_key, uint32_t local_key) {
+inline Outcome filter_packet(Mode mode, uint8_t* packet, size_t size, uint32_t remote_key, uint32_t local_key, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
     Outcome o;
-    if (mode == Mode::Off || !packet || size != kHeader + kAckSize) return o;
+    if (!l || mode == Mode::Off || !packet || size != kHeader + l->action) return o;
     const uint16_t op = static_cast<uint16_t>(packet[0] | (packet[1] << 8));
     const uint16_t len = static_cast<uint16_t>(packet[3] | (packet[4] << 8));
-    if (op != kOpStartActionAck || len != kAckSize) return o;
-    o.ack = read_ack(packet + kHeader, kAckSize);
+    if (op != kOpStartActionAck || len != l->action) return o;
+    o.ack = read_ack(packet + kHeader, l->action, build);
     o.start_action = o.ack.ok;
     if (!o.ack.ok) return o;
     o.remote = is_remote_player(o.ack.key, remote_key, local_key);
     if (!o.remote) return o;
     o.kind = classify(o.ack);
-    if (mode == Mode::On && o.kind != Kind::None) o.rewritten = rewrite(packet + kHeader, kAckSize, o.kind);
+    if (mode == Mode::On && o.kind != Kind::None) o.rewritten = rewrite(packet + kHeader, l->action, o.kind, build);
     return o;
 }
 

@@ -40,6 +40,13 @@ void put(uint8_t* bytes, uint32_t off, T v) {
     std::memcpy(bytes + off, &v, sizeof v);
 }
 
+template <class T>
+T get(const uint8_t* bytes, uint32_t off) {
+    T v{};
+    std::memcpy(&v, bytes + off, sizeof v);
+    return v;
+}
+
 struct FakeUser {
     alignas(8) uint8_t bytes[0x220] = {};
     explicit FakeUser(uint32_t key) {
@@ -69,12 +76,30 @@ struct FakeCharacter {
 };
 
 void test_character_no() {
+    CHECK(identity_status_number_offset_for_build(false) == 0x70);
+    CHECK(identity_status_number_offset_for_build(true) == 0x90);
     FakeCharacter c(0xA010052C);
     uint64_t no = 0;
     CHECK(identity_character_no(c.addr(), no) && no == kProvisional);
     // The chain follows the pointer each time: a normalised value is seen at once.
     c.number = 0x7FFFFFFFFFFFF002;
     CHECK(identity_character_no(c.addr(), no) && no == 0x7FFFFFFFFFFFF002);
+
+    // Build 3527 layout: read through +0x90 without treating the old +0x70
+    // scalar or the adjacent inline name at +0x98 as the identity pointer.
+    FakeCharacter current(0xA010052D);
+    constexpr uint64_t old70 = 0x00000000FFFFFF06ull;
+    constexpr uint8_t name98[] = {0x53, 0x32, 0x2D, 0x4E, 0x41, 0x4D, 0x45, 0x00,
+                                  0xA5, 0x5A, 0xC3, 0x3C, 0x11, 0x22, 0x33, 0x44};
+    put(current.status, idp::kStatusCharacterNo, old70);
+    put(current.status, idp::kStatusCharacterNo3527, reinterpret_cast<uintptr_t>(&current.number));
+    std::memcpy(current.status + 0x98, name98, sizeof name98);
+    CHECK(identity_character_no_at(current.addr(), no, idp::kStatusCharacterNo3527) && no == kProvisional);
+    CHECK(get<uint64_t>(current.status, idp::kStatusCharacterNo) == old70);
+    CHECK(get<uintptr_t>(current.status, idp::kStatusCharacterNo3527) ==
+          reinterpret_cast<uintptr_t>(&current.number));
+    CHECK(std::memcmp(current.status + 0x98, name98, sizeof name98) == 0);
+    CHECK(!identity_character_no_at(current.addr(), no, 0x88));
     // Any null link: false, nothing read.
     no = 1;
     put(c.status, idp::kStatusCharacterNo, uintptr_t{0});

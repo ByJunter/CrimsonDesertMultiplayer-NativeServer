@@ -421,24 +421,24 @@ public:
         return v;
     }
 
-    // What the HUD says while the client does not play on the host (Spanish, the user's language); "" = nothing.
+    // What the HUD says while the client does not play on the host; "" = nothing.
     // probe never changes the HUD (review of c4367f8, 7).
     std::string hud_text() const {
         if (mode_ != Mode::On) return {};
         switch (phase_) {
-            case Phase::Asking: return "Volviendo al mundo del anfitrión: esperando a que termine tu salida...";
-            case Phase::Granted: return "El anfitrión te espera: pulsa Continuar para volver a su mundo.";
+            case Phase::Asking: return "Going back to the host's world: waiting for your exit to finish...";
+            case Phase::Granted: return "The host is waiting: press Continue to return to its world.";
             case Phase::Over:
-                return "El anfitrión no admite volver a entrar: cierra el juego y ábrelo.";
+                return "The host does not allow rejoining: close the game and open it again.";
             case Phase::Refused:
                 switch (refusal_) {
-                    case Refusal::LocalGame: return "Cargaste tu partida local: para volver, cierra el juego y ábrelo.";
-                    case Refusal::HostDead: return "El anfitrión cerró la conexión: cierra el juego y ábrelo.";
-                    case Refusal::HostQuarantined: return "El anfitrión no admite más entradas en esta partida.";
-                    case Refusal::NoAnswer: return "El anfitrión no respondió: cierra el juego y ábrelo.";
+                    case Refusal::LocalGame: return "You loaded your local save: to go back, close the game and open it again.";
+                    case Refusal::HostDead: return "The host closed the connection: close the game and open it again.";
+                    case Refusal::HostQuarantined: return "The host takes no more joins in this session.";
+                    case Refusal::NoAnswer: return "The host did not answer: close the game and open it again.";
                     case Refusal::LocalConnection:
-                        return "No se pudo volver al mundo del anfitrión (tu juego ya está en tu propio servidor): "
-                               "cierra el juego y ábrelo.";
+                        return "Could not return to the host's world (your game is already on its own server): "
+                               "close the game and open it again.";
                     case Refusal::None: return {};
                 }
                 return {};

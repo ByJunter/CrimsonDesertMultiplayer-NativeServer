@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "mod/game/game_fault.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/fast_travel.h"
@@ -131,13 +132,345 @@ const Region kRegions[] = {
     {0x27733A6, kRealmBytes, "ServerRunThread's realm mark (TLS +0x1EC)"},
 };
 
+// Build 3527 evidence: tools/porting/data/observer_milestone_3527.json and
+// field_mover_layout_3527.json. Executable SHA-256:
+// dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841.
+// Keep original bytes, including call displacements and layout operands.
+constexpr uint8_t kCurrentCode0[] = {
+    0x48, 0x89, 0x4C, 0x24, 0x08, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0xD9, 0x48, 0x8D, 0x05, 
+    0xBC, 0x82, 0x1E, 0x03, 0x48, 0x89, 0x01, 0xC6, 0x41, 0x08, 0x00, 0x48, 0x8D, 0x05, 0x8E, 0x82, 
+    0x1E, 0x03, 0x48, 0x89, 0x01, 0x48, 0xC7, 0x41, 0x10, 0x00, 0x00, 0x00, 0x00, 0x48, 0x85, 0xD2, 
+    0x74, 0x10, 0x48, 0x8B, 0x02, 0x48, 0x8B, 0xCA, 0xFF, 0x90, 0xE8, 0x00, 0x00, 0x00, 0x48, 0x89, 
+    0x43, 0x10, 0x48, 0x8B, 0xC3, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3 
+};
+constexpr uint8_t kCurrentCode1[] = {
+    0x48, 0x89, 0x4C, 0x24, 0x08, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0xD9, 0x48, 0x8D, 0x05, 
+    0x1C, 0x83, 0x1E, 0x03, 0x48, 0x89, 0x01, 0xF6, 0xC2, 0x01, 0x74, 0x32, 0xE8, 0xBF, 0x15, 0x85, 
+    0xFE, 0xBA, 0xFE, 0x01, 0x00, 0x00, 0x65, 0x48, 0x8B, 0x04, 0x25, 0x58, 0x00, 0x00, 0x00, 0x48, 
+    0x8B, 0x08, 0x80, 0x3C, 0x0A, 0x00, 0x48, 0x8B, 0xCB, 0x74, 0x0E, 0xE8, 0x3C, 0xCF, 0xDF, 0x01, 
+    0x48, 0x8B, 0xC3, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3, 0xE8, 0x2E, 0xCE, 0xDF, 0x01, 0x48, 0x8B, 
+    0xC3, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3 
+};
+constexpr uint8_t kCurrentCode2[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x83, 0x79, 0x10, 0x00, 0x48, 
+    0x8B, 0xDA, 0x48, 0x8B, 0xF9, 0x74, 0x3D, 0x8B, 0x4A, 0x08, 0x8B, 0x42, 0x0C, 0x3B, 0xC1, 0x77, 
+    0x22, 0x8D, 0x14, 0x45, 0x01, 0x00, 0x00, 0x00, 0x03, 0xD0, 0xB8, 0x01, 0x00, 0x00, 0x00, 0xD1, 
+    0xEA, 0x3B, 0xD0, 0x0F, 0x42, 0xD0, 0x3B, 0xCA, 0x0F, 0x47, 0xD1, 0x48, 0x8B, 0xCB, 0xE8, 0xDD, 
+    0x38, 0x6A, 0xFD, 0x8B, 0x53, 0x08, 0x48, 0x8B, 0x47, 0x10, 0x48, 0x8B, 0x0B, 0x48, 0x89, 0x04, 
+    0xD1, 0xFF, 0x43, 0x08, 0x48, 0x8B, 0x5C, 0x24, 0x30, 0x48, 0x83, 0xC4, 0x20, 0x5F, 0xC3 
+};
+constexpr uint8_t kCurrentCode3[] = {
+    0x48, 0x8B, 0x42, 0x10, 0x48, 0x39, 0x41, 0x10, 0x0F, 0x94, 0xC0, 0xC3 
+};
+constexpr uint8_t kCurrentCode4[] = {
+    0x48, 0x89, 0x5C, 0x24, 0x08 
+};
+constexpr uint8_t kCurrentCode5[] = {
+    0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C, 0x24, 0xD9, 
+    0x48, 0x81, 0xEC, 0xB0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xFA, 0x48, 0x8B, 0xF1, 0x65, 0x48, 0x8B, 
+    0x04, 0x25, 0x58, 0x00, 0x00, 0x00, 0x4C, 0x8B, 0x20, 0x4C, 0x89, 0x65, 0xD7, 0xB8, 0x50, 0x02, 
+    0x00, 0x00, 0x4A, 0x8B, 0x04, 0x20, 0x33, 0xDB, 0x89, 0x98, 0xB8, 0x02, 0x00, 0x00, 0x4C, 0x8D, 
+    0xB8, 0xB0, 0x02, 0x00, 0x00, 0x48, 0x8B, 0x02, 0x49, 0x8B, 0xD7, 0x48, 0x8B, 0xCF, 0xFF, 0x50, 
+    0x08, 0x45, 0x8B, 0x6F, 0x08, 0x45, 0x85, 0xED, 0x0F, 0x84, 0x7C, 0x03, 0x00, 0x00, 0x48, 0x8B, 
+    0xCF, 0xE8, 0xF5, 0x13, 0xFC, 0xFF 
+};
+constexpr uint8_t kCurrentCode6[] = {
+    0x48, 0x85, 0xF6, 0x74, 0x03, 0x8B, 0x5E, 0x60, 0x89, 0x5D, 0x6F, 0x48, 0x8B, 0x00, 0x41, 0xB8, 
+    0x04, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x55, 0x6F, 0xFF, 0x50, 0x08 
+};
+constexpr uint8_t kCurrentCode7[] = {
+    0x66, 0x41, 0xC7, 0x06, 0x50, 0x09 
+};
+constexpr uint8_t kCurrentCode8[] = {
+    0x48, 0x8D, 0x3D, 0x95, 0x15, 0x41, 0x03, 0x48, 0x89, 0x7C, 0x24, 0x50, 0xC6, 0x44, 0x24, 0x58, 
+    0x00, 0x48, 0x8D, 0x05, 0x64, 0x15, 0x41, 0x03, 0x48, 0x89, 0x44, 0x24, 0x50, 0x4C, 0x89, 0x7C, 
+    0x24, 0x60, 0x4D, 0x85, 0xF6, 0x74, 0x11, 0x49, 0x8B, 0x06, 0x49, 0x8B, 0xCE, 0xFF, 0x90, 0xE8, 
+    0x00, 0x00, 0x00, 0x48, 0x89, 0x44, 0x24, 0x60 
+};
+constexpr uint8_t kCurrentCode9[] = {
+    0x48, 0x8D, 0x54, 0x24, 0x50, 0x49, 0x8B, 0xCE, 0xE8, 0x97, 0x8F, 0x13, 0x00, 0x90, 0x48, 0x89, 
+    0x7C, 0x24, 0x50 
+};
+constexpr uint8_t kCurrentCode10[] = {
+    0x48, 0x8D, 0x3D, 0x35, 0x25, 0x08, 0x03, 0x48, 0x89, 0x7D, 0x90, 0xC6, 0x45, 0x98, 0x00, 0x48, 
+    0x8D, 0x05, 0x06, 0x25, 0x08, 0x03, 0x48, 0x89, 0x45, 0x90, 0x4C, 0x89, 0x65, 0xA0, 0x48, 0x8B, 
+    0x06, 0x48, 0x8B, 0xCE, 0xFF, 0x90, 0xE8, 0x00, 0x00, 0x00, 0x48, 0x89, 0x45, 0xA0, 0x4D, 0x8D, 
+    0x8D, 0x50, 0x04, 0x00, 0x00, 0x48, 0x8D, 0x45, 0x70, 0x48, 0x89, 0x44, 0x24, 0x20, 0x4C, 0x8D, 
+    0x45, 0xE0, 0x48, 0x8D, 0x55, 0x90, 0x48, 0x8B, 0xCE, 0xE8, 0x2E, 0xA3, 0xDA, 0xFF 
+};
+constexpr uint8_t kCurrentCode11[] = {
+    0x66, 0x41, 0xC7, 0x06, 0x24, 0x09 
+};
+constexpr uint8_t kCurrentCode12[] = {
+    0x4C, 0x8B, 0x4C, 0x24, 0x70, 0x4C, 0x8B, 0xC3, 0x48, 0x8D, 0x55, 0x60, 0x49, 0x8B, 0xCD, 0xE8, 
+    0x4D, 0x03, 0x00, 0x00 
+};
+constexpr uint8_t kCurrentCode13[] = {
+    0x4D, 0x8B, 0xE9, 0x4D, 0x8B, 0xF8, 0x48, 0x8B, 0xF1, 0x33, 0xC0, 0x89, 0x44, 0x24, 0x68, 0x4C, 
+    0x8B, 0x71, 0x08 
+};
+constexpr uint8_t kCurrentCode14[] = {
+    0x48, 0x8D, 0x1D, 0x7B, 0x16, 0x08, 0x03, 0x48, 0x89, 0x5C, 0x24, 0x70, 0xC6, 0x44, 0x24, 0x78, 
+    0x00, 0x48, 0x8D, 0x05, 0x4A, 0x16, 0x08, 0x03, 0x48, 0x89, 0x44, 0x24, 0x70, 0x33, 0xC9, 0x48, 
+    0x89, 0x4D, 0x80, 0x49, 0x8B, 0x06, 0x49, 0x8B, 0xCE, 0xFF, 0x90, 0xE8, 0x00, 0x00, 0x00, 0x48, 
+    0x89, 0x45, 0x80, 0x4C, 0x8D, 0x8D, 0x18, 0x01, 0x00, 0x00, 0x4C, 0x8D, 0x44, 0x24, 0x40, 0x48, 
+    0x8D, 0x54, 0x24, 0x70, 0x49, 0x8B, 0xCE, 0xE8, 0x16, 0x99, 0xDA, 0xFF 
+};
+constexpr uint8_t kCurrentCode15[] = {
+    0x66, 0x41, 0xC7, 0x06, 0xD5, 0x0B 
+};
+constexpr uint8_t kCurrentCode16[] = {
+    0x49, 0x8B, 0x86, 0xA0, 0x00, 0x00, 0x00, 0x45, 0x33, 0xED, 0x48, 0x85, 0xC0, 0x74, 0x05, 0x8B, 
+    0x40, 0x60, 0xEB, 0x03, 0x41, 0x8B, 0xC5, 0x45, 0x8B, 0x87, 0x80, 0x01, 0x00, 0x00, 0x41, 0x3B, 
+    0xC0, 0x75, 0x69 
+};
+constexpr uint8_t kCurrentCode17[] = {
+    0x48, 0x8B, 0x44, 0x24, 0x78, 0x48, 0x8B, 0x88, 0xD0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x41, 0x68, 
+    0x48, 0x8B, 0x88, 0xA8, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x59, 0x18 
+};
+constexpr uint8_t kCurrentCode18[] = {
+    0x4C, 0x8B, 0x4C, 0x24, 0x50, 0x4D, 0x8B, 0xC6, 0x49, 0x8B, 0xD7, 0x48, 0x8B, 0xCB, 0xE8, 0x24, 
+    0xFA, 0xC6, 0xFF, 0x48, 0x8B, 0x4F, 0x18, 0xE8, 0x9B, 0xED, 0xC1, 0xFF 
+};
+constexpr uint8_t kCurrentCode19[] = {
+    0x49, 0x8B, 0x87, 0xD8, 0x02, 0x00, 0x00, 0x48, 0x85, 0xC0, 0x75, 0x07, 0xB8, 0xFF, 0xFF, 0x00 
+};
+constexpr uint8_t kCurrentCode20[] = {
+    0x65, 0x48, 0x8B, 0x04, 0x25, 0x58, 0x00, 0x00, 0x00, 0x48, 0x8B, 0xF1, 0xBD, 0x50, 0x02, 0x00, 
+    0x00, 0x48, 0x8B, 0x10, 0x48, 0x8B, 0x2C, 0x2A, 0x80, 0xBD, 0xAC, 0x02, 0x00, 0x00, 0x00, 0x74, 
+    0x44, 0x44, 0x8B, 0xB5, 0xA0, 0x02, 0x00, 0x00 
+};
+constexpr uint8_t kCurrentCode21[] = {
+    0x65, 0x48, 0x8B, 0x04, 0x25, 0x58, 0x00, 0x00, 0x00, 0xBF, 0x50, 0x02, 0x00, 0x00, 0x48, 0x8B, 
+    0x08, 0x48, 0x8B, 0x3C, 0x0F, 0x8B, 0x87, 0xA8, 0x02, 0x00, 0x00, 0x83, 0xF8, 0xFF, 0x74, 0x5C, 
+    0x8B, 0xC8, 0x48, 0x89, 0x5C, 0x24, 0x30, 0x48, 0x8B, 0x87, 0x98, 0x02, 0x00, 0x00 
+};
+constexpr uint8_t kCurrentCode22[] = {
+    0xB8, 0xEB, 0x01, 0x00, 0x00, 0xC6, 0x04, 0x18, 0x01 
+};
+constexpr uint8_t kCurrentCode23[] = {
+    0x48, 0x8B, 0x81, 0xD0, 0x00, 0x00, 0x00, 0xC3 
+};
+constexpr uint8_t kCurrentCode24[] = {
+    0x48, 0x8B, 0x81, 0xF8, 0x01, 0x00, 0x00, 0xC3 
+};
+constexpr uint8_t kCurrentCode25[] = {
+    0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48, 0xC6, 0x80, 0x59, 0x02, 0x00, 0x00, 
+    0x02 
+};
+constexpr uint8_t kCurrentCode26[] = {
+    0x49, 0x8B, 0x8D, 0xC0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x09, 0xE8, 0x01, 0x47, 0x25, 0x00, 0x80, 
+    0xB8, 0x59, 0x02, 0x00, 0x00, 0x02, 0x0F, 0x82, 0x62, 0x03, 0x00, 0x00, 0xC4, 0xC1, 0x7B, 0x10, 
+    0x85, 0x50, 0x01, 0x00, 0x00, 0xC5, 0xFB, 0x11, 0x45, 0x10, 0x41, 0x8B, 0x8D, 0x58, 0x01, 0x00, 
+    0x00, 0x89, 0x4D, 0x18, 0x48, 0x8D, 0x55, 0x10, 0x48, 0x8B, 0xC8, 0xE8, 0xA0, 0xCE, 0x34, 0x00, 
+    0x84, 0xC0, 0x0F, 0x84, 0x36, 0x03, 0x00, 0x00, 0x41, 0xC6, 0x85, 0x5C, 0x01, 0x00, 0x00 
+};
+constexpr uint8_t kCurrentCode27[] = {
+    0x48, 0x8B, 0x6E, 0x10 
+};
+constexpr uint8_t kCurrentCode28[] = {
+    0x48, 0x8B, 0x46, 0x68 
+};
+constexpr uint8_t kCurrentCode29[] = {
+    0x48, 0x8B, 0x88, 0xA0, 0x01, 0x00, 0x00 
+};
+constexpr uint8_t kCurrentTsFieldChain[] = {
+    0x48, 0x8B, 0x48, 0x68, 0x48, 0x8B, 0x99, 0xA0, 0x01, 0x00, 0x00,
+    0x48, 0x8D, 0x8B, 0x08, 0x05, 0x00, 0x00, 0x48, 0x8D, 0x54, 0x24,
+    0x20, 0xE8, 0xDA, 0xCA, 0x15, 0x00};
+constexpr uint8_t kCurrentFieldThis[] = {0x48, 0x8B, 0xF9};
+constexpr uint8_t kCurrentFieldKey[] = {0xC7, 0x87, 0xD0, 0x02, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00};
+const Region kRegions3527[] = {
+    {0x2d04590, kCurrentCode0, "ToTarget constructor: RCX=finder, RDX=actor; vfE8 returns session"},
+    {0x2d04530, kCurrentCode1, "ToTarget scalar deleting destructor; flag0 only resets base vtable"},
+    {0x2d045e0, kCurrentCode2, "ToTarget recipient append from finder+10"},
+    {0x2d04640, kCurrentCode3, "ToTarget session equality"},
+    {0x2c142a0, kCurrentCode4, "2322/native2384 emitter original head"},
+    {0x2c142a5, kCurrentCode5, "Emitter frame, actor/finder ABI, TLS250, recipients2B0/count2B8, ScopeFind"},
+    {0x2c1437c, kCurrentCode6, "Emitter serializes actor key+60 as exactly four bytes"},
+    {0x2c14397, kCurrentCode7, "Emitter native2384 opcode0x950"},
+    {0x2adb2c4, kCurrentCode8, "Native stack ToTarget recipe before emitter call"},
+    {0x2adb2fc, kCurrentCode9, "Native actor/finder argument setup, emitter call, stack destructor reset"},
+    {0x2e6a324, kCurrentCode10, "2144/native2340 finder recipe and emitter call"},
+    {0x2c147d3, kCurrentCode11, "2144 writer native2340 opcode0x924"},
+    {0x2e6a39f, kCurrentCode12, "2144 wrapper sets R8 field, RCX component and calls MoveFieldCompleteCore"},
+    {0x2e6a72a, kCurrentCode13, "Core register provenance: R15=R8 field; R14=[RCX+8] actor"},
+    {0x2e6b1de, kCurrentCode14, "3066/native3029 finder recipe and emitter call before milestone"},
+    {0x2c14c67, kCurrentCode15, "3066 writer native3029 opcode0xBD5"},
+    {0x2e6b5e0, kCurrentCode16, "Actor+A0 user, user+60 identity compared with fieldR15+180; nonowner skips native2322"},
+    {0x2e6b628, kCurrentCode17, "Owner user+D0 main, main+68 components, components+A8 sequencer, component+18 manager"},
+    {0x2e6b659, kCurrentCode18, "Owner-only native2322 call then owner/nonowner converge before hook"},
+    {0x2e6b675, kCurrentCode19, "Milestone hook: original seven-byte instruction reads fieldR15+2D8"},
+    {0x2bd571a, kCurrentCode20, "Scope lookup TLS250, mode2AC and count2A0"},
+    {0x2bd5c86, kCurrentCode21, "Current scope flush TLS250, current2A8 and array298"},
+    {0x29aaf36, kCurrentCode22, "ServerRunThread realm TLS1EB=1"},
+    {0xbe5a10, kCurrentCode23, "ServerChildOnlyInGameActor vfE8 returns actor+D0 session"},
+    {0x2d0c4f0, kCurrentCode24, "ServerUserActor vfE8 returns user+1F8 session"},
+    {0xc9cb91, kCurrentCode25, "2322 client handler obtains field sequencer and writes readiness+259=2"},
+    {0x856090, kCurrentCode26, "Loading state11 waits for owner sequencer+259>=2 then BA2F70 predicate before state12"},
+    {0x2e61263, kCurrentCode27, "The same object supplies its ServerField"},
+    {0x2e61a23, kCurrentCode28, "MoveField obtains the actor component table"},
+    {0x2e61a27, kCurrentCode29, "MoveField obtains TransformSync"},
+    {0x2D0467A, kCurrentTsFieldChain, "actor+68 -> components+1A0 -> TS+508 GetField; its field at +10 gives TS+518"},
+    {0x2D8CA6F, kCurrentFieldThis, "ServerField constructor preserves this in RDI"},
+    {0x2D8CDDF, kCurrentFieldKey, "ServerField constructor initializes its key at +2D0"},
+};
+
 // The objects the decision reads (the same offsets as the rest of option D):
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kActor_Comp = 0x68, kComp_TS = 0x1A0;
-constexpr uint32_t kTS_Field = 0x4F0 + 0x10;  // the field mover's field (field_share.h kTsFieldMover + kFmField)
 constexpr uint32_t kUser_Key = 0x60, kUser_Main = 0xD0, kUser_Session = 0x1F8;
-constexpr uint32_t kField_Owner = 0x180, kField_Key = 0x2C8;
-constexpr uint32_t kTls_Realm = 0x1EC, kTls_SendCtx = 0x250;
+constexpr uint32_t kField_Owner = 0x180;
 constexpr uint32_t kCtx_ScopeCount = 0x2A0, kCtx_ScopeCurrent = 0x2A8, kCtx_ScopeMode = 0x2AC;
+
+struct NativeLayout {
+    uintptr_t ctor, emit, target_vtable, base_vtable;
+    uint32_t ts_field, field_key, tls_realm, tls_send_ctx;
+};
+constexpr NativeLayout kLayout2976{kCtorRva, kEmitRva, kVtToTarget, kVtFinderBase,
+                                    0x500, 0x2C8, 0x1EC, 0x250};
+// The current finder and emitter retain their ABI. Field/TS tails and the
+// server realm byte moved; the send-context scope fields above did not.
+constexpr NativeLayout kLayout3527{0x2D04590, 0x2C142A0, 0x5EEC840, 0x5EEC860,
+                                    0x518, 0x2D0, 0x1EB, 0x250};
+constexpr uintptr_t kEntry3527 = 0x2E6B675;
+constexpr uint8_t kEntryBytes3527[] = {0x49, 0x8B, 0x87, 0xD8, 0x02, 0x00, 0x00,
+                                      0x48, 0x85, 0xC0, 0x75, 0x07, 0xB8, 0xFF, 0xFF, 0x00};
+
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). Every 3527 region was found again with relative operands masked,
+// each at one place: +0xC70 for the finder, the emitter, MoveField/MoveFieldCompleteCore, the scope lookup, the user
+// session and the ServerField constructor; +0xC50 for 0x2ADB2C4/0x2ADB2FC (native recipe) and 0x29AAF36 (realm);
+// +0x420 for 0xBE5A10 (actor session) and 0xC9CB91 (client 2322 handler); +0x250 for 0x856090 (loading state 11).
+// The nine `_3576` arrays differ from 3527 only in rel32/RIP fields, and each new target is the mapped one: the
+// ToTarget/ISendTargetFinder vtables 0x5EEC840/0x5EEC860 -> 0x5EEEA60/0x5EEEA80 (RTTI map), the emitter 0x2C142A0 ->
+// 0x2C14F10, its writers 0x2C146A0/0x2C14B40 -> 0x2C15310/0x2C157B0, 0x2ADB090 -> 0x2ADBCE0, 0x2A8A410 -> 0x2A8B060,
+// 0xAAA7A0 -> 0xAAABB0, 0xBA2F70 -> 0xBA3390 (all function starts in .pdata). Layout operands (TS+0x508/+0x518, field
+// +0x2D0/+0x2D8/+0x180, TLS +0x1EB/+0x250, scope +0x2A0/+0x2A8/+0x2AC, opcodes 0x950/0x924/0xBD5) are unchanged.
+constexpr uint8_t kCurrentCode0_3576[] = {  // 0x2D05200
+    0x48, 0x89, 0x4C, 0x24, 0x08, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0xD9, 0x48, 0x8D, 0x05,
+    0x6C, 0x98, 0x1E, 0x03, 0x48, 0x89, 0x01, 0xC6, 0x41, 0x08, 0x00, 0x48, 0x8D, 0x05, 0x3E, 0x98,
+    0x1E, 0x03, 0x48, 0x89, 0x01, 0x48, 0xC7, 0x41, 0x10, 0x00, 0x00, 0x00, 0x00, 0x48, 0x85, 0xD2,
+    0x74, 0x10, 0x48, 0x8B, 0x02, 0x48, 0x8B, 0xCA, 0xFF, 0x90, 0xE8, 0x00, 0x00, 0x00, 0x48, 0x89,
+    0x43, 0x10, 0x48, 0x8B, 0xC3, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3
+};
+constexpr uint8_t kCurrentCode1_3576[] = {  // 0x2D051A0
+    0x48, 0x89, 0x4C, 0x24, 0x08, 0x53, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0xD9, 0x48, 0x8D, 0x05,
+    0xCC, 0x98, 0x1E, 0x03, 0x48, 0x89, 0x01, 0xF6, 0xC2, 0x01, 0x74, 0x32, 0xE8, 0x6F, 0x11, 0x85,
+    0xFE, 0xBA, 0xFE, 0x01, 0x00, 0x00, 0x65, 0x48, 0x8B, 0x04, 0x25, 0x58, 0x00, 0x00, 0x00, 0x48,
+    0x8B, 0x08, 0x80, 0x3C, 0x0A, 0x00, 0x48, 0x8B, 0xCB, 0x74, 0x0E, 0xE8, 0xAC, 0xD2, 0xDF, 0x01,
+    0x48, 0x8B, 0xC3, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3, 0xE8, 0x9E, 0xD1, 0xDF, 0x01, 0x48, 0x8B,
+    0xC3, 0x48, 0x83, 0xC4, 0x20, 0x5B, 0xC3
+};
+constexpr uint8_t kCurrentCode2_3576[] = {  // 0x2D05250
+    0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x83, 0x79, 0x10, 0x00, 0x48,
+    0x8B, 0xDA, 0x48, 0x8B, 0xF9, 0x74, 0x3D, 0x8B, 0x4A, 0x08, 0x8B, 0x42, 0x0C, 0x3B, 0xC1, 0x77,
+    0x22, 0x8D, 0x14, 0x45, 0x01, 0x00, 0x00, 0x00, 0x03, 0xD0, 0xB8, 0x01, 0x00, 0x00, 0x00, 0xD1,
+    0xEA, 0x3B, 0xD0, 0x0F, 0x42, 0xD0, 0x3B, 0xCA, 0x0F, 0x47, 0xD1, 0x48, 0x8B, 0xCB, 0xE8, 0x4D,
+    0x2F, 0x6A, 0xFD, 0x8B, 0x53, 0x08, 0x48, 0x8B, 0x47, 0x10, 0x48, 0x8B, 0x0B, 0x48, 0x89, 0x04,
+    0xD1, 0xFF, 0x43, 0x08, 0x48, 0x8B, 0x5C, 0x24, 0x30, 0x48, 0x83, 0xC4, 0x20, 0x5F, 0xC3
+};
+constexpr uint8_t kCurrentCode8_3576[] = {  // 0x2ADBF14
+    0x48, 0x8D, 0x3D, 0x65, 0x2B, 0x41, 0x03, 0x48, 0x89, 0x7C, 0x24, 0x50, 0xC6, 0x44, 0x24, 0x58,
+    0x00, 0x48, 0x8D, 0x05, 0x34, 0x2B, 0x41, 0x03, 0x48, 0x89, 0x44, 0x24, 0x50, 0x4C, 0x89, 0x7C,
+    0x24, 0x60, 0x4D, 0x85, 0xF6, 0x74, 0x11, 0x49, 0x8B, 0x06, 0x49, 0x8B, 0xCE, 0xFF, 0x90, 0xE8,
+    0x00, 0x00, 0x00, 0x48, 0x89, 0x44, 0x24, 0x60
+};
+constexpr uint8_t kCurrentCode9_3576[] = {  // 0x2ADBF4C
+    0x48, 0x8D, 0x54, 0x24, 0x50, 0x49, 0x8B, 0xCE, 0xE8, 0xB7, 0x8F, 0x13, 0x00, 0x90, 0x48, 0x89,
+    0x7C, 0x24, 0x50
+};
+constexpr uint8_t kCurrentCode10_3576[] = {  // 0x2E6AF94
+    0x48, 0x8D, 0x3D, 0xE5, 0x3A, 0x08, 0x03, 0x48, 0x89, 0x7D, 0x90, 0xC6, 0x45, 0x98, 0x00, 0x48,
+    0x8D, 0x05, 0xB6, 0x3A, 0x08, 0x03, 0x48, 0x89, 0x45, 0x90, 0x4C, 0x89, 0x65, 0xA0, 0x48, 0x8B,
+    0x06, 0x48, 0x8B, 0xCE, 0xFF, 0x90, 0xE8, 0x00, 0x00, 0x00, 0x48, 0x89, 0x45, 0xA0, 0x4D, 0x8D,
+    0x8D, 0x50, 0x04, 0x00, 0x00, 0x48, 0x8D, 0x45, 0x70, 0x48, 0x89, 0x44, 0x24, 0x20, 0x4C, 0x8D,
+    0x45, 0xE0, 0x48, 0x8D, 0x55, 0x90, 0x48, 0x8B, 0xCE, 0xE8, 0x2E, 0xA3, 0xDA, 0xFF
+};
+constexpr uint8_t kCurrentCode14_3576[] = {  // 0x2E6BE4E
+    0x48, 0x8D, 0x1D, 0x2B, 0x2C, 0x08, 0x03, 0x48, 0x89, 0x5C, 0x24, 0x70, 0xC6, 0x44, 0x24, 0x78,
+    0x00, 0x48, 0x8D, 0x05, 0xFA, 0x2B, 0x08, 0x03, 0x48, 0x89, 0x44, 0x24, 0x70, 0x33, 0xC9, 0x48,
+    0x89, 0x4D, 0x80, 0x49, 0x8B, 0x06, 0x49, 0x8B, 0xCE, 0xFF, 0x90, 0xE8, 0x00, 0x00, 0x00, 0x48,
+    0x89, 0x45, 0x80, 0x4C, 0x8D, 0x8D, 0x18, 0x01, 0x00, 0x00, 0x4C, 0x8D, 0x44, 0x24, 0x40, 0x48,
+    0x8D, 0x54, 0x24, 0x70, 0x49, 0x8B, 0xCE, 0xE8, 0x16, 0x99, 0xDA, 0xFF
+};
+constexpr uint8_t kCurrentCode18_3576[] = {  // 0x2E6C2C9
+    0x4C, 0x8B, 0x4C, 0x24, 0x50, 0x4D, 0x8B, 0xC6, 0x49, 0x8B, 0xD7, 0x48, 0x8B, 0xCB, 0xE8, 0x04,
+    0xFA, 0xC6, 0xFF, 0x48, 0x8B, 0x4F, 0x18, 0xE8, 0x7B, 0xED, 0xC1, 0xFF
+};
+constexpr uint8_t kCurrentCode26_3576[] = {  // 0x8562E0
+    0x49, 0x8B, 0x8D, 0xC0, 0x00, 0x00, 0x00, 0x48, 0x8B, 0x09, 0xE8, 0xC1, 0x48, 0x25, 0x00, 0x80,
+    0xB8, 0x59, 0x02, 0x00, 0x00, 0x02, 0x0F, 0x82, 0x62, 0x03, 0x00, 0x00, 0xC4, 0xC1, 0x7B, 0x10,
+    0x85, 0x50, 0x01, 0x00, 0x00, 0xC5, 0xFB, 0x11, 0x45, 0x10, 0x41, 0x8B, 0x8D, 0x58, 0x01, 0x00,
+    0x00, 0x89, 0x4D, 0x18, 0x48, 0x8D, 0x55, 0x10, 0x48, 0x8B, 0xC8, 0xE8, 0x70, 0xD0, 0x34, 0x00,
+    0x84, 0xC0, 0x0F, 0x84, 0x36, 0x03, 0x00, 0x00, 0x41, 0xC6, 0x85, 0x5C, 0x01, 0x00, 0x00
+};
+const Region kRegions3576[] = {
+    {0x2D05200, kCurrentCode0_3576, "ToTarget constructor: RCX=finder, RDX=actor; vfE8 returns session"},
+    {0x2D051A0, kCurrentCode1_3576, "ToTarget scalar deleting destructor; flag0 only resets base vtable"},
+    {0x2D05250, kCurrentCode2_3576, "ToTarget recipient append from finder+10"},
+    {0x2D052B0, kCurrentCode3, "ToTarget session equality"},
+    {0x2C14F10, kCurrentCode4, "2322/native2384 emitter original head"},
+    {0x2C14F15, kCurrentCode5, "Emitter frame, actor/finder ABI, TLS250, recipients2B0/count2B8, ScopeFind"},
+    {0x2C14FEC, kCurrentCode6, "Emitter serializes actor key+60 as exactly four bytes"},
+    {0x2C15007, kCurrentCode7, "Emitter native2384 opcode0x950"},
+    {0x2ADBF14, kCurrentCode8_3576, "Native stack ToTarget recipe before emitter call"},
+    {0x2ADBF4C, kCurrentCode9_3576, "Native actor/finder argument setup, emitter call, stack destructor reset"},
+    {0x2E6AF94, kCurrentCode10_3576, "2144/native2340 finder recipe and emitter call"},
+    {0x2C15443, kCurrentCode11, "2144 writer native2340 opcode0x924"},
+    {0x2E6B00F, kCurrentCode12, "2144 wrapper sets R8 field, RCX component and calls MoveFieldCompleteCore"},
+    {0x2E6B39A, kCurrentCode13, "Core register provenance: R15=R8 field; R14=[RCX+8] actor"},
+    {0x2E6BE4E, kCurrentCode14_3576, "3066/native3029 finder recipe and emitter call before milestone"},
+    {0x2C158D7, kCurrentCode15, "3066 writer native3029 opcode0xBD5"},
+    {0x2E6C250, kCurrentCode16, "Actor+A0 user, user+60 identity compared with fieldR15+180; nonowner skips native2322"},
+    {0x2E6C298, kCurrentCode17, "Owner user+D0 main, main+68 components, components+A8 sequencer, component+18 manager"},
+    {0x2E6C2C9, kCurrentCode18_3576, "Owner-only native2322 call then owner/nonowner converge before hook"},
+    {0x2E6C2E5, kCurrentCode19, "Milestone hook: original seven-byte instruction reads fieldR15+2D8"},
+    {0x2BD638A, kCurrentCode20, "Scope lookup TLS250, mode2AC and count2A0"},
+    {0x2BD68F6, kCurrentCode21, "Current scope flush TLS250, current2A8 and array298"},
+    {0x29ABB86, kCurrentCode22, "ServerRunThread realm TLS1EB=1"},
+    {0xBE5E30, kCurrentCode23, "ServerChildOnlyInGameActor vfE8 returns actor+D0 session"},
+    {0x2D0D160, kCurrentCode24, "ServerUserActor vfE8 returns user+1F8 session"},
+    {0xC9CFB1, kCurrentCode25, "2322 client handler obtains field sequencer and writes readiness+259=2"},
+    {0x8562E0, kCurrentCode26_3576, "Loading state11 waits for owner sequencer+259>=2 then BA2F70 predicate before state12"},
+    {0x2E61ED3, kCurrentCode27, "The same object supplies its ServerField"},
+    {0x2E62693, kCurrentCode28, "MoveField obtains the actor component table"},
+    {0x2E62697, kCurrentCode29, "MoveField obtains TransformSync"},
+    {0x2D052EA, kCurrentTsFieldChain, "actor+68 -> components+1A0 -> TS+508 GetField; its field at +10 gives TS+518"},
+    {0x2D8D6DF, kCurrentFieldThis, "ServerField constructor preserves this in RDI"},
+    {0x2D8DA4F, kCurrentFieldKey, "ServerField constructor initializes its key at +2D0"},
+};
+constexpr NativeLayout kLayout3576{0x2D05200, 0x2C14F10, 0x5EEEA60, 0x5EEEA80,
+                                    0x518, 0x2D0, 0x1EB, 0x250};
+constexpr uintptr_t kEntry3576 = 0x2E6C2E5;  // 0x2E6B675 + 0xC70, kEntryBytes3527 unchanged
+
+// The synchronous installer's per-build profile (3527/3549 and 3576 share the logic and the layout).
+struct CurrentPort {
+    const char* build;
+    std::span<const Region> regions;
+    const NativeLayout* layout;
+    uintptr_t entry;
+    uintptr_t target_vf0, target_vf1, target_vf2, base_vf0;  // the finder vtables' slots
+    uintptr_t actor_session_slot, actor_session_fn;          // ServerChildOnlyInGameActor vtable + 0xE8
+    uintptr_t user_session_slot, user_session_fn;            // ServerUserActor vtable + 0xE8
+};
+const CurrentPort kPort3527{"3527", kRegions3527, &kLayout3527, kEntry3527,
+                            0x2D04530, 0x2D045E0, 0x2D04640, 0x2D04490,
+                            0x5EE4E90, 0xBE5A10, 0x5EECD90, 0x2D0C4F0};
+// 3576 slots by RTTI: ServerChildOnlyInGameActor 0x5EE4DA8 -> 0x5EE74D0 (+0xE8 = 0xBE5E30), ServerUserActor 0x5EECCA8
+// -> 0x5EEEEA8 (+0xE8 = 0x2D0D160); finder slots 0x2D051A0/0x2D05250/0x2D052B0, base slot 0 = 0x2D05100 (+0xC70).
+const CurrentPort kPort3576{"3576", kRegions3576, &kLayout3576, kEntry3576,
+                            0x2D051A0, 0x2D05250, 0x2D052B0, 0x2D05100,
+                            0x5EE75B8, 0xBE5E30, 0x5EEEF90, 0x2D0D160};
+
+// The build that uses the synchronous installer, or null (2976 uses observer_stage's verifier).
+const CurrentPort* current_port() noexcept {
+    switch (game::current_build()) {
+        case game::Build::v3527: return &kPort3527;
+        case game::Build::v3576: return &kPort3576;
+        default: return nullptr;
+    }
+}
+
+const NativeLayout* g_layout = &kLayout2976;  // published before g_verified
 
 using CtorFn = void*(__fastcall*)(void* finder, uintptr_t actor);
 using EmitFn = void(__fastcall*)(uintptr_t actor, void* finder);
@@ -145,6 +478,10 @@ using EmitFn = void(__fastcall*)(uintptr_t actor, void* finder);
 uintptr_t g_base = 0;
 std::atomic<oms::Mode> g_mode{oms::Mode::Off};
 std::atomic<bool> g_verified{false}, g_disabled{false};
+std::atomic<bool> g_current_entry_ready{false};
+std::mutex g_install_mu;
+bool g_current_attempted = false;  // under g_install_mu; refusal cannot turn into Off-success
+SafetyHookMid g_current_entry;
 CtorFn g_ctor = nullptr;
 EmitFn g_emit = nullptr;
 
@@ -191,12 +528,12 @@ uintptr_t fp(uintptr_t a, bool& ok) noexcept {
     return v.value_or(0);
 }
 
-// TS->field of an actor ([[actor+0x68]+0x1A0]+0x500); 0 if unreadable.
+// The selected build's TS->field; 0 if unreadable.
 uintptr_t field_of_actor(uintptr_t actor) noexcept {
     bool ok = true;
     const uintptr_t c = fp(actor + kActor_Comp, ok);
     const uintptr_t ts = ok ? fp(c + kComp_TS, ok) : 0;
-    const uintptr_t f = ok ? fp(ts + kTS_Field, ok) : 0;
+    const uintptr_t f = ok ? fp(ts + g_layout->ts_field, ok) : 0;
     return ok ? f : 0;
 }
 
@@ -206,9 +543,9 @@ void read_tls(oms::EntryFacts& f) noexcept {
     const uintptr_t block = fp(array, ok);
     if (!ok || !block) return;
     bool r = true;
-    f.realm = fr<uint8_t>(block + kTls_Realm, r) != 0 && r;
+    f.realm = fr<uint8_t>(block + g_layout->tls_realm, r) != 0 && r;
     bool c = true;
-    f.send_ctx = fp(block + kTls_SendCtx, c);
+    f.send_ctx = fp(block + g_layout->tls_send_ctx, c);
     if (!c) f.send_ctx = 0;
     if (f.send_ctx) {
         bool s = true;
@@ -233,7 +570,7 @@ oms::EntryFacts read_facts(uintptr_t field, uintptr_t actor) noexcept {
     f.user = fp(actor + kActor_User, ok);
     f.user_key = ok ? fr<uint32_t>(f.user + kUser_Key, ok) : 0;
     f.field_owner = fr<uint32_t>(field + kField_Owner, ok);
-    f.field_key = fr<uint32_t>(field + kField_Key, ok);
+    f.field_key = fr<uint32_t>(field + g_layout->field_key, ok);
     f.reads_ok = ok;
     if (ok) {
         bool o = true;
@@ -264,7 +601,7 @@ oms::EntryFacts read_facts(uintptr_t field, uintptr_t actor) noexcept {
 
 // ---------------------------------------------------------------- the call (Send only)
 
-// The ToTarget constructor 0x2A757A0: only our stack finder and the actor's
+// The selected ToTarget constructor: only our stack finder and the actor's
 // lock-free vf 0xE8 getter [V] (observer_scene_copy.cpp): a fault there is a bad
 // actor pointer, ours to handle (FaultCtor: emission off, logged).
 int guarded_ctor(void* finder, uintptr_t actor) noexcept {
@@ -276,12 +613,12 @@ int guarded_ctor(void* finder, uintptr_t actor) noexcept {
     }
 }
 
-// The 2322 emitter 0x2999D80 builds and queues the packet through the thread's
+// The selected native milestone emitter queues the packet through the thread's
 // send context: an exception inside it is the game's (P8 review I1). Emission
 // off here, one line straight to the log, the exception passed on.
 int emit_fault(EXCEPTION_POINTERS* ep) noexcept {
     g_disabled.store(true);
-    return game::game_fault_continue(ep, "ObserverMilestone", "the 2322 emitter 0x2999D80 ran for user 2");
+    return game::game_fault_continue(ep, "ObserverMilestone", "the verified native preload milestone emitter ran for user 2");
 }
 
 int guarded_emit(uintptr_t actor, void* finder) noexcept {
@@ -311,19 +648,19 @@ CallOutcome call_native(uintptr_t actor, uintptr_t expected_session) noexcept {
         return o;
     }
     o.finder_session = finder[2];
-    if (finder[0] != g_base + kVtToTarget || (finder[1] & 0xFF) != 0) {
+    if (finder[0] != g_base + g_layout->target_vtable || (finder[1] & 0xFF) != 0) {
         o.result = oms::CallResult::BadFinder;
     } else if (!expected_session || finder[2] != expected_session) {
         o.result = oms::CallResult::WrongRecipient;
     } else if (guarded_emit(actor, finder)) {
         o.result = oms::CallResult::FaultEmit;
     }
-    finder[0] = g_base + kVtFinderBase;  // 0x287F1DA: mov [rsp+0x50], rdi (the base vtable)
+    finder[0] = g_base + g_layout->base_vtable;  // native stack-finder cleanup: no allocation to free
     o.dur_us = p8_now_us() - t0;
     return o;
 }
 
-// ---------------------------------------------------------------- the lines (observer_stage's thread)
+// ---------------------------------------------------------------- the lines (report thread)
 
 std::map<uint32_t, uint32_t> g_gen_epoch;  // drain thread only
 uint64_t g_lines = 0;                      // drain thread only
@@ -409,7 +746,7 @@ std::string line_of(const p8p::Event& e) {
             const auto scope_count = static_cast<uint32_t>((v[10] >> 8) & 0xFFFFFFFF);
             const auto scope_cur = static_cast<int32_t>(static_cast<uint32_t>(v[10] >> 40));
             std::string verdict = emit ? (dry ? "WOULD EMIT (dry run: observer_milestone_send=0, nothing called)"
-                                              : "EMIT NOW: 0x2A757A0 + 0x2999D80 on this thread")
+                                              : "EMIT NOW: verified native ToTarget + milestone writer on this thread")
                                        : std::format("NO 2322 FROM US: {}", oms::why_name(why));
             return std::format(
                 "{} trip {} | observer entry of user 0x{:08X} actor 0x{:08X} into field 0x{:X} (key 0x{:08X}) owned by "
@@ -425,11 +762,11 @@ std::string line_of(const p8p::Event& e) {
             if (r != oms::CallResult::Returned) {
                 what = std::format("{} (ToTarget session 0x{:X})", oms::call_name(r), v[5]);
             } else if (!v[2]) {
-                what = std::format("0x2999D80 returned but NO 2322 reached take_frame on this thread (no recipient, "
+                what = std::format("native milestone writer returned but NO 2322 reached take_frame on this thread (no recipient, "
                                    "or a scope bundle): not retried (ToTarget session 0x{:X})",
                                    v[5]);
             } else {
-                what = std::format("0x2999D80 returned; its 2322 {} in user 2's queue (x{}){} (ToTarget session 0x{:X})",
+                what = std::format("native milestone writer returned; its 2322 {} in user 2's queue (x{}){} (ToTarget session 0x{:X})",
                                    v[3] ? "IS" : "is NOT (LOST)", v[4], v[7] ? " | ALSO SEEN FOR ANOTHER SESSION" : "",
                                    v[5]);
             }
@@ -614,6 +951,33 @@ bool code_at(uintptr_t rva, std::span<const uint8_t> b) {
            std::equal(actual.begin(), actual.end(), b.begin());
 }
 
+// The current port owns only the entry hook. It accepts no third-party jump
+// at the native emitter or finder: every checked region must be original.
+bool current_code_at(uintptr_t rva, std::span<const uint8_t> expected) {
+    std::vector<uint8_t> actual(expected.size());
+    return game::safe_read(g_base + rva, actual.data(), actual.size()) &&
+           std::equal(actual.begin(), actual.end(), expected.begin());
+}
+
+void current_on_entry(SafetyHookContext& ctx) {
+    // 3527's prologue sets R15=field and R14=[FieldMover+0]+8 traveller.
+    // R13 no longer holds the field. This common continuation follows the
+    // owner/nonowner branch and the traveller's native 2144/3066 sends.
+    observer_milestone_on_entry(ctx.r15, ctx.r14);
+}
+
+DWORD WINAPI current_report_thread(LPVOID) {
+    for (uint64_t tick = 1;; ++tick) {
+        Sleep(1000);
+        try {
+            observer_milestone_drain();
+            if (tick % 60 == 0) log::info("{}", observer_milestone_counters());
+        } catch (...) {
+            log::error("ObserverMilestone: report drain failed; emission is never retried by this thread");
+        }
+    }
+}
+
 }  // namespace
 
 oms::Mode observer_milestone_configure(bool diag, bool send) {
@@ -629,12 +993,83 @@ oms::Mode observer_milestone_configure(bool diag, bool send) {
 oms::Mode observer_milestone_mode() { return g_mode.load(); }
 
 bool observer_milestone_active() {
-    return g_mode.load() != oms::Mode::Off && g_verified.load() && !g_disabled.load();
+    return g_mode.load() != oms::Mode::Off && g_verified.load() && !g_disabled.load() &&
+           (!current_port() || g_current_entry_ready.load());
+}
+
+bool observer_milestone_install_current() {
+    std::lock_guard lock(g_install_mu);
+    // Preserve a refusal even if a later caller changes the configured mode.
+    if (g_current_attempted) return g_current_entry_ready.load() && !g_disabled.load();
+    if (g_mode.load() == oms::Mode::Off) return true;
+    g_current_attempted = true;
+    const auto refuse = [](const char* why) {
+        g_disabled.store(true);
+        g_verified.store(false);
+        log::error("ObserverMilestone: build {} install REFUSED: {}; guest admission must stay closed",
+                   current_port() ? current_port()->build : "?", why);
+        return false;
+    };
+    const CurrentPort* port = current_port();
+    if (!port || !game::validate_native_catalog()) {
+        return refuse("unsupported executable or native message catalog");
+    }
+    g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    std::vector<gad::Section> sections;
+    if (!p8_exe_sections(g_base, sections)) return refuse("unreadable executable sections");
+    for (const Region& r : port->regions) {
+        if (!gad::in_real_code(sections, static_cast<uint32_t>(r.rva), static_cast<uint32_t>(r.bytes.size())) ||
+            !current_code_at(r.rva, r.bytes)) {
+            log::error("ObserverMilestone: current {} differs at exe+0x{:X} ({} bytes)", r.what, r.rva, r.bytes.size());
+            return refuse("native code or layout witness differs");
+        }
+    }
+    const auto target0 = game::read<uintptr_t>(g_base + port->layout->target_vtable);
+    const auto target1 = game::read<uintptr_t>(g_base + port->layout->target_vtable + 8);
+    const auto target2 = game::read<uintptr_t>(g_base + port->layout->target_vtable + 16);
+    const auto base0 = game::read<uintptr_t>(g_base + port->layout->base_vtable);
+    const auto actor_session = game::read<uintptr_t>(g_base + port->actor_session_slot);
+    const auto user_session = game::read<uintptr_t>(g_base + port->user_session_slot);
+    if (!target0 || *target0 != g_base + port->target_vf0 || !target1 || *target1 != g_base + port->target_vf1 ||
+        !target2 || *target2 != g_base + port->target_vf2 || !base0 || *base0 != g_base + port->base_vf0 ||
+        !actor_session || *actor_session != g_base + port->actor_session_fn ||
+        !user_session || *user_session != g_base + port->user_session_fn) {
+        return refuse("native finder or actor/user session vtable differs");
+    }
+    g_layout = port->layout;
+    g_ctor = reinterpret_cast<CtorFn>(g_base + g_layout->ctor);
+    g_emit = reinterpret_cast<EmitFn>(g_base + g_layout->emit);
+    g_verified.store(true);
+    // The callback remains disarmed until all installation work has succeeded.
+    if (!p8_install_mid(g_base, sections, port->entry, 7, kEntryBytes3527, current_on_entry,
+                        g_current_entry, "ObserverMilestone", "the current field-entry completion")) {
+        return refuse("field-entry hook could not be installed");
+    }
+    const HANDLE report = CreateThread(nullptr, 0, current_report_thread, nullptr, 0, nullptr);
+    if (!report) {
+        // Keep the trampoline alive if a game thread is already inside it.
+        (void)g_current_entry.disable();
+        return refuse("report thread could not be started");
+    }
+    CloseHandle(report);
+    g_current_entry_ready.store(true, std::memory_order_release);
+    log::info("ObserverMilestone ON (build {}, {}): {} exact code regions and finder vtables verified; entry "
+              "exe+0x{:X} field=R15 actor=R14; native 2384 (logical 2322) writer exe+0x{:X}, "
+              "ToTarget exe+0x{:X}; once per observer trip after same-thread queued 2144/3066; "
+              "no worker emission or reload path",
+              port->build, oms::mode_name(g_mode.load()), port->regions.size(), port->entry, port->layout->emit,
+              port->layout->ctor);
+    return true;
 }
 
 bool observer_milestone_verify(uintptr_t base, std::span<const gad::Section> secs) {
     if (g_mode.load() == oms::Mode::Off) return false;
+    if (game::current_build() != game::Build::v2976) {
+        log::error("ObserverMilestone: legacy verifier refused on this build; build 3527 requires its synchronous installer");
+        return false;
+    }
     g_base = base;
+    g_layout = &kLayout2976;
     std::string bad;
     for (const Region& r : kRegions) {
         if (!gad::in_real_code(secs, static_cast<uint32_t>(r.rva), static_cast<uint32_t>(r.bytes.size())) ||
@@ -857,6 +1292,11 @@ omr::Mode observer_milestone_reload_configure(const std::string& value) {
         log::warn("ObserverMilestone reload: observer_milestone_reload='{}' is not 0, probe or 1; it stays 0", value);
     }
     omr::Mode mode = m.mode;
+    if (mode != omr::Mode::Off && current_port()) {
+        log::warn("ObserverMilestone reload: builds 3527/3576 support field-entry milestones only; reload={} is refused",
+                  value);
+        mode = omr::Mode::Off;
+    }
     if (mode != omr::Mode::Off && g_mode.load() == oms::Mode::Off) {
         log::warn("ObserverMilestone reload: observer_milestone_reload={} needs observer_milestone=1 (its verified "
                   "emitter and its thread; _send=1 for mode 1): OFF",
@@ -892,6 +1332,12 @@ omr::Mode observer_milestone_reload_any_configure(const std::string& value) {
         log::warn("ObserverMilestone reload: observer_milestone_reload_any='{}' is not 0, probe or 1; it stays 0", value);
     }
     omr::Mode mode = m.mode;
+    if (mode != omr::Mode::Off && current_port()) {
+        log::warn("ObserverMilestone reload: builds 3527/3576 support field-entry milestones only; reload_any={} is "
+                  "refused",
+                  value);
+        mode = omr::Mode::Off;
+    }
     if (mode != omr::Mode::Off && g_r_mode.load() == omr::Mode::Off) {
         log::warn("ObserverMilestone reload: observer_milestone_reload_any={} needs observer_milestone_reload=probe or 1 "
                   "(its ledger, its 2873 gate and its emission): OFF",

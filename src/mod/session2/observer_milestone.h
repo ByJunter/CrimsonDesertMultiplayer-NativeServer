@@ -16,9 +16,10 @@
 //                              ToTarget constructor 0x2A757A0(finder, traveller) and
 //                              emitter 0x2999D80(traveller, finder), once per trip.
 //
-// observer_stage_sync is unchanged and never sends (=2 is still refused); the
-// entry hook these keys need is observer_stage's: they install it in measure
-// mode when observer_stage_sync=0.
+// The addresses above describe build 2976. Build 3527 has a dedicated checked
+// entry hook at 0x2E6B675 (field R15, traveller R14), constructor 0x2D04590 and
+// emitter 0x2C142A0 (native opcode 2384). It does not install observer_stage.
+// observer_stage_sync is unchanged and never sends (=2 is still refused).
 //
 // Threads: the decision and the call run inside the entry hook (the server's
 // logic thread, the one MoveFieldCompleteCore runs on); take_frame calls
@@ -26,7 +27,8 @@
 // own 2322 among them, synchronously); inject / epoch / logout on the mod's
 // network thread. One lock around the ledger, never held while the game runs.
 // Every line is a fixed record in a lock-free ring, formatted once a second by
-// observer_stage's own thread (never a game or network thread).
+// observer_stage's thread on 2976 or the dedicated report thread on 3527
+// (never a game or network thread).
 
 #include <cstdint>
 #include <span>
@@ -44,6 +46,14 @@ oms::Mode observer_milestone_configure(bool diag, bool send);
 oms::Mode observer_milestone_mode();
 bool observer_milestone_active();  // configured and its code verified
 
+// Build 3527 only: synchronously verify the native writer, finder, object/TLS
+// layout and field-entry site, then install the dedicated entry hook. Off is a
+// no-op success; a requested but refused install stays false on every retry.
+// Call after configure and before accepting a guest or enabling shared fields.
+// Its own report thread only drains records; native emission stays on the
+// original server thread. The legacy observer_stage worker is not required.
+bool observer_milestone_install_current();
+
 // observer_stage's install thread, after the game's code is there and BEFORE
 // its own hooks go in: compares every instruction the emission and the
 // decision rely on with build 2976. False = off for the run (logged).
@@ -51,7 +61,7 @@ bool observer_milestone_verify(uintptr_t base, std::span<const gad::Section> sec
 // observer_stage's install thread: the entry hook could not be installed.
 void observer_milestone_disable(const char* why);
 
-// observer_stage's entry hook (0x2BC84E2): R13 = field, R14 = traveller.
+// The verified entry hook: 2976 R13/R14 or 3527 R15/R14 = field/traveller.
 void observer_milestone_on_entry(uintptr_t field, uintptr_t actor) noexcept;
 
 // server.cpp. take_frame, after g_outgoing.push, for oms::followed_out opcodes:
@@ -65,7 +75,7 @@ void observer_milestone_on_epoch(uint32_t epoch, const char* why) noexcept;
 // server_logout_user2: an undecided trip will never get a 2322.
 void observer_milestone_on_logout() noexcept;
 
-// observer_stage's thread, once a second: the queued lines and the follow-ups.
+// The selected report thread, once a second: queued lines and follow-ups.
 void observer_milestone_drain();
 std::string observer_milestone_counters();  // the 60 s line
 std::string observer_milestone_describe();  // atomics only

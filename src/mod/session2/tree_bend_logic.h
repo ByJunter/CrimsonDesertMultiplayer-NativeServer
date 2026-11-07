@@ -1,6 +1,7 @@
 #pragma once
 // P8 session 29, the tree bend of the grappling rope (docs/research/s25/gancho-cuerda.md section 14): the pure logic
-// of tree_bend.cpp, with no game access, so the tests can run it. Build 1.0.0.2976 only.
+// of tree_bend.cpp, with no game access, so the tests can run it. Builds 1.0.0.2976, 1.0.0.3527 and 1.0.0.3576 (the
+// addresses named below are 2976's; 3527's and 3576's tables follow them).
 //
 // The bend of a pulled tree is client-local and input-driven (section 14.3 [V code]): the client script's
 // pa::gameClientScript::RemoteCatchFunctions vf2 0x117F7E0 calls 0x1190FD0 every frame for the THROWER, which reads the
@@ -109,6 +110,63 @@ inline constexpr uint32_t kTree_Amount = 0x2A4;
 inline constexpr uint32_t kTree_Set = 0x2B4;
 inline constexpr uint32_t kTree_Flags = 0x59;
 inline constexpr uintptr_t kMainThreadId = 0x6A652D4;  // dword: the client's main thread
+
+// ---------------------------------------------------------------- build 1.0.0.3527 [V capstone on the installed PE]
+
+// From RTTI, not from similar bytes: pa::gameClientScript::RemoteCatchFunctions vtable 0x5A9C838, slot 2 = 0x134CB80 (same
+// size 0x15C and shape as 0x117F7E0; it calls the release 0x663130 at 0x134CC7C, remote_rope_logic.h). Its calls give the
+// apply 0x1360CC0 (size 0x5B4, as 0x1190FD0; only caller 0x134CCB1), FUN_1405b1600 = 0x66D150, FUN_140491ac0 = 0x53A700
+// ([obj+0x210] walk). The apply's last call is SetBend 0x376C6A0 (0x1361222, its only caller; the same writes +0x2A8,
+// +0x2AC, +0x2A4, +0x2B4, +0x59). The tick 0x658550 calls [comp+0xCF8]->vf(owner, slot, dt, comp+0x168+slot*0x428), has
+// callers 0x98A697 and the job's jmp 0x98F160. Heads kVf2Head, kApplyHead, kSetBendHead, kTickHead, kGetTargetHead and
+// kFindTreeHead are byte-identical in 3527. What moved in the data: the script's state (+0x48: 0x13611D5 amount, 0x13611FF
+// direction), the action's f6 byte (+0xFA: 0x134CC13), the component's slot state (see remote_rope_logic.h).
+inline constexpr uintptr_t kCodeEnd3527 = 0x5595000;
+inline constexpr uintptr_t kVf23527 = 0x134CB80;
+inline constexpr uintptr_t kVf2Slot3527 = 0x5A9C848;  // vtable 0x5A9C838 slot 2
+inline constexpr uintptr_t kApply3527 = 0x1360CC0;
+inline constexpr uintptr_t kApplyCall3527 = 0x134CCB1;
+inline constexpr uint8_t kApplyCallBytes3527[5] = {0xE8, 0x0A, 0x40, 0x01, 0x00};
+inline constexpr uintptr_t kSetBend3527 = 0x376C6A0;
+inline constexpr uintptr_t kSetBendCall3527 = 0x1361222;  // rdx = state+0x3C8, xmm2 = state+0x3C0
+inline constexpr uint8_t kSetBendCallBytes3527[5] = {0xE8, 0x79, 0xB4, 0x40, 0x02};
+inline constexpr uintptr_t kTick3527 = 0x658550;
+inline constexpr uintptr_t kTickJump3527 = 0x98F160;
+inline constexpr uint8_t kTickJumpBytes3527[5] = {0xE9, 0xEB, 0x93, 0xCC, 0xFF};
+inline constexpr uintptr_t kGetTarget3527 = 0x66D150;
+inline constexpr uintptr_t kFindTree3527 = 0x53A700;
+inline constexpr uintptr_t kClientRemoteCatchVtbl3527 = 0x5916888;
+inline constexpr uint32_t kControl_F63527 = 0xFA;
+inline constexpr uint32_t kStateBase3527 = 0xA4C;
+inline constexpr uint32_t kState_Dir3527 = 0x3C8;
+inline constexpr uintptr_t kMainThreadId3527 = 0x6EA3C78;
+
+// ---------------------------------------------------------------- build 1.0.0.3576 (static, 2026-11-06; not yet run)
+
+// From RTTI again: RemoteCatchFunctions vtable 0x5A9E970, slot 2 = 0x134D340 (+0x7C0; kVf2Head, 0x15C bytes, the release
+// call 0x134D43C -> 0x663790). Its call 0x134D471 (the same 5 bytes as 3527's: the apply moved with it) -> the apply
+// 0x1361480 (+0x7C0, kApplyHead, 0x5B4 bytes, only caller), whose calls give FUN_1405b1600 = 0x66D7B0 (+0x83) and
+// FUN_140491ac0 = 0x53AD60 (+0x97) (both +0x660, their heads) and, last, SetBend 0x376D3A0 (+0xD00, kSetBendHead; its
+// only caller 0x13619E2, rdx = state+0x3C8, xmm2 = state+0x3C0 as 3527's). The tick 0x658BB0 (+0x660, kTickHead): the
+// only function with that head within +0x2000; its callers call 0x98AA07 and jmp 0x98F4D0 (3527's + 0x370).
+// ClientRemoteCatchActorComponent 0x59188F0 (RTTI; vf158 = the release 0x663790). The main thread's id 0x6EA5C78: the
+// release's `cmp [rip],eax` at 0x6637FD (3527's 0x66319D + 0x660). The data offsets are 3527's: f6 +0xFA (0x134D3D3), the
+// slot state +0xA4C (0x65DEB4), the state's +0x3C0 / +0x3C8 (0x1361995 / 0x13619BF).
+inline constexpr uintptr_t kCodeEnd3576 = 0x5597000;
+inline constexpr uintptr_t kVf23576 = 0x134D340;
+inline constexpr uintptr_t kVf2Slot3576 = 0x5A9E980;  // vtable 0x5A9E970 slot 2
+inline constexpr uintptr_t kApply3576 = 0x1361480;
+inline constexpr uintptr_t kApplyCall3576 = 0x134D471;  // kApplyCallBytes3527
+inline constexpr uintptr_t kSetBend3576 = 0x376D3A0;
+inline constexpr uintptr_t kSetBendCall3576 = 0x13619E2;
+inline constexpr uint8_t kSetBendCallBytes3576[5] = {0xE8, 0xB9, 0xB9, 0x40, 0x02};
+inline constexpr uintptr_t kTick3576 = 0x658BB0;
+inline constexpr uintptr_t kTickJump3576 = 0x98F4D0;
+inline constexpr uint8_t kTickJumpBytes3576[5] = {0xE9, 0xDB, 0x96, 0xCC, 0xFF};
+inline constexpr uintptr_t kGetTarget3576 = 0x66D7B0;
+inline constexpr uintptr_t kFindTree3576 = 0x53AD60;
+inline constexpr uintptr_t kClientRemoteCatchVtbl3576 = 0x59188F0;
+inline constexpr uintptr_t kMainThreadId3576 = 0x6EA5C78;
 
 // As the natives (0x5947B4, 0x5A5370, FUN_1405b1600): a scene id is set when one of its first three dwords is.
 inline bool scene_set(const uint8_t* s) {

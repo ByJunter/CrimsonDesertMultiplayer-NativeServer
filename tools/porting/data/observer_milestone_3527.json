@@ -1,0 +1,572 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "timestamp": "0x6aea07a6",
+  "assertions": [
+    {
+      "rva": "0x2d04590",
+      "bytes": "48 89 4c 24 08 53 48 83 ec 20 48 8b d9 48 8d 05 bc 82 1e 03 48 89 01 c6 41 08 00 48 8d 05 8e 82 1e 03 48 89 01 48 c7 41 10 00 00 00 00 48 85 d2 74 10 48 8b 02 48 8b ca ff 90 e8 00 00 00 48 89 43 10 48 8b c3 48 83 c4 20 5b c3",
+      "meaning": "ToTarget constructor: RCX=finder, RDX=actor; vfE8 returns session",
+      "instructions": [
+        "2D04590: mov qword ptr [rsp + 8], rcx",
+        "2D04595: push rbx",
+        "2D04596: sub rsp, 0x20",
+        "2D0459A: mov rbx, rcx",
+        "2D0459D: lea rax, [rip + 0x31e82bc]",
+        "2D045A4: mov qword ptr [rcx], rax",
+        "2D045A7: mov byte ptr [rcx + 8], 0",
+        "2D045AB: lea rax, [rip + 0x31e828e]",
+        "2D045B2: mov qword ptr [rcx], rax",
+        "2D045B5: mov qword ptr [rcx + 0x10], 0",
+        "2D045BD: test rdx, rdx",
+        "2D045C0: je 0x2d045d2",
+        "2D045C2: mov rax, qword ptr [rdx]",
+        "2D045C5: mov rcx, rdx",
+        "2D045C8: call qword ptr [rax + 0xe8]",
+        "2D045CE: mov qword ptr [rbx + 0x10], rax",
+        "2D045D2: mov rax, rbx",
+        "2D045D5: add rsp, 0x20",
+        "2D045D9: pop rbx",
+        "2D045DA: ret "
+      ]
+    },
+    {
+      "rva": "0x2d04530",
+      "bytes": "48 89 4c 24 08 53 48 83 ec 20 48 8b d9 48 8d 05 1c 83 1e 03 48 89 01 f6 c2 01 74 32 e8 bf 15 85 fe ba fe 01 00 00 65 48 8b 04 25 58 00 00 00 48 8b 08 80 3c 0a 00 48 8b cb 74 0e e8 3c cf df 01 48 8b c3 48 83 c4 20 5b c3 e8 2e ce df 01 48 8b c3 48 83 c4 20 5b c3",
+      "meaning": "ToTarget scalar deleting destructor; flag0 only resets base vtable",
+      "instructions": [
+        "2D04530: mov qword ptr [rsp + 8], rcx",
+        "2D04535: push rbx",
+        "2D04536: sub rsp, 0x20",
+        "2D0453A: mov rbx, rcx",
+        "2D0453D: lea rax, [rip + 0x31e831c]",
+        "2D04544: mov qword ptr [rcx], rax",
+        "2D04547: test dl, 1",
+        "2D0454A: je 0x2d0457e",
+        "2D0454C: call 0x1555b10",
+        "2D04551: mov edx, 0x1fe",
+        "2D04556: mov rax, qword ptr gs:[0x58]",
+        "2D0455F: mov rcx, qword ptr [rax]",
+        "2D04562: cmp byte ptr [rdx + rcx], 0",
+        "2D04566: mov rcx, rbx",
+        "2D04569: je 0x2d04579",
+        "2D0456B: call 0x4b014ac",
+        "2D04570: mov rax, rbx",
+        "2D04573: add rsp, 0x20",
+        "2D04577: pop rbx",
+        "2D04578: ret ",
+        "2D04579: call 0x4b013ac",
+        "2D0457E: mov rax, rbx",
+        "2D04581: add rsp, 0x20",
+        "2D04585: pop rbx",
+        "2D04586: ret "
+      ]
+    },
+    {
+      "rva": "0x2d045e0",
+      "bytes": "48 89 5c 24 08 57 48 83 ec 20 48 83 79 10 00 48 8b da 48 8b f9 74 3d 8b 4a 08 8b 42 0c 3b c1 77 22 8d 14 45 01 00 00 00 03 d0 b8 01 00 00 00 d1 ea 3b d0 0f 42 d0 3b ca 0f 47 d1 48 8b cb e8 dd 38 6a fd 8b 53 08 48 8b 47 10 48 8b 0b 48 89 04 d1 ff 43 08 48 8b 5c 24 30 48 83 c4 20 5f c3",
+      "meaning": "ToTarget recipient append from finder+10",
+      "instructions": [
+        "2D045E0: mov qword ptr [rsp + 8], rbx",
+        "2D045E5: push rdi",
+        "2D045E6: sub rsp, 0x20",
+        "2D045EA: cmp qword ptr [rcx + 0x10], 0",
+        "2D045EF: mov rbx, rdx",
+        "2D045F2: mov rdi, rcx",
+        "2D045F5: je 0x2d04634",
+        "2D045F7: mov ecx, dword ptr [rdx + 8]",
+        "2D045FA: mov eax, dword ptr [rdx + 0xc]",
+        "2D045FD: cmp eax, ecx",
+        "2D045FF: ja 0x2d04623",
+        "2D04601: lea edx, [rax*2 + 1]",
+        "2D04608: add edx, eax",
+        "2D0460A: mov eax, 1",
+        "2D0460F: shr edx, 1",
+        "2D04611: cmp edx, eax",
+        "2D04613: cmovb edx, eax",
+        "2D04616: cmp ecx, edx",
+        "2D04618: cmova edx, ecx",
+        "2D0461B: mov rcx, rbx",
+        "2D0461E: call 0x3a7f00",
+        "2D04623: mov edx, dword ptr [rbx + 8]",
+        "2D04626: mov rax, qword ptr [rdi + 0x10]",
+        "2D0462A: mov rcx, qword ptr [rbx]",
+        "2D0462D: mov qword ptr [rcx + rdx*8], rax",
+        "2D04631: inc dword ptr [rbx + 8]",
+        "2D04634: mov rbx, qword ptr [rsp + 0x30]",
+        "2D04639: add rsp, 0x20",
+        "2D0463D: pop rdi",
+        "2D0463E: ret "
+      ]
+    },
+    {
+      "rva": "0x2d04640",
+      "bytes": "48 8b 42 10 48 39 41 10 0f 94 c0 c3",
+      "meaning": "ToTarget session equality",
+      "instructions": [
+        "2D04640: mov rax, qword ptr [rdx + 0x10]",
+        "2D04644: cmp qword ptr [rcx + 0x10], rax",
+        "2D04648: sete al",
+        "2D0464B: ret "
+      ]
+    },
+    {
+      "rva": "0x2c142a0",
+      "bytes": "48 89 5c 24 08",
+      "meaning": "2322/native2384 emitter original head",
+      "instructions": [
+        "2C142A0: mov qword ptr [rsp + 8], rbx"
+      ]
+    },
+    {
+      "rva": "0x2c142a5",
+      "bytes": "55 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 d9 48 81 ec b0 00 00 00 48 8b fa 48 8b f1 65 48 8b 04 25 58 00 00 00 4c 8b 20 4c 89 65 d7 b8 50 02 00 00 4a 8b 04 20 33 db 89 98 b8 02 00 00 4c 8d b8 b0 02 00 00 48 8b 02 49 8b d7 48 8b cf ff 50 08 45 8b 6f 08 45 85 ed 0f 84 7c 03 00 00 48 8b cf e8 f5 13 fc ff",
+      "meaning": "Emitter frame, actor/finder ABI, TLS250, recipients2B0/count2B8, ScopeFind",
+      "instructions": [
+        "2C142A5: push rbp",
+        "2C142A6: push rsi",
+        "2C142A7: push rdi",
+        "2C142A8: push r12",
+        "2C142AA: push r13",
+        "2C142AC: push r14",
+        "2C142AE: push r15",
+        "2C142B0: lea rbp, [rsp - 0x27]",
+        "2C142B5: sub rsp, 0xb0",
+        "2C142BC: mov rdi, rdx",
+        "2C142BF: mov rsi, rcx",
+        "2C142C2: mov rax, qword ptr gs:[0x58]",
+        "2C142CB: mov r12, qword ptr [rax]",
+        "2C142CE: mov qword ptr [rbp - 0x29], r12",
+        "2C142D2: mov eax, 0x250",
+        "2C142D7: mov rax, qword ptr [rax + r12]",
+        "2C142DB: xor ebx, ebx",
+        "2C142DD: mov dword ptr [rax + 0x2b8], ebx",
+        "2C142E3: lea r15, [rax + 0x2b0]",
+        "2C142EA: mov rax, qword ptr [rdx]",
+        "2C142ED: mov rdx, r15",
+        "2C142F0: mov rcx, rdi",
+        "2C142F3: call qword ptr [rax + 8]",
+        "2C142F6: mov r13d, dword ptr [r15 + 8]",
+        "2C142FA: test r13d, r13d",
+        "2C142FD: je 0x2c1467f",
+        "2C14303: mov rcx, rdi",
+        "2C14306: call 0x2bd5700"
+      ]
+    },
+    {
+      "rva": "0x2c1437c",
+      "bytes": "48 85 f6 74 03 8b 5e 60 89 5d 6f 48 8b 00 41 b8 04 00 00 00 48 8d 55 6f ff 50 08",
+      "meaning": "Emitter serializes actor key+60 as exactly four bytes",
+      "instructions": [
+        "2C1437C: test rsi, rsi",
+        "2C1437F: je 0x2c14384",
+        "2C14381: mov ebx, dword ptr [rsi + 0x60]",
+        "2C14384: mov dword ptr [rbp + 0x6f], ebx",
+        "2C14387: mov rax, qword ptr [rax]",
+        "2C1438A: mov r8d, 4",
+        "2C14390: lea rdx, [rbp + 0x6f]",
+        "2C14394: call qword ptr [rax + 8]"
+      ]
+    },
+    {
+      "rva": "0x2c14397",
+      "bytes": "66 41 c7 06 50 09",
+      "meaning": "Emitter native2384 opcode0x950",
+      "instructions": [
+        "2C14397: mov word ptr [r14], 0x950"
+      ]
+    },
+    {
+      "rva": "0x2adb2c4",
+      "bytes": "48 8d 3d 95 15 41 03 48 89 7c 24 50 c6 44 24 58 00 48 8d 05 64 15 41 03 48 89 44 24 50 4c 89 7c 24 60 4d 85 f6 74 11 49 8b 06 49 8b ce ff 90 e8 00 00 00 48 89 44 24 60",
+      "meaning": "Native stack ToTarget recipe before emitter call",
+      "instructions": [
+        "2ADB2C4: lea rdi, [rip + 0x3411595]",
+        "2ADB2CB: mov qword ptr [rsp + 0x50], rdi",
+        "2ADB2D0: mov byte ptr [rsp + 0x58], 0",
+        "2ADB2D5: lea rax, [rip + 0x3411564]",
+        "2ADB2DC: mov qword ptr [rsp + 0x50], rax",
+        "2ADB2E1: mov qword ptr [rsp + 0x60], r15",
+        "2ADB2E6: test r14, r14",
+        "2ADB2E9: je 0x2adb2fc",
+        "2ADB2EB: mov rax, qword ptr [r14]",
+        "2ADB2EE: mov rcx, r14",
+        "2ADB2F1: call qword ptr [rax + 0xe8]",
+        "2ADB2F7: mov qword ptr [rsp + 0x60], rax"
+      ]
+    },
+    {
+      "rva": "0x2adb2fc",
+      "bytes": "48 8d 54 24 50 49 8b ce e8 97 8f 13 00 90 48 89 7c 24 50",
+      "meaning": "Native actor/finder argument setup, emitter call, stack destructor reset",
+      "instructions": [
+        "2ADB2FC: lea rdx, [rsp + 0x50]",
+        "2ADB301: mov rcx, r14",
+        "2ADB304: call 0x2c142a0",
+        "2ADB309: nop ",
+        "2ADB30A: mov qword ptr [rsp + 0x50], rdi"
+      ]
+    },
+    {
+      "rva": "0x2e6a324",
+      "bytes": "48 8d 3d 35 25 08 03 48 89 7d 90 c6 45 98 00 48 8d 05 06 25 08 03 48 89 45 90 4c 89 65 a0 48 8b 06 48 8b ce ff 90 e8 00 00 00 48 89 45 a0 4d 8d 8d 50 04 00 00 48 8d 45 70 48 89 44 24 20 4c 8d 45 e0 48 8d 55 90 48 8b ce e8 2e a3 da ff",
+      "meaning": "2144/native2340 finder recipe and emitter call",
+      "instructions": [
+        "2E6A324: lea rdi, [rip + 0x3082535]",
+        "2E6A32B: mov qword ptr [rbp - 0x70], rdi",
+        "2E6A32F: mov byte ptr [rbp - 0x68], 0",
+        "2E6A333: lea rax, [rip + 0x3082506]",
+        "2E6A33A: mov qword ptr [rbp - 0x70], rax",
+        "2E6A33E: mov qword ptr [rbp - 0x60], r12",
+        "2E6A342: mov rax, qword ptr [rsi]",
+        "2E6A345: mov rcx, rsi",
+        "2E6A348: call qword ptr [rax + 0xe8]",
+        "2E6A34E: mov qword ptr [rbp - 0x60], rax",
+        "2E6A352: lea r9, [r13 + 0x450]",
+        "2E6A359: lea rax, [rbp + 0x70]",
+        "2E6A35D: mov qword ptr [rsp + 0x20], rax",
+        "2E6A362: lea r8, [rbp - 0x20]",
+        "2E6A366: lea rdx, [rbp - 0x70]",
+        "2E6A36A: mov rcx, rsi",
+        "2E6A36D: call 0x2c146a0"
+      ]
+    },
+    {
+      "rva": "0x2c147d3",
+      "bytes": "66 41 c7 06 24 09",
+      "meaning": "2144 writer native2340 opcode0x924",
+      "instructions": [
+        "2C147D3: mov word ptr [r14], 0x924"
+      ]
+    },
+    {
+      "rva": "0x2e6a39f",
+      "bytes": "4c 8b 4c 24 70 4c 8b c3 48 8d 55 60 49 8b cd e8 4d 03 00 00",
+      "meaning": "2144 wrapper sets R8 field, RCX component and calls MoveFieldCompleteCore",
+      "instructions": [
+        "2E6A39F: mov r9, qword ptr [rsp + 0x70]",
+        "2E6A3A4: mov r8, rbx",
+        "2E6A3A7: lea rdx, [rbp + 0x60]",
+        "2E6A3AB: mov rcx, r13",
+        "2E6A3AE: call 0x2e6a700"
+      ]
+    },
+    {
+      "rva": "0x2e6a72a",
+      "bytes": "4d 8b e9 4d 8b f8 48 8b f1 33 c0 89 44 24 68 4c 8b 71 08",
+      "meaning": "Core register provenance: R15=R8 field; R14=[RCX+8] actor",
+      "instructions": [
+        "2E6A72A: mov r13, r9",
+        "2E6A72D: mov r15, r8",
+        "2E6A730: mov rsi, rcx",
+        "2E6A733: xor eax, eax",
+        "2E6A735: mov dword ptr [rsp + 0x68], eax",
+        "2E6A739: mov r14, qword ptr [rcx + 8]"
+      ]
+    },
+    {
+      "rva": "0x2e6b1de",
+      "bytes": "48 8d 1d 7b 16 08 03 48 89 5c 24 70 c6 44 24 78 00 48 8d 05 4a 16 08 03 48 89 44 24 70 33 c9 48 89 4d 80 49 8b 06 49 8b ce ff 90 e8 00 00 00 48 89 45 80 4c 8d 8d 18 01 00 00 4c 8d 44 24 40 48 8d 54 24 70 49 8b ce e8 16 99 da ff",
+      "meaning": "3066/native3029 finder recipe and emitter call before milestone",
+      "instructions": [
+        "2E6B1DE: lea rbx, [rip + 0x308167b]",
+        "2E6B1E5: mov qword ptr [rsp + 0x70], rbx",
+        "2E6B1EA: mov byte ptr [rsp + 0x78], 0",
+        "2E6B1EF: lea rax, [rip + 0x308164a]",
+        "2E6B1F6: mov qword ptr [rsp + 0x70], rax",
+        "2E6B1FB: xor ecx, ecx",
+        "2E6B1FD: mov qword ptr [rbp - 0x80], rcx",
+        "2E6B201: mov rax, qword ptr [r14]",
+        "2E6B204: mov rcx, r14",
+        "2E6B207: call qword ptr [rax + 0xe8]",
+        "2E6B20D: mov qword ptr [rbp - 0x80], rax",
+        "2E6B211: lea r9, [rbp + 0x118]",
+        "2E6B218: lea r8, [rsp + 0x40]",
+        "2E6B21D: lea rdx, [rsp + 0x70]",
+        "2E6B222: mov rcx, r14",
+        "2E6B225: call 0x2c14b40"
+      ]
+    },
+    {
+      "rva": "0x2c14c67",
+      "bytes": "66 41 c7 06 d5 0b",
+      "meaning": "3066 writer native3029 opcode0xBD5",
+      "instructions": [
+        "2C14C67: mov word ptr [r14], 0xbd5"
+      ]
+    },
+    {
+      "rva": "0x2e6b5e0",
+      "bytes": "49 8b 86 a0 00 00 00 45 33 ed 48 85 c0 74 05 8b 40 60 eb 03 41 8b c5 45 8b 87 80 01 00 00 41 3b c0 75 69",
+      "meaning": "Actor+A0 user, user+60 identity compared with fieldR15+180; nonowner skips native2322",
+      "instructions": [
+        "2E6B5E0: mov rax, qword ptr [r14 + 0xa0]",
+        "2E6B5E7: xor r13d, r13d",
+        "2E6B5EA: test rax, rax",
+        "2E6B5ED: je 0x2e6b5f4",
+        "2E6B5EF: mov eax, dword ptr [rax + 0x60]",
+        "2E6B5F2: jmp 0x2e6b5f7",
+        "2E6B5F4: mov eax, r13d",
+        "2E6B5F7: mov r8d, dword ptr [r15 + 0x180]",
+        "2E6B5FE: cmp eax, r8d",
+        "2E6B601: jne 0x2e6b66c"
+      ]
+    },
+    {
+      "rva": "0x2e6b628",
+      "bytes": "48 8b 44 24 78 48 8b 88 d0 00 00 00 48 8b 41 68 48 8b 88 a8 00 00 00 48 8b 59 18",
+      "meaning": "Owner user+D0 main, main+68 components, components+A8 sequencer, component+18 manager",
+      "instructions": [
+        "2E6B628: mov rax, qword ptr [rsp + 0x78]",
+        "2E6B62D: mov rcx, qword ptr [rax + 0xd0]",
+        "2E6B634: mov rax, qword ptr [rcx + 0x68]",
+        "2E6B638: mov rcx, qword ptr [rax + 0xa8]",
+        "2E6B63F: mov rbx, qword ptr [rcx + 0x18]"
+      ]
+    },
+    {
+      "rva": "0x2e6b659",
+      "bytes": "4c 8b 4c 24 50 4d 8b c6 49 8b d7 48 8b cb e8 24 fa c6 ff 48 8b 4f 18 e8 9b ed c1 ff",
+      "meaning": "Owner-only native2322 call then owner/nonowner converge before hook",
+      "instructions": [
+        "2E6B659: mov r9, qword ptr [rsp + 0x50]",
+        "2E6B65E: mov r8, r14",
+        "2E6B661: mov rdx, r15",
+        "2E6B664: mov rcx, rbx",
+        "2E6B667: call 0x2adb090",
+        "2E6B66C: mov rcx, qword ptr [rdi + 0x18]",
+        "2E6B670: call 0x2a8a410"
+      ]
+    },
+    {
+      "rva": "0x2e6b675",
+      "bytes": "49 8b 87 d8 02 00 00 48 85 c0 75 07 b8 ff ff 00",
+      "meaning": "Milestone hook: original seven-byte instruction reads fieldR15+2D8",
+      "instructions": [
+        "2E6B675: mov rax, qword ptr [r15 + 0x2d8]",
+        "2E6B67C: test rax, rax",
+        "2E6B67F: jne 0x2e6b688"
+      ]
+    },
+    {
+      "rva": "0x2bd571a",
+      "bytes": "65 48 8b 04 25 58 00 00 00 48 8b f1 bd 50 02 00 00 48 8b 10 48 8b 2c 2a 80 bd ac 02 00 00 00 74 44 44 8b b5 a0 02 00 00",
+      "meaning": "Scope lookup TLS250, mode2AC and count2A0",
+      "instructions": [
+        "2BD571A: mov rax, qword ptr gs:[0x58]",
+        "2BD5723: mov rsi, rcx",
+        "2BD5726: mov ebp, 0x250",
+        "2BD572B: mov rdx, qword ptr [rax]",
+        "2BD572E: mov rbp, qword ptr [rdx + rbp]",
+        "2BD5732: cmp byte ptr [rbp + 0x2ac], 0",
+        "2BD5739: je 0x2bd577f",
+        "2BD573B: mov r14d, dword ptr [rbp + 0x2a0]"
+      ]
+    },
+    {
+      "rva": "0x2bd5c86",
+      "bytes": "65 48 8b 04 25 58 00 00 00 bf 50 02 00 00 48 8b 08 48 8b 3c 0f 8b 87 a8 02 00 00 83 f8 ff 74 5c 8b c8 48 89 5c 24 30 48 8b 87 98 02 00 00",
+      "meaning": "Current scope flush TLS250, current2A8 and array298",
+      "instructions": [
+        "2BD5C86: mov rax, qword ptr gs:[0x58]",
+        "2BD5C8F: mov edi, 0x250",
+        "2BD5C94: mov rcx, qword ptr [rax]",
+        "2BD5C97: mov rdi, qword ptr [rdi + rcx]",
+        "2BD5C9B: mov eax, dword ptr [rdi + 0x2a8]",
+        "2BD5CA1: cmp eax, -1",
+        "2BD5CA4: je 0x2bd5d02",
+        "2BD5CA6: mov ecx, eax",
+        "2BD5CA8: mov qword ptr [rsp + 0x30], rbx",
+        "2BD5CAD: mov rax, qword ptr [rdi + 0x298]"
+      ]
+    },
+    {
+      "rva": "0x29aaf36",
+      "bytes": "b8 eb 01 00 00 c6 04 18 01",
+      "meaning": "ServerRunThread realm TLS1EB=1",
+      "instructions": [
+        "29AAF36: mov eax, 0x1eb",
+        "29AAF3B: mov byte ptr [rax + rbx], 1"
+      ]
+    },
+    {
+      "rva": "0xbe5a10",
+      "bytes": "48 8b 81 d0 00 00 00 c3",
+      "meaning": "ServerChildOnlyInGameActor vfE8 returns actor+D0 session",
+      "instructions": [
+        "BE5A10: mov rax, qword ptr [rcx + 0xd0]",
+        "BE5A17: ret "
+      ]
+    },
+    {
+      "rva": "0x2d0c4f0",
+      "bytes": "48 8b 81 f8 01 00 00 c3",
+      "meaning": "ServerUserActor vfE8 returns user+1F8 session",
+      "instructions": [
+        "2D0C4F0: mov rax, qword ptr [rcx + 0x1f8]",
+        "2D0C4F7: ret "
+      ]
+    },
+    {
+      "rva": "0x2d0467a",
+      "bytes": "48 8b 48 68 48 8b 99 a0 01 00 00 48 8d 8b 08 05 00 00 48 8d 54 24 20 e8 da ca 15 00",
+      "meaning": "Actor+68 -> components+1A0 -> TransformSync+508 passed to FieldMover GetField",
+      "instructions": [
+        "2D0467A: mov rcx, qword ptr [rax + 0x68]",
+        "2D0467E: mov rbx, qword ptr [rcx + 0x1a0]",
+        "2D04685: lea rcx, [rbx + 0x508]",
+        "2D0468C: lea rdx, [rsp + 0x20]",
+        "2D04691: call 0x2e61170"
+      ]
+    },
+    {
+      "rva": "0x2e61188",
+      "bytes": "48 8b f1",
+      "meaning": "GetField preserves FieldMover RCX as RSI",
+      "instructions": [
+        "2E61188: mov rsi, rcx"
+      ]
+    },
+    {
+      "rva": "0x2e61263",
+      "bytes": "48 8b 6e 10",
+      "meaning": "GetField reads FieldMover+10, hence TransformSync+518 field",
+      "instructions": [
+        "2E61263: mov rbp, qword ptr [rsi + 0x10]"
+      ]
+    },
+    {
+      "rva": "0x2d8ca6f",
+      "bytes": "48 8b f9",
+      "meaning": "ServerField constructor preserves this in RDI",
+      "instructions": [
+        "2D8CA6F: mov rdi, rcx"
+      ]
+    },
+    {
+      "rva": "0x2d8cc0e",
+      "bytes": "48 8d 05 f3 3c 16 03 48 89 07",
+      "meaning": "ServerField constructor installs verified RTTI vtable5EF0908",
+      "instructions": [
+        "2D8CC0E: lea rax, [rip + 0x3163cf3]",
+        "2D8CC15: mov qword ptr [rdi], rax"
+      ]
+    },
+    {
+      "rva": "0x2d8cddf",
+      "bytes": "c7 87 d0 02 00 00 00 00 03 00",
+      "meaning": "ServerField constructor initializes field key at+2D0 to0x30000",
+      "instructions": [
+        "2D8CDDF: mov dword ptr [rdi + 0x2d0], 0x30000"
+      ]
+    },
+    {
+      "rva": "0x2da24b2",
+      "bytes": "66 45 89 88 d0 02 00 00 49 8b c8 41 c6 80 d2 02 00 00 03",
+      "meaning": "Native field identity setter writes lowword+2D0 and typebyte+2D2",
+      "instructions": [
+        "2DA24B2: mov word ptr [r8 + 0x2d0], r9w",
+        "2DA24BA: mov rcx, r8",
+        "2DA24BD: mov byte ptr [r8 + 0x2d2], 3"
+      ]
+    },
+    {
+      "rva": "0xc9cb91",
+      "bytes": "48 8b 4d b8 48 8b 01 ff 50 48 c6 80 59 02 00 00 02",
+      "meaning": "2322 client handler obtains field sequencer and writes readiness+259=2",
+      "instructions": [
+        "C9CB91: mov rcx, qword ptr [rbp - 0x48]",
+        "C9CB95: mov rax, qword ptr [rcx]",
+        "C9CB98: call qword ptr [rax + 0x48]",
+        "C9CB9B: mov byte ptr [rax + 0x259], 2"
+      ]
+    },
+    {
+      "rva": "0x856090",
+      "bytes": "49 8b 8d c0 00 00 00 48 8b 09 e8 01 47 25 00 80 b8 59 02 00 00 02 0f 82 62 03 00 00 c4 c1 7b 10 85 50 01 00 00 c5 fb 11 45 10 41 8b 8d 58 01 00 00 89 4d 18 48 8d 55 10 48 8b c8 e8 a0 ce 34 00 84 c0 0f 84 36 03 00 00 41 c6 85 5c 01 00 00",
+      "meaning": "Loading state11 waits for owner sequencer+259>=2 then BA2F70 predicate before state12",
+      "instructions": [
+        "856090: mov rcx, qword ptr [r13 + 0xc0]",
+        "856097: mov rcx, qword ptr [rcx]",
+        "85609A: call 0xaaa7a0",
+        "85609F: cmp byte ptr [rax + 0x259], 2",
+        "8560A6: jb 0x85640e",
+        "8560AC: vmovsd xmm0, qword ptr [r13 + 0x150]",
+        "8560B5: vmovsd qword ptr [rbp + 0x10], xmm0",
+        "8560BA: mov ecx, dword ptr [r13 + 0x158]",
+        "8560C1: mov dword ptr [rbp + 0x18], ecx",
+        "8560C4: lea rdx, [rbp + 0x10]",
+        "8560C8: mov rcx, rax",
+        "8560CB: call 0xba2f70",
+        "8560D0: test al, al",
+        "8560D2: je 0x85640e"
+      ]
+    }
+  ],
+  "tables": {
+    "finder": {
+      "rva": "0x5eec840",
+      "targets": [
+        "0x2d04530",
+        "0x2d045e0",
+        "0x2d04640"
+      ]
+    },
+    "base_finder": {
+      "rva": "0x5eec860",
+      "targets": [
+        "0x2d04490"
+      ]
+    },
+    "child_actor_vfE8": {
+      "rva": "0x5ee4e90",
+      "targets": [
+        "0xbe5a10"
+      ]
+    },
+    "user_vfE8": {
+      "rva": "0x5eecd90",
+      "targets": [
+        "0x2d0c4f0"
+      ]
+    }
+  },
+  "hook": {
+    "rva": "0x2E6B675",
+    "stolen_bytes": 7,
+    "field": "r15",
+    "actor": "r14",
+    "core": "0x2E6A700",
+    "inbound_inside_stolen": [],
+    "registers_written_on_paths_to_hook": [
+      "2E6A72D: mov r15, r8",
+      "2E6A739: mov r14, qword ptr [rcx + 8]"
+    ],
+    "dominates_hook": {
+      "0x2e6a72d": true,
+      "0x2e6a739": true,
+      "0x2e6b225": true,
+      "0x2e6b670": true
+    },
+    "native_owner_call_dominates": false
+  },
+  "layout": {
+    "tls_realm": "0x1EB",
+    "tls_send_ctx": "0x250",
+    "actor_key": "0x60",
+    "actor_user": "0xA0",
+    "actor_components": "0x68",
+    "components_ts": "0x1A0",
+    "ts_field": "0x518",
+    "user_key": "0x60",
+    "user_main": "0xD0",
+    "user_session": "0x1F8",
+    "field_owner": "0x180",
+    "field_key": "0x2D0",
+    "scope_count": "0x2A0",
+    "scope_current": "0x2A8",
+    "scope_mode": "0x2AC",
+    "scope_array": "0x298"
+  },
+  "layout_extra_evidence": "field_mover_layout_3527.json; guest_loading_run8_3527.json; native_coop_join8_phase_fixed_journal_3527.json"
+}

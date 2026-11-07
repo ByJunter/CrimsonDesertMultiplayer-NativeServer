@@ -1,0 +1,20 @@
+
+=== 2BAFA40: 0x2BAFA40 range=None section=.rsrc ===
+02BAFA40 e9bb408d0b               jmp      0xe483b00
+02BAFA45 44cf                     iretd    
+02BAFA47 0f8817932701             js       0x3e28d64
+02BAFA4D 47e9de31b102             jmp      0x56c2c31
+02BAFA53 3bcd                     cmp      ecx, ebp
+02BAFA55 2ce9                     sub      al, 0xe9
+02BAFA57 65e9d100fbe9             jmp      0xffffffffecb5fb2e
+02BAFA5D 1ce0                     sbb      al, 0xe0
+02BAFA5F 04ff                     add      al, 0xff
+02BAFA61 e903682601               jmp      0x3e16269
+02BAFA66 9d                       popfq    
+02BAFA67 0f83d7fa4b01             jae      0x406f544
+02BAFA6D 447699                   jbe      0x2bafa09
+02BAFA70 ec                       in       al, dx
+02BAFA71 a8d4                     test     al, 0xd4
+02BAFA73 366f                     outsd    dx, dword ptr ss:[rsi]
+02BAFA75 000f                     add      byte ptr [rdi], cl
+02BAFA77 8699d93f00a3             xchg     byte ptr [rcx - 0x5cffc027], bl

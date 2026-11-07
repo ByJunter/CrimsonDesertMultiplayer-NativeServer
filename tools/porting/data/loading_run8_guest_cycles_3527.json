@@ -1,0 +1,226 @@
+{
+  "parsed_bytes": 57476179,
+  "partial_tail_bytes": 0,
+  "trips": [
+    {
+      "actor": "0xA0100278",
+      "field": 3,
+      "client_visible_owner": "0x90100277",
+      "events": [
+        {
+          "time_us": 149491205162,
+          "direction": 2,
+          "name": "MoveFieldAck",
+          "payload_hex": "04780210a003000000770210900100000001000000780210a00000000000007a44000000000000000000000000000000000000803f0000803f0000803f0000803f0000000000000000",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149505134878,
+          "direction": 1,
+          "name": "MoveFieldCompleteReq",
+          "payload_hex": "00",
+          "thread": 40712,
+          "session": 4
+        },
+        {
+          "time_us": 149505176031,
+          "direction": 2,
+          "name": "MoveFieldCompleteAck",
+          "payload_hex": "780210a00000000000007a440000000000000000180000000000000000000000000000000000000000000000000000dc0210b0",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149505176032,
+          "direction": 2,
+          "name": "MoveFieldCompletePostAck",
+          "payload_hex": "780210a00000",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149505191723,
+          "direction": 2,
+          "name": "PlayAllPreLoadSequencerAck",
+          "payload_hex": "780210a0",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149521388419,
+          "direction": 1,
+          "name": "LoadingCompleteReq",
+          "payload_hex": "01",
+          "thread": 40712,
+          "session": 4
+        },
+        {
+          "time_us": 149521409120,
+          "direction": 2,
+          "name": "LoadingCompleteAck",
+          "payload_hex": "780210a0013dcd020000000000",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149525520292,
+          "direction": 1,
+          "name": "GameLoadingStartReq",
+          "payload_hex": "",
+          "thread": 40712,
+          "session": 4
+        }
+      ],
+      "preload_milestone": true,
+      "completion_requested": true,
+      "completion_replied": true,
+      "protocol_complete": true,
+      "elapsed_observed_us": 34315130
+    },
+    {
+      "actor": "0xA0100278",
+      "field": 1,
+      "client_visible_owner": "0x90100277",
+      "events": [
+        {
+          "time_us": 149525564729,
+          "direction": 2,
+          "name": "MoveFieldAck",
+          "payload_hex": "04780210a001000000770210900100000001000000780210a0df0b9fc57803ca431b3a93c50000000006ed77be000000002462783f0000803f0000803f0000803f0000000000000000",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149537360334,
+          "direction": 1,
+          "name": "MoveFieldCompleteReq",
+          "payload_hex": "00",
+          "thread": 40712,
+          "session": 4
+        },
+        {
+          "time_us": 149537749964,
+          "direction": 2,
+          "name": "MoveFieldCompleteAck",
+          "payload_hex": "780210a0df0b9fc57803ca431b3a93c5920100000b000000310000003b000000c8020000030c00efdd0200000000006e0010b0",
+          "thread": 59240,
+          "session": 0
+        },
+        {
+          "time_us": 149537749968,
+          "direction": 2,
+          "name": "MoveFieldCompletePostAck",
+          "payload_hex": "780210a00000",
+          "thread": 59240,
+          "session": 0
+        }
+      ],
+      "preload_milestone": false,
+      "completion_requested": false,
+      "completion_replied": false,
+      "protocol_complete": false,
+      "elapsed_observed_us": 12185239
+    }
+  ],
+  "events": [
+    {
+      "time_us": 149491205162,
+      "direction": 2,
+      "name": "MoveFieldAck",
+      "payload_hex": "04780210a003000000770210900100000001000000780210a00000000000007a44000000000000000000000000000000000000803f0000803f0000803f0000803f0000000000000000",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149505134878,
+      "direction": 1,
+      "name": "MoveFieldCompleteReq",
+      "payload_hex": "00",
+      "thread": 40712,
+      "session": 4
+    },
+    {
+      "time_us": 149505176031,
+      "direction": 2,
+      "name": "MoveFieldCompleteAck",
+      "payload_hex": "780210a00000000000007a440000000000000000180000000000000000000000000000000000000000000000000000dc0210b0",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149505176032,
+      "direction": 2,
+      "name": "MoveFieldCompletePostAck",
+      "payload_hex": "780210a00000",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149505191723,
+      "direction": 2,
+      "name": "PlayAllPreLoadSequencerAck",
+      "payload_hex": "780210a0",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149521388419,
+      "direction": 1,
+      "name": "LoadingCompleteReq",
+      "payload_hex": "01",
+      "thread": 40712,
+      "session": 4
+    },
+    {
+      "time_us": 149521409120,
+      "direction": 2,
+      "name": "LoadingCompleteAck",
+      "payload_hex": "780210a0013dcd020000000000",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149525520292,
+      "direction": 1,
+      "name": "GameLoadingStartReq",
+      "payload_hex": "",
+      "thread": 40712,
+      "session": 4
+    },
+    {
+      "time_us": 149525564729,
+      "direction": 2,
+      "name": "MoveFieldAck",
+      "payload_hex": "04780210a001000000770210900100000001000000780210a0df0b9fc57803ca431b3a93c50000000006ed77be000000002462783f0000803f0000803f0000803f0000000000000000",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149537360334,
+      "direction": 1,
+      "name": "MoveFieldCompleteReq",
+      "payload_hex": "00",
+      "thread": 40712,
+      "session": 4
+    },
+    {
+      "time_us": 149537749964,
+      "direction": 2,
+      "name": "MoveFieldCompleteAck",
+      "payload_hex": "780210a0df0b9fc57803ca431b3a93c5920100000b000000310000003b000000c8020000030c00efdd0200000000006e0010b0",
+      "thread": 59240,
+      "session": 0
+    },
+    {
+      "time_us": 149537749968,
+      "direction": 2,
+      "name": "MoveFieldCompletePostAck",
+      "payload_hex": "780210a00000",
+      "thread": 59240,
+      "session": 0
+    }
+  ],
+  "limitation": "Protocol completion does not prove UI control or movement.",
+  "capture": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp_packets.guest_20261105-004008.bin"
+}

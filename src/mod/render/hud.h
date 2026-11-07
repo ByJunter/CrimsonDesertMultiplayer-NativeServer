@@ -13,6 +13,9 @@
 namespace cdmp::render {
 
 struct HudData {
+    bool host = false;              // this PC's role in the session
+    bool host_ready = false;        // guest: the host said it can take this guest now
+    bool host_search_hint = false;  // guest over Steam with no host configured: it depends on seeing the host in-game
     bool connected = false;
     std::string peer_name;
     float rtt_ms = 0.0f;
@@ -28,7 +31,7 @@ struct HudData {
     bool alone_after_remote = false;  // the guest went back to the title and plays on its own server
     // P8 re-entry ([session2] rejoin, session2/rejoin_logic.h): the re-entry's state or why it cannot happen ("" = none).
     std::string rejoin_text;
-    // P8 S26 (docs/research/s25/montura-regresion.md section 7.1): a mount problem to show ("" none), Spanish.
+    // P8 S26 (docs/research/s25/montura-regresion.md section 7.1): a mount problem to show ("" none).
     std::string mount_problem;
 };
 

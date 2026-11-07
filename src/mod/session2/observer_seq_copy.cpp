@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/log.h"
 #include "mod/session2/observer_seq_copy_logic.h"
 #include "mod/session2/p8_probe_logic.h"
@@ -20,6 +21,8 @@ namespace {
 std::atomic<osq::Mode> g_mode{osq::Mode::Off};
 std::mutex g_mu;  // leaf lock: under it only the outgoing queue's own lock is taken (server_push_extra)
 osq::Ledger g_ledger;  // under g_mu
+// The 2661's prefix on this build (set by observer_seq_copy_configure, before the tap and take_frame's calls).
+std::atomic<size_t> g_prepare_prefix{osq::kPreparePrefix};
 osq::Copier g_copier;  // under g_mu
 uint32_t g_trip_epoch = 0;  // under g_mu: the guest epoch of the current trip
 std::atomic<uint64_t> g_milestone_hold_ms{0};  // review M2: the host's 2322 hold after user 2's 2762 (0 = off)
@@ -507,7 +510,13 @@ void observer_seq_copy_configure(const std::string& mode, const std::string& onl
     for (uint64_t s : f.seqs) list += std::format(" seq 0x{:X}", s);
     for (uint32_t k : f.keys) list += std::format(" actor 0x{:08X}", k);
     {
+        // 3576: the Troc catalogue did not change (troc_mapping_3549_3576.json: 0 size changes), so 3527's prefix.
+        const game::Build b = game::current_build();
+        const size_t prefix =
+            b == game::Build::v3527 || b == game::Build::v3576 ? osq::kPreparePrefix3527 : osq::kPreparePrefix;
+        g_prepare_prefix.store(prefix);
         std::lock_guard lock(g_mu);
+        g_ledger.set_prepare_prefix(prefix);
         g_copier.set_filter(std::move(f));
         g_copier.set_milestone(copy_2322);
         g_copier.set_filter_2100(filter_2100);
@@ -755,7 +764,7 @@ void observer_seq_copy_on_out(uint16_t opcode, std::span<const uint8_t> payload,
                 return;
             }
             case osq::kOpPrepare: {  // user 2's own scene (its ESC item view): its Reqs about it always pass
-                const auto p = osq::parse_prepare(payload);
+                const auto p = osq::parse_prepare(payload, g_prepare_prefix.load(std::memory_order_relaxed));
                 const uint32_t me = server_user2_player_key();
                 if (!p || !me || p->actor != me) return;
                 std::lock_guard lock(g_mu);

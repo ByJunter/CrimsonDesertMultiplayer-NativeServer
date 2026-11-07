@@ -38,6 +38,7 @@
 #include <vector>
 
 #include "mod/session2/user2_funnels_logic.h"
+#include "common/movement_layout.h"
 
 namespace cdmp::session2::afl {
 
@@ -182,10 +183,14 @@ struct Action {
     uint64_t parent = kNoParent, ts = 0;
     Pose world, local, path_world;
 };
-inline Action read_action(std::span<const uint8_t> payload, bool ack) {
+inline Action read_action(std::span<const uint8_t> payload, bool ack, movement::Build build = movement::Build::v2976) {
+    const auto* ml = movement::layout(build);
     Action a;
-    if (payload.size() != kActionSize) return a;
-    const ActionLayout& l = ack ? kAck : kReq;
+    if (!ml || payload.size() != ml->action) return a;
+    const size_t shift = movement::action_shift(ack);
+    const ActionLayout l{ml->pos + shift, ml->quat + shift, ml->local_pos + shift, ml->local_quat + shift,
+                         ml->parent + shift, ml->world_pos + shift, ml->world_quat + shift,
+                         ml->timestamp + shift, (ack ? 143u : 142u) + ml->action_target};
     a.ok = true;
     a.key = rd32(payload, 0);
     a.hash0 = rd32(payload, kHash0);
@@ -206,14 +211,16 @@ struct Move {
     uint64_t parent = kNoParent, ts = 0;
     Pose pose;
 };
-inline Move read_move(std::span<const uint8_t> payload, size_t expected) {
+inline Move read_move(std::span<const uint8_t> payload, size_t expected, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
     Move m;
-    if (payload.size() != expected) return m;
+    if (!l || (expected != kMoveAckSize && expected != kMoveReqSize) ||
+        payload.size() != (expected == kMoveAckSize ? l->move_ack : l->move_req)) return m;
     m.ok = true;
     m.key = rd32(payload, kMKey);
-    m.parent = rd64(payload, kMParent);
-    m.ts = rd64(payload, kMTs);
-    m.pose = rd_pose(payload, kMPos, kMQuat);
+    m.parent = rd64(payload, l->parent);
+    m.ts = rd64(payload, l->timestamp);
+    m.pose = rd_pose(payload, l->pos, l->quat);
     return m;
 }
 
@@ -221,37 +228,43 @@ inline Move read_move(std::span<const uint8_t> payload, size_t expected) {
 
 // Writes a child's pose into a copy of its parent's Move payload (Ack or Req): the recipe of
 // horse_follow_logic.h make_horse_ack (the shape of a child's own Moves: parent -1, Path local = world).
-inline void write_child(uint8_t* m, uint32_t child, const Pose& pose) {
+inline void write_child(uint8_t* m, uint32_t child, const Pose& pose, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l) return;
     std::memcpy(m + kMKey, &child, 4);
-    std::memcpy(m + kMPos, &pose.p, 12);
-    std::memcpy(m + kMQuat, &pose.q, 16);
-    std::memset(m + kMAux, 0, 4);
-    std::memcpy(m + kMLocalPos, &pose.p, 12);
-    std::memcpy(m + kMLocalQuat, &pose.q, 16);
+    std::memcpy(m + l->pos, &pose.p, 12);
+    std::memcpy(m + l->quat, &pose.q, 16);
+    std::memset(m + l->aux, 0, 4);
+    std::memcpy(m + l->local_pos, &pose.p, 12);
+    std::memcpy(m + l->local_quat, &pose.q, 16);
     const float one[3] = {1.0f, 1.0f, 1.0f};
-    std::memcpy(m + kMLocalScale, one, 12);
-    std::memset(m + kMParent, 0xFF, 8);
-    std::memset(m + kMWorldPos, 0, kMWorldEnd - kMWorldPos);
+    std::memcpy(m + l->local_scale, one, 12);
+    std::memset(m + l->parent, 0xFF, 8);
+    std::memset(m + l->world_pos, 0, l->world_end - l->world_pos);
 }
 // The child's 2697 from its parent's (whole packet: header + 235 bytes). ts and tail: the parent's.
 inline bool make_child_ack(std::span<const uint8_t> parent_packet, uint32_t child, const Pose& pose,
-                           std::vector<uint8_t>& out) {
-    if (parent_packet.size() != kHeader + kMoveAckSize || !child_key(child) || !sane_world(pose)) return false;
+                           std::vector<uint8_t>& out, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l) return false;
+    if (parent_packet.size() != kHeader + l->move_ack || !child_key(child) || !sane_world(pose)) return false;
     const uint16_t op = static_cast<uint16_t>(parent_packet[0] | (parent_packet[1] << 8));
     const uint16_t n = static_cast<uint16_t>(parent_packet[3] | (parent_packet[4] << 8));
-    if (op != kOpMoveActorAck || n != kMoveAckSize) return false;
+    if (op != kOpMoveActorAck || n != l->move_ack) return false;
     out.assign(parent_packet.begin(), parent_packet.end());
-    write_child(out.data() + kHeader, child, pose);
+    write_child(out.data() + kHeader, child, pose, build);
     return true;
 }
 // The child's 2556 from its parent's payload (514 bytes), its 10-entry history zeroed. NOT sent by this
 // version (user 2's pet -> host stays in probe): built only to count what 1 would make.
 inline bool make_child_req(std::span<const uint8_t> parent_payload, uint32_t child, const Pose& pose,
-                           std::vector<uint8_t>& out) {
-    if (parent_payload.size() != kMoveReqSize || !child_key(child) || !sane_world(pose)) return false;
+                           std::vector<uint8_t>& out, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l) return false;
+    if (parent_payload.size() != l->move_req || !child_key(child) || !sane_world(pose)) return false;
     out.assign(parent_payload.begin(), parent_payload.end());
-    write_child(out.data(), child, pose);
-    std::memset(out.data() + kMReqHistory, 0, kMoveReqSize - kMReqHistory);
+    write_child(out.data(), child, pose, build);
+    std::memset(out.data() + l->request_history, 0, l->move_req - l->request_history);
     return true;
 }
 
@@ -516,18 +529,18 @@ struct RegEvent {
     Reg what = Reg::None;
     uint32_t key = 0;
 };
-inline RegEvent registry_event(uint16_t opcode, std::span<const uint8_t> payload) {
+inline RegEvent registry_event(uint16_t opcode, std::span<const uint8_t> payload, movement::Build build = movement::Build::v2976) {
     RegEvent r;
     const bool ack_action = opcode == kOpStartActionAck, req_action = opcode == kOpStartActionReq;
     if (ack_action || req_action) {
-        const Action a = read_action(payload, ack_action);
+        const Action a = read_action(payload, ack_action, build);
         if (!a.ok || !child_key(a.key)) return r;
         r.key = a.key;
         r.what = char_parent(a.parent) && !dismount(a) ? Reg::Attach : Reg::Detach;
         return r;
     }
     if (opcode == kOpMoveActorAck || opcode == kOpMoveActorReq) {
-        const Move m = read_move(payload, opcode == kOpMoveActorAck ? kMoveAckSize : kMoveReqSize);
+        const Move m = read_move(payload, opcode == kOpMoveActorAck ? kMoveAckSize : kMoveReqSize, build);
         if (!m.ok || !child_key(m.key) || char_parent(m.parent)) return r;
         r.key = m.key;
         r.what = Reg::Detach;

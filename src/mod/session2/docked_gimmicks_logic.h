@@ -1,7 +1,8 @@
 #pragma once
 // P8 session 28: the gimmicks docked to a player character (docs/research/s25/gimmicks-dueno.md, section 6
 // "Implementado"). The pure logic, with no game access, so the tests can run it on S27's real 2005 bytes.
-// Build 1.0.0.2976.
+// Builds 1.0.0.2976, 1.0.0.3527 and 1.0.0.3576 (the addresses named below are 2976's; 3527's and 3576's tables are at
+// the end of the file).
 //
 // The game (gimmicks-dueno.md sections 1-2):
 //   - the server writes a gimmick's controller once, at its creation (0x2791CD0, 0x2792A7B): in the host's field
@@ -108,6 +109,16 @@ inline constexpr size_t kRecNameLen = 0x1E;
 inline constexpr size_t kRecName = 0x22;
 inline constexpr size_t kParentA = 0xAC;  // after the name
 inline constexpr size_t kParentB = 0xC6;
+// Where the parent's two copies sit after the name, per build. 2976 above. 3527 [V real 2005s of
+// cdmp_packets.{host_20261105-070654,guest_20261105-070716}.bin, tail searched byte by byte for the player keys]: +0xB9
+// and +0xD7, equal in all 24 + 24 records docked to a player (0xA0100001 / 0xA0100066, 8 per spawn of the character); the
+// rest of the record's head (+0, +1, +5, +0x12, +0x1E, +0x22) is unchanged, and +0x12 still holds the field owner
+// (0x90100000) for the devices docked to the guest's character in the host's field.
+struct RecLayout {
+    size_t parent_a, parent_b;
+};
+inline constexpr RecLayout kRecLayout2976{kParentA, kParentB};
+inline constexpr RecLayout kRecLayout3527{0xB9, 0xD7};
 inline constexpr uint32_t kMaxNameChars = 64;
 inline constexpr uint8_t kTypePlayer = 1;
 inline constexpr uint8_t kTypeGimmick = 7;
@@ -125,14 +136,14 @@ inline bool world_key(uint32_t k) { return (k >> 28) == 0xB; }
 inline bool user_key(uint32_t k) { return (k >> 28) == 0x9; }
 
 // The docked parent of a gimmick record: 0 when not a gimmick, not docked, short, or the two copies differ.
-inline uint32_t docked_parent(std::span<const uint8_t> rec) {
+inline uint32_t docked_parent(std::span<const uint8_t> rec, const RecLayout& layout = kRecLayout2976) {
     if (rec.size() < kRecName || rec[kRecType] != kTypeGimmick) return 0;
     const uint32_t n = le32(&rec[kRecNameLen]);
     if (n == 0 || n >= kMaxNameChars) return 0;
     const size_t ne = kRecName + 2 * static_cast<size_t>(n);
-    if (rec.size() < ne + kParentB + 4) return 0;
-    const uint32_t a = le32(&rec[ne + kParentA]);
-    const uint32_t b = le32(&rec[ne + kParentB]);
+    if (rec.size() < ne + layout.parent_b + 4) return 0;
+    const uint32_t a = le32(&rec[ne + layout.parent_a]);
+    const uint32_t b = le32(&rec[ne + layout.parent_b]);
     return a == b ? a : 0;
 }
 
@@ -430,7 +441,9 @@ inline uint32_t learn_own_user(std::span<const uint8_t> pl, Self& self, bool* ok
 // key announced again with another parent (or not docked) leaves `keys`. Off: nothing.
 // `other` (docked_gimmicks_other; Off unless the caller is the guest): the same checks and rewrite for the records
 // docked to ANOTHER player's character, their keys added with kKeyOther (and kKeyOn in mode 1).
-inline Result2005 process_2005(std::span<uint8_t> pl, Self& self, Mode mode, LocalKeys& keys, Mode other = Mode::Off) {
+// `layout`: where this build's records keep the parent (kRecLayout2976 / kRecLayout3527).
+inline Result2005 process_2005(std::span<uint8_t> pl, Self& self, Mode mode, LocalKeys& keys, Mode other = Mode::Off,
+                               const RecLayout& layout = kRecLayout2976) {
     Result2005 r;
     if (mode == Mode::Off) return r;
     // First the own character's record (its 2005 can share the packet with its devices).
@@ -441,7 +454,7 @@ inline Result2005 process_2005(std::span<uint8_t> pl, Self& self, Mode mode, Loc
         ++r.records;
         if (rec[kRecType] != kTypeGimmick) return;
         ++r.gimmicks;
-        const uint32_t parent = docked_parent(rec);
+        const uint32_t parent = docked_parent(rec, layout);
         // A local-only key leaves when a 2005 names another parent than the one it was added with, or none.
         if (LocalKey lk; keys.find(le32(&rec[kRecKey]), lk) && (parent == 0 || parent != lk.parent)) {
             if (keys.remove(le32(&rec[kRecKey]))) ++r.retired;
@@ -763,5 +776,82 @@ inline constexpr uint32_t kUser_Owner = 0xA0;  // the requester's +0xA0 -> its +
 // The only patch size accepted at every entry: safetyhook's 5-byte jump over whole instructions (the 14-byte
 // fallback is refused). Every head above begins with one 5-byte instruction.
 inline constexpr uint32_t kEntryPatch = 5;
+
+// ---------------------------------------------------------------- build 1.0.0.3527 [V capstone on the installed PE]
+
+// Client. pa::ClientGimmickActorComponent 0x59459E0 (RTTI, 278 slots as in 2976). The request is the 2297 handler's
+// (UpdateGimmickAck vtable 0x5997D38 slot 2 = 0xCD11F0, call at 0xCD1488), same 21-byte head as 2976 (kClientRequestHead),
+// its control check 0x9D0641 cmp eax,[rsi+0x90], its refusal 0x9D0649. Its vtable slot moved to +0x748. The second
+// requester has its own head (r9 saved before r8), the same check (0x9D0B6F, refusal 0x9D0B78) and 5 arguments (a u8 at
+// [rbp+0x60]; callers 0x9D7F56, 0x9F6315). Both refuse with the global below (hashlittle eErrNoActorNotExist).
+inline constexpr uintptr_t kClientRequest3527 = 0x9D05D0;
+inline constexpr uintptr_t kClientRequest23527 = 0x9D0B00;
+inline constexpr uint8_t kClientRequest2Head3527[20] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x4C, 0x89, 0x4C, 0x24, 0x20,
+                                                        0x4C, 0x89, 0x44, 0x24, 0x18, 0x55, 0x56, 0x57, 0x41, 0x54};
+// The two control compares (guest_gimmick_interact, gimmick_interact_logic.h; same on 3549, capstone 2026-11-06): eax =
+// this client's user, the gimmick actor in rsi / r13 (= [comp+8]); both followed by je +0x6E to the accepted path, which
+// overwrites rax at once (lea rax,[...]). A jmp lands on each compare (0x9D063D / 0x9D0B6B), at its first byte only.
+inline constexpr uintptr_t kClientCheck3527 = 0x9D0641;   // cmp eax,[rsi+0x90] | je 0x9D06B7
+inline constexpr uint8_t kClientCheckBytes3527[8] = {0x3B, 0x86, 0x90, 0x00, 0x00, 0x00, 0x74, 0x6E};
+inline constexpr uint32_t kClientCheckPatch3527 = 6;
+inline constexpr uintptr_t kClientCheck23527 = 0x9D0B6F;  // cmp eax,[r13+0x90] | je 0x9D0BE6
+inline constexpr uint8_t kClientCheck2Bytes3527[9] = {0x41, 0x3B, 0x85, 0x90, 0x00, 0x00, 0x00, 0x74, 0x6E};
+inline constexpr uint32_t kClientCheck2Patch3527 = 7;
+inline constexpr uintptr_t kClientGimmickVtbl3527 = 0x59459E0;
+inline constexpr uintptr_t kClientGimmickRequestSlot3527 = 0x59459E0 + 0x748;  // holds 0x9D05D0
+inline constexpr uintptr_t kErrNotControllerGlobal3527 = 0x7148C80;
+// Server (host). 2249 handler 0x2BE4700 (vtable 0x5EEC6D8 slot 2): rcx = [[actor+0x68]+0x170], 0x2BE4B34 call 0x2B0BF80.
+// The other docking spawn: handler 0x2BE53E0 (TrocTrOnDemandDockingGimmickSpawnReq 0x5EEC698 slot 2), 0x2BE57EE call
+// 0x2B0CC70. Both one caller, the same 20-byte head (kDockHead).
+inline constexpr uintptr_t kDockEquip3527 = 0x2B0BF80;
+inline constexpr uintptr_t kDockOther3527 = 0x2B0CC70;
+inline constexpr uint8_t kDockEquipCall3527[5] = {0xE8, 0x47, 0x74, 0xF2, 0xFF};
+inline constexpr uintptr_t kDockEquipCallSite3527 = 0x2BE4B34;
+// The controller's write: the same 20 bytes (kControllerWriteBytes) once in the exe, inside [0x29CB290, 0x29CC624); same
+// registers (r14 the actor, r13 the field, rsi the descriptor); no branch lands in 0x29CBF62..0x29CBF67. The block's head
+// has another jne displacement; the field-owner read is the same 11 bytes (kFieldOwnerReadBytes).
+inline constexpr uintptr_t kControllerWrite3527 = 0x29CBF61;
+inline constexpr uintptr_t kControllerBlock3527 = 0x29CBEFC;
+inline constexpr uint8_t kControllerBlockBytes3527[16] = {0x41, 0x8B, 0x86, 0x90, 0x00, 0x00, 0x00, 0x85,
+                                                          0xC0, 0x75, 0x5A, 0x48, 0x8B, 0x46, 0x40, 0x48};
+inline constexpr uintptr_t kFieldOwnerRead3527 = 0x29CBF56;
+// The server's gimmick logic: 3082 handler 0x2C66A80 calls 0x2D52980 at 0x2C66D6F (same head, kServerExecuteHead; test
+// 0x2D529CA cmp [r10+0x90],eax against [[rdx+0xA0]+0x60]); 2758 handler 0x2C64500 calls 0x2D51F10 at 0x2C64809 (own head;
+// test 0x2D51F50, refusal 0x2D51F58).
+inline constexpr uintptr_t kServerExecute3527 = 0x2D52980;
+inline constexpr uintptr_t kServerUpdate3527 = 0x2D51F10;
+inline constexpr uint8_t kServerUpdateHead3527[21] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x55,
+                                                      0x57, 0x41, 0x54, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C};
+
+// ---------------------------------------------------------------- build 1.0.0.3576 (static, 2026-11-06; not yet run)
+
+// Every function moved whole; the heads, compares, block and reads are 3527's bytes (kClientRequest2Head3527,
+// kClientCheckBytes3527 / kClientCheck2Bytes3527 and their patches, kControllerBlockBytes3527, kServerUpdateHead3527).
+// Client: pa::ClientGimmickActorComponent 0x5947AE0 (RTTI); its +0x748 holds the request 0x9D0820 (+0x250, kClientRequestHead).
+// The second requester 0x9D0D50 (+0x250; its callers 0x9D81A6 / 0x9F6565 are 3527's + 0x250). The compares at the same
+// +0x71 / +0x6F (0x9D0891 / 0x9D0DBF), each followed by je +0x6E; both refusals read the global 0x714ADA0
+// (0x9D0899 / 0x9D0DC8).
+inline constexpr uintptr_t kClientRequest3576 = 0x9D0820;
+inline constexpr uintptr_t kClientRequest23576 = 0x9D0D50;
+inline constexpr uintptr_t kClientCheck3576 = 0x9D0891;   // cmp eax,[rsi+0x90] | je 0x9D0907
+inline constexpr uintptr_t kClientCheck23576 = 0x9D0DBF;  // cmp eax,[r13+0x90] | je 0x9D0E36
+inline constexpr uintptr_t kClientGimmickVtbl3576 = 0x5947AE0;
+inline constexpr uintptr_t kClientGimmickRequestSlot3576 = 0x5947AE0 + 0x748;  // holds 0x9D0820
+inline constexpr uintptr_t kErrNotControllerGlobal3576 = 0x714ADA0;
+// Server (host). The 2249 handler 0x2BE5370 (TrocTrOnDemandEquipDockingGimmickSpawnReq 0x5EEE518 slot 2) calls 0x2B0CBD0
+// at 0x2BE57A4; TrocTrOnDemandDockingGimmickSpawnReq 0x5EEE4D8 slot 2 = 0x2BE6050 calls 0x2B0D8C0 at 0x2BE645E (the
+// spawns +0xC50 with kDockHead, their only callers; the handlers +0xC70). The controller's write 0x29CCBB1
+// (kControllerWriteBytes, still once in the exe) inside 0x29CBEE0 (3527's 0x29CB290 + 0xC50, the same 0x1394 bytes, the
+// write at the same +0xCD1); the block 0x29CCB4C and the field-owner read 0x29CCBA6. The 3082 handler 0x2C676F0 calls
+// 0x2D535F0 at 0x2C679DF; the 2758 handler 0x2C65170 calls 0x2D52B80 at 0x2C65479 (all +0xC70, the same heads).
+inline constexpr uintptr_t kDockEquip3576 = 0x2B0CBD0;
+inline constexpr uintptr_t kDockOther3576 = 0x2B0D8C0;
+inline constexpr uint8_t kDockEquipCall3576[5] = {0xE8, 0x27, 0x74, 0xF2, 0xFF};
+inline constexpr uintptr_t kDockEquipCallSite3576 = 0x2BE57A4;
+inline constexpr uintptr_t kControllerWrite3576 = 0x29CCBB1;
+inline constexpr uintptr_t kControllerBlock3576 = 0x29CCB4C;
+inline constexpr uintptr_t kFieldOwnerRead3576 = 0x29CCBA6;
+inline constexpr uintptr_t kServerExecute3576 = 0x2D535F0;
+inline constexpr uintptr_t kServerUpdate3576 = 0x2D52B80;
 
 }  // namespace cdmp::session2::dgl

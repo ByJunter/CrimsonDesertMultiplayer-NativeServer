@@ -48,6 +48,7 @@ namespace idp {
 inline constexpr uint32_t kActorComponents = 0x68;   // actor -> component table (0x206A890, 0x2AE1037)
 inline constexpr uint32_t kTableStatus = 0x20;       // table -> Status component (0x206A894)
 inline constexpr uint32_t kStatusCharacterNo = 0x70; // Status -> u64* characterNo (0x206A8A5)
+inline constexpr uint32_t kStatusCharacterNo3527 = 0x90; // build 3527 Status -> u64* characterNo
 inline constexpr uint32_t kComponentOwner = 0x08;    // component -> actor (0x2AE102A, 0x17919A5)
 inline constexpr uint32_t kActorUser = 0xA0;         // character -> ServerUserActor (clock gate, P9 §2.2)
 inline constexpr uint32_t kKey = 0x60;               // actor/user -> u32 key (offsets_s2.h)
@@ -70,9 +71,19 @@ uintptr_t identity_owner(uintptr_t actor, uintptr_t user_vtable, bool& self);
 // (users.user2 == 0): a ServerUserActor whose key is not the host's.
 IdWho identity_who(uintptr_t actor, const IdUsers& users, uintptr_t user_vtable, bool& self);
 
-// characterNo of a server actor: *[[[actor+0x68]+0x20]+0x70] (as 0x206A890).
+// Status -> u64* characterNo. Unsupported/test executables deliberately use
+// the legacy layout so the pure fake-memory tests remain deterministic.
+constexpr uint32_t identity_status_number_offset_for_build(bool build_3527) noexcept {
+    return build_3527 ? idp::kStatusCharacterNo3527 : idp::kStatusCharacterNo;
+}
+uint32_t identity_status_number_offset() noexcept;
+
+// characterNo of a server actor: *[[[actor+0x68]+0x20]+build offset].
 // False if a link is unreadable or null.
 bool identity_character_no(uintptr_t actor, uint64_t& no);
+// Pure-layout variant used by the build-profile tests. Only the two verified
+// Status layouts (+0x70 and +0x90) are accepted.
+bool identity_character_no_at(uintptr_t actor, uint64_t& no, uint32_t status_number_offset);
 
 // The actor that owns a Status component, [status+8], only if that actor's
 // Status is this component; 0 otherwise.

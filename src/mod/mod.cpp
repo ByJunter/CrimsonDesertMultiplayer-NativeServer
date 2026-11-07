@@ -19,6 +19,7 @@
 #include "mod/config.h"
 #include "mod/game/game_errors.h"
 #include "mod/game/offsets.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/player_reader.h"
 #include "mod/game/safe_memory.h"
 #include "mod/bg_speed.h"
@@ -42,6 +43,11 @@
 #include "mod/session2/rope_probe.h"
 #include "mod/session2/tree_bend.h"
 #include "mod/session2/docked_gimmicks.h"
+#include "mod/session2/interact_gate.h"
+#include "mod/session2/guest_shop_window.h"
+#include "mod/session2/shop_ui_trace.h"
+#include "mod/session2/store_gate.h"
+#include "mod/session2/guest_shop_branch.h"
 #include "mod/session2/clock_push.h"
 #include "mod/session2/fast_travel.h"
 #include "mod/session2/travel_probe.h"
@@ -52,6 +58,7 @@
 #include "mod/session2/guest_save_guest.h"
 #include "mod/session2/guest_save_tunnel.h"
 #include "mod/session2/guest_sched_load.h"
+#include "mod/session2/guest_s3.h"
 #include "mod/session2/p8_probes.h"
 #include "mod/session2/npc_probe_client.h"
 #include "mod/session2/door_trace.h"
@@ -63,6 +70,12 @@
 #include "mod/session2/save_hooks.h"
 #include "mod/session2/mount_sync.h"
 #include "mod/session2/ride_filter.h"
+#include "mod/session2/achievement_guard.h"
+#include "mod/session2/field_leave_guard.h"
+#include "mod/session2/focus_follow.h"
+#include "mod/session2/manager_probe.h"
+#include "mod/session2/pivot_guard.h"
+#include "mod/session2/seq_marker.h"
 #include "mod/session2/ui_pause.h"
 #include "mod/session2/user2_funnels.h"
 #include "mod/session2/weather_sync.h"
@@ -220,8 +233,12 @@ class LocalSource {
 public:
     explicit LocalSource(bool in_game) : in_game_(in_game) {
         if (!in_game_) return;
+        reader_.set_follow_focus(true);  // the panel and the other player's marker follow a character switch
         if (reader_.init()) {
-            log::info("Game reader enabled (build 1.0.0.2976 offsets)");
+            // 3576's profile is static evidence only so far (build_profile.h): said so in the log.
+            log::info("Game reader enabled (build {} {})", game::reader_profile()->version,
+                      game::current_build() == game::Build::v3576 ? "offsets from static analysis, not yet run"
+                                                                  : "verified offsets");
         } else {
             log::warn("Game reader DISABLED: {}. Only networking will run.",
                       reader_.last_failure());
@@ -441,6 +458,7 @@ void run_network(const Config& cfg, LocalSource& local) {
                 [&session](std::vector<uint8_t>&& p, uint32_t at) {
                     session2::tunnel_on_packet(std::move(p), session.epoch(), at);
                 });
+            s2_link->require_identity(game::pe_identity().timestamp, native_opcode::kMappingFingerprint);
             // p8-tunel-rendimiento.md: compressed batches to a guest that says it decodes them.
             s2_link->set_compress(cfg.s2_tunnel_compress);
             log::info("Session2: Troc tunnel open on the network link (the guest is whoever connects){}",
@@ -457,6 +475,7 @@ void run_network(const Config& cfg, LocalSource& local) {
             s2_guest_link = std::make_unique<troc::TrocLink>(
                 session, troc::Dir::ToHostServer, troc::Dir::ToGuestClient,
                 [](std::vector<uint8_t>&& p, uint32_t) { session2::guest_deliver(std::move(p)); });
+            s2_guest_link->require_identity(game::pe_identity().timestamp, native_opcode::kMappingFingerprint);
             // p8-tunel-rendimiento.md: tell the host this end decodes compressed batches; P8 S25 phase B: and that it
             // speaks the own-save states 6-11 (guest_own_save=probe or 1).
             // P8 re-entry (rejoin_logic.h): and that it speaks states 13-14 (rejoin=probe or 1).
@@ -512,6 +531,8 @@ void run_network(const Config& cfg, LocalSource& local) {
             if (auto state = local.sample(now)) session.send_local_state(*state, now);
 
             render::HudData hud;
+            hud.host = host;
+            hud.host_search_hint = steam && !host && !peer;
             hud.connected = session.state() == ClientSession::State::Connected;
             hud.peer_name = session.peer_name();
             hud.rtt_ms = session.stats().rtt_ms;
@@ -531,6 +552,7 @@ void run_network(const Config& cfg, LocalSource& local) {
                 hud.same_world = session2::guest_remote();
                 hud.s2_guest = true;
                 hud.alone_after_remote = session2::guest_local_after_remote();
+                hud.host_ready = session2::guest_host_ready();
                 // P8 re-entry: what the re-entry is doing (or why it cannot), while not playing on the host. The text
                 // follows the re-entry's phase alone (empty while playing): after the goodbye the connection still
                 // reads as remote and live until the client connects again, so S28 never showed the grant.
@@ -806,8 +828,13 @@ DWORD WINAPI late_init(LPVOID param) {
     std::unique_ptr<LateInit> init(static_cast<LateInit*>(param));
     if (init->in_game) {
         log::info("Late init: waiting for the game to finish starting up");
+        const auto* profile = game::reader_profile();
+        if (!profile) {
+            log::error("Late init: unsupported game build; native integration disabled");
+            return 0;
+        }
         const auto world_slot = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) +
-                                game::build_2976::kWorldSystemSlot;
+                                profile->world_system;
         // WorldSystem exists from the title screen on, i.e. after the game
         // created its device and swap chain and started presenting.
         while (!stop_requested(500)) {
@@ -1143,6 +1170,12 @@ DWORD WINAPI worker(LPVOID) {
                 session2::schedule_selfcheck_start(cfg.s2_schedule_load_selfcheck, /*host=*/false);
                 // Menus do not pause this guest's world while it plays on the host (p8-pausa-esc.md); its own thread.
                 session2::ui_pause_start(cfg.s2_ui_pause_block, /*guest=*/true);
+                session2::seq_marker_start(cfg.s2_seq_marker_guard, /*guest=*/true, cfg.s2_seq_marker_trace);
+                session2::pivot_guard_start(cfg.s2_change_pivot_guard, /*guest=*/true);
+                session2::focus_follow_start(cfg.s2_focus_follow, /*guest=*/true);
+                session2::field_leave_guard_start(cfg.s2_field_leave_guard, /*guest=*/true);
+                session2::achievement_guard_start(cfg.s2_achievement_guard);
+                session2::guest_set_docking_dedupe(cfg.s2_docking_dedupe);
                 // The host's character climbs / climbs up / dismounts as a native remote actor here
                 // (pendientes/p8-impl-escalada.md); its own thread, nothing with the three keys at 0.
                 session2::remote_motion_start({cfg.s2_remote_climb, cfg.s2_wallup_send, cfg.s2_dismount_probe,
@@ -1150,7 +1183,8 @@ DWORD WINAPI worker(LPVOID) {
                                               /*guest=*/true);
                 // The host's NPCs, animals and horses move smoothly here (p8-impl-interp-remota.md); its own thread.
                 session2::remote_interp_start(cfg.s2_remote_interp, /*guest=*/true, cfg.s2_remote_interp_owned_cap_ms,
-                                              cfg.s2_remote_interp_pair, cfg.s2_remote_interp_combat);
+                                              cfg.s2_remote_interp_pair, cfg.s2_remote_interp_combat,
+                                              cfg.s2_remote_interp_players);
                 // P8 mounts (pendientes/p8-impl-monturas.md): the rider<->horse commit both ways; its own thread.
                 session2::mount_sync_start(cfg.s2_mount_sync, /*guest=*/true, cfg.s2_mount_seat, cfg.s2_ride_hold_pos,
                                            cfg.s2_mount_relink);
@@ -1177,10 +1211,25 @@ DWORD WINAPI worker(LPVOID) {
                 // P8 session 29 (s25/gimmicks-dueno.md section 8): the same for the host's character (its rope drawn
                 // here). Needs docked_gimmicks on. Nothing with 0.
                 session2::docked_gimmicks_other_start(cfg.s2_docked_gimmicks_other, /*guest=*/true);
+                session2::docked_gimmicks_interact_start(cfg.s2_guest_gimmick_interact,
+                                                         cfg.s2_guest_gimmick_interact_events, /*guest=*/true);
                 // P8 session 28 (s25/gimmicks-dueno.md section 7): its 2779 for gimmicks the host controls. Nothing with 0.
                 session2::gimmick_event_dedup_start(cfg.s2_gimmick_event_dedup, /*guest=*/true);
+                session2::interact_gate_start(cfg.s2_interact_gate, cfg.s2_interact_gate_errors,
+                                              cfg.s2_interact_gate_pass, cfg.s2_interact_gate_types, /*guest=*/true);
+                session2::store_gate_start(cfg.s2_store_gate, /*guest=*/true);
+                session2::guest_shop_branch_start(cfg.s2_guest_shop_branch, /*guest=*/true, dir + ini.name);
+                session2::shop_ui_trace_start(cfg.s2_shop_ui_trace, /*guest=*/true);
+                session2::guest_shop_window_start(cfg.s2_guest_shop_window, /*guest=*/true);
             }
             session2 = false;  // nothing of the host's side on the guest's PC
+        }
+        // The same bounded crash collector is useful on the host's client: no
+        // S3 probes or guards, only first-chance records and the chained
+        // top-level/minidump capture explicitly requested by the config.
+        if (session2 && cfg.s2_guest_crash_dump) {
+            session2::guest_s3_start(/*diag=*/false, /*crash_dump=*/true, /*update_guard=*/false,
+                                     /*actor_diag=*/false, /*update_site_taken=*/false);
         }
         // The same probes on the host's PC (S1 on its client, S2 on its server
         // and its ExtraReward UI); nothing without load_diag / s1_diag.
@@ -1205,10 +1254,22 @@ DWORD WINAPI worker(LPVOID) {
         if (session2) session2::docked_gimmicks_other_start(cfg.s2_docked_gimmicks_other, /*guest=*/false);
         // P8 session 28 (s25/gimmicks-dueno.md section 7): the 2779 / 2250 duplicates, log only on the host.
         if (session2) session2::gimmick_event_dedup_start(cfg.s2_gimmick_event_dedup, /*guest=*/false);
+        if (session2) {
+            session2::interact_gate_start(cfg.s2_interact_gate, cfg.s2_interact_gate_errors, cfg.s2_interact_gate_pass,
+                                          cfg.s2_interact_gate_types, /*guest=*/false);
+            session2::store_gate_start(cfg.s2_store_gate, /*guest=*/false);
+            session2::shop_ui_trace_start(cfg.s2_shop_ui_trace, /*guest=*/false);
+        }
         // The same read-only schedule self-check on the host (its client is the reference: p8-impl-horarios.md §8).
         if (session2) session2::schedule_selfcheck_start(cfg.s2_schedule_load_selfcheck, /*host=*/true);
         // Menus do not pause the host's world while user 2 is logged in (p8-pausa-esc.md); nothing with ui_pause_block=0.
         if (session2) session2::ui_pause_start(cfg.s2_ui_pause_block, /*guest=*/false);
+        // The host gets no death screen once a guest has joined without this (session2/seq_marker.h).
+        if (session2) session2::seq_marker_start(cfg.s2_seq_marker_guard, /*guest=*/false, cfg.s2_seq_marker_trace);
+        if (session2) session2::pivot_guard_start(cfg.s2_change_pivot_guard, /*guest=*/false);
+        if (session2) session2::focus_follow_start(cfg.s2_focus_follow, /*guest=*/false);
+        if (session2) session2::field_leave_guard_start(cfg.s2_field_leave_guard, /*guest=*/false);
+        if (session2) session2::manager_probe_start(cfg.s2_manager_probe);
         // User 2's character climbs / climbs up / dismounts as a native remote actor on the host's client
         // (pendientes/p8-impl-escalada.md); its own thread, nothing with the three keys at 0.
         if (session2) {
@@ -1219,7 +1280,8 @@ DWORD WINAPI worker(LPVOID) {
         // User 2's pet and horse move smoothly on the host's client (p8-impl-interp-remota.md); nothing with 0.
         if (session2) {
             session2::remote_interp_start(cfg.s2_remote_interp, /*guest=*/false, cfg.s2_remote_interp_owned_cap_ms,
-                                          cfg.s2_remote_interp_pair, cfg.s2_remote_interp_combat);
+                                          cfg.s2_remote_interp_pair, cfg.s2_remote_interp_combat,
+                                          cfg.s2_remote_interp_players);
             // P8 mounts (pendientes/p8-impl-monturas.md): the rider<->horse commit both ways; its own thread.
             session2::mount_sync_start(cfg.s2_mount_sync, /*guest=*/false, cfg.s2_mount_seat, cfg.s2_ride_hold_pos,
                                        cfg.s2_mount_relink);

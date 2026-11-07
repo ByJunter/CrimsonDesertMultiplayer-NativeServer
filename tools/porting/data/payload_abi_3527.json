@@ -1,0 +1,1271 @@
+{
+  "source_build": "1.0.0.2976",
+  "target_build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "scope": "Critical native login/movement payloads only; outer opcode codec remains separate.",
+  "method": "Sequential stream reads in current named RTTI handlers, recursively inspected helper readers; old layouts from repository docs and source.",
+  "old_executable_available": false,
+  "live_capture_verified": "Player ActorLoadData tail only, if actor_tail_capture_3527.json is present; this is not multiplayer validation.",
+  "offset_convention": "Zero-based bytes relative to payload start unless explicitly described otherwise; add5 for whole ordinary packet.",
+  "stream_proof": {
+    "vtable_rva": "0x5ABF6D8",
+    "read_slot": "0x28",
+    "read_rva": "0x1602740",
+    "data_offset": "0x20",
+    "length_offset": "0x28",
+    "cursor_offset": "0x2C",
+    "verified_instruction_bytes": [
+      {
+        "rva": "0x1602760",
+        "bytes": "498b4120488d52010fb60c01884aff41ff412c",
+        "meaning": "Read source[stream.data + cursor], store one byte, increment cursor"
+      },
+      {
+        "rva": "0x2639535",
+        "bytes": "e8d626e5fe",
+        "meaning": "MoveData first consumes Path via 0x148BC10"
+      },
+      {
+        "rva": "0x263954c",
+        "bytes": "e83f9cfcfe",
+        "meaning": "MoveData next consumes Transform via 0x1603190"
+      },
+      {
+        "rva": "0x2639563",
+        "bytes": "e8489bfcfe",
+        "meaning": "MoveData next consumes quaternion via 0x16030B0"
+      },
+      {
+        "rva": "0x26395cc",
+        "bytes": "41b804000000",
+        "meaning": "Additional four-byte field after timestamp in MoveData"
+      },
+      {
+        "rva": "0x263be75",
+        "bytes": "ff5028",
+        "meaning": "MoveField entry reads a u32 after its Transform"
+      },
+      {
+        "rva": "0x263be94",
+        "bytes": "ff5028",
+        "meaning": "MoveField entry reads another u32 after its Transform"
+      },
+      {
+        "rva": "0xc9e5a5",
+        "bytes": "41b804000000488d55c0",
+        "meaning": "LoadingFieldDataAck fourth prefix field is u32 at wire offset9"
+      },
+      {
+        "rva": "0xc9e6c2",
+        "bytes": "486bd038",
+        "meaning": "LoadingFieldDataAck entry destination stride56"
+      },
+      {
+        "rva": "0xc9e6d0",
+        "bytes": "e81bd79901",
+        "meaning": "LoadingFieldDataAck consumes shared56-byte entry reader0x263BDF0"
+      },
+      {
+        "rva": "0xc9e6d9",
+        "bytes": "0fb746038b4dac3bc872dc",
+        "meaning": "Continue entries while stream cursor is below payload length"
+      },
+      {
+        "rva": "0x236c0b4",
+        "bytes": "e8875112ff",
+        "meaning": "TransformSync consumes its separate104-byte path via0x1491240"
+      },
+      {
+        "rva": "0x236c2c2",
+        "bytes": "e8697f3cff",
+        "meaning": "Final TransformSync list consumes u32 count then12*n via0x1734230"
+      },
+      {
+        "rva": "0x1734259",
+        "bytes": "ff5028",
+        "meaning": "TransformSync final list reads its four-byte count"
+      },
+      {
+        "rva": "0x17342a8",
+        "bytes": "41b80c000000",
+        "meaning": "TransformSync final list entries each consume12 bytes"
+      },
+      {
+        "rva": "0x2371d4b",
+        "bytes": "41b80c000000",
+        "meaning": "Navigation component consumes12 bytes"
+      },
+      {
+        "rva": "0xb27f1b2",
+        "bytes": "41b802000000",
+        "meaning": "Hierarchy component consumes u16 child count after1+4+1 prefix"
+      }
+    ]
+  },
+  "shared_layouts": {
+    "Transform": {
+      "wire_size": 40,
+      "status": "wire_order_preserved",
+      "fields": [
+        {
+          "name": "position",
+          "offset": 0,
+          "size": 12
+        },
+        {
+          "name": "rotation_xyzw",
+          "offset": 12,
+          "size": 16
+        },
+        {
+          "name": "scale",
+          "offset": 28,
+          "size": 12
+        }
+      ],
+      "decoder_rva": "0x1603190",
+      "destination_note": "Current native struct stores scale at0, quat at12, position at28. Reader consumes destination+28, +12, +0 in that order. Constructor0x26392D0 copies three1.0f values from0x58F28B8 into scale; native struct ordering is NOT wire ordering."
+    },
+    "Path": {
+      "wire_size": 136,
+      "status": "wire_order_preserved",
+      "fields": [
+        {
+          "name": "local_transform",
+          "offset": 0,
+          "size": 40
+        },
+        {
+          "name": "vector0",
+          "offset": 40,
+          "size": 12
+        },
+        {
+          "name": "vector1",
+          "offset": 52,
+          "size": 12
+        },
+        {
+          "name": "parent_u64",
+          "offset": 64,
+          "size": 8
+        },
+        {
+          "name": "world_transform",
+          "offset": 72,
+          "size": 40
+        },
+        {
+          "name": "vector2",
+          "offset": 112,
+          "size": 12
+        },
+        {
+          "name": "vector3",
+          "offset": 124,
+          "size": 12
+        }
+      ],
+      "decoder_rva": "0x148BC10",
+      "subreader_rva": "0x148BB20"
+    },
+    "MoveData": {
+      "old_wire_size": 218,
+      "new_wire_size": 222,
+      "status": "confirmed_incompatible",
+      "fields": [
+        {
+          "name": "path",
+          "offset": 0,
+          "size": 136
+        },
+        {
+          "name": "secondary_transform",
+          "offset": 136,
+          "size": 40
+        },
+        {
+          "name": "rotation_xyzw",
+          "offset": 176,
+          "size": 16
+        },
+        {
+          "name": "world_position",
+          "offset": 192,
+          "size": 12
+        },
+        {
+          "name": "auxiliary_u32",
+          "offset": 204,
+          "size": 4
+        },
+        {
+          "name": "timestamp_u64",
+          "offset": 208,
+          "size": 8
+        },
+        {
+          "name": "additional_u32_semantics_unproven",
+          "offset": 216,
+          "size": 4
+        },
+        {
+          "name": "flag0_u8",
+          "offset": 220,
+          "size": 1
+        },
+        {
+          "name": "flag1_u8",
+          "offset": 221,
+          "size": 1
+        }
+      ],
+      "decoder_rva": "0x2639500",
+      "old_order": "position12,quat16,aux4,Transform40,Path136,flag1,timestamp8,flag1",
+      "semantic_limit": "Extra u32 meaning unknown. Preserve exactly; do not synthesize zero by assumption. Timestamp/flag semantic labels follow old analogous data and need current application-level validation."
+    },
+    "StartActionA": {
+      "wire_size": 69,
+      "status": "read_width_sequence_preserved",
+      "decoder_rva": "0x2637790",
+      "nested_8byte_reader": "0x1C2B350",
+      "note": "Read4+4+4x2+1+2x(3x2+1)+1+4x4+8+9x1+4. Semantic enum/hash compatibility not established."
+    },
+    "StartActionB": {
+      "old_wire_size": 582,
+      "new_wire_size": 586,
+      "status": "confirmed_incompatible",
+      "decoder_rva": "0x2637D90",
+      "fields": [
+        {
+          "name": "move_data",
+          "offset": 0,
+          "size": 222
+        },
+        {
+          "name": "aux0",
+          "offset": 222,
+          "size": 4
+        },
+        {
+          "name": "aux1_target",
+          "offset": 226,
+          "size": 4
+        },
+        {
+          "name": "vec0",
+          "offset": 230,
+          "size": 12
+        },
+        {
+          "name": "vec1",
+          "offset": 242,
+          "size": 12
+        },
+        {
+          "name": "aux2",
+          "offset": 254,
+          "size": 4
+        },
+        {
+          "name": "nine_u32",
+          "offset": 258,
+          "size": 36
+        },
+        {
+          "name": "two_u8",
+          "offset": 294,
+          "size": 2
+        },
+        {
+          "name": "history_10x28",
+          "offset": 296,
+          "size": 280
+        },
+        {
+          "name": "u64",
+          "offset": 576,
+          "size": 8
+        },
+        {
+          "name": "two_final_u8",
+          "offset": 584,
+          "size": 2
+        }
+      ]
+    }
+  },
+  "messages": [
+    {
+      "name": "MoveActorReq",
+      "logical": 2556,
+      "native": 2833,
+      "handler_rva": "0x2BEC5C0",
+      "old_payload_size": 514,
+      "new_payload_size": 518,
+      "status": "confirmed_incompatible",
+      "fields": [
+        {
+          "name": "actor_key",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "move_data",
+          "offset": 4,
+          "size": 222
+        },
+        {
+          "name": "tail_vec3",
+          "offset": 226,
+          "size": 12
+        },
+        {
+          "name": "history_10x28",
+          "offset": 238,
+          "size": 280
+        }
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "logical": 2697,
+      "native": 3094,
+      "handler_rva": "0xC702F0",
+      "old_payload_size": 235,
+      "new_payload_size": 239,
+      "status": "confirmed_incompatible",
+      "fields": [
+        {
+          "name": "actor_key",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "move_data",
+          "offset": 4,
+          "size": 222
+        },
+        {
+          "name": "server_flag",
+          "offset": 226,
+          "size": 1
+        },
+        {
+          "name": "tail_vec3",
+          "offset": 227,
+          "size": 12
+        }
+      ]
+    },
+    {
+      "name": "StartActionReq",
+      "logical": 2223,
+      "native": 2202,
+      "handler_rva": "0x2BE08C0",
+      "old_payload_size": 725,
+      "new_payload_size": 729,
+      "status": "confirmed_incompatible",
+      "fields": [
+        {
+          "name": "actor_key",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "A0",
+          "offset": 4,
+          "size": 69
+        },
+        {
+          "name": "A1",
+          "offset": 73,
+          "size": 69
+        },
+        {
+          "name": "B",
+          "offset": 142,
+          "size": 586
+        },
+        {
+          "name": "flag",
+          "offset": 728,
+          "size": 1
+        }
+      ]
+    },
+    {
+      "name": "StartActionAck",
+      "logical": 2991,
+      "native": 2552,
+      "handler_rva": "0xC64250",
+      "old_payload_size": 725,
+      "new_payload_size": 729,
+      "status": "confirmed_incompatible",
+      "fields": [
+        {
+          "name": "actor_key",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "A0",
+          "offset": 4,
+          "size": 69
+        },
+        {
+          "name": "A1",
+          "offset": 73,
+          "size": 69
+        },
+        {
+          "name": "flag",
+          "offset": 142,
+          "size": 1
+        },
+        {
+          "name": "B",
+          "offset": 143,
+          "size": 586
+        }
+      ]
+    },
+    {
+      "name": "LoginUserToFieldServerReq",
+      "logical": 2490,
+      "native": 2535,
+      "handler_rva": "0x2CAA830",
+      "status": "audited_prefix_preserved",
+      "fields": [
+        {
+          "name": "account",
+          "offset": 0,
+          "size": 8
+        },
+        {
+          "name": "u32",
+          "offset": 8,
+          "size": 4
+        },
+        {
+          "name": "u8",
+          "offset": 12,
+          "size": 1
+        },
+        {
+          "name": "wstring_char_count",
+          "offset": 13,
+          "size": 4
+        }
+      ],
+      "variable_tail": "UTF16 count*2+2, including null terminator; count<=1500. Empty-name payload19bytes matchesold.",
+      "evidence_sites": [
+        "0x2CAA8D2",
+        "0x2CAA917",
+        "0x2CAA947",
+        "0x2CAA974",
+        "0x2CAA99B",
+        "0x2CAA9F8"
+      ],
+      "mod_use": "server.cpp account rewrite atpayload0 remains correctly placed."
+    },
+    {
+      "name": "LoginCharacterToFieldServerReq",
+      "logical": 3093,
+      "native": 2733,
+      "handler_rva": "0x2C047B0",
+      "status": "audited_prefix_preserved",
+      "fields": [
+        {
+          "name": "unused_prefix",
+          "offset": 0,
+          "size": 1
+        },
+        {
+          "name": "character_number",
+          "offset": 1,
+          "size": 8
+        },
+        {
+          "name": "save_slot",
+          "offset": 9,
+          "size": 4
+        },
+        {
+          "name": "unknown_u32",
+          "offset": 13,
+          "size": 4
+        }
+      ],
+      "variable_tail": "Remaining payload consumed as UTF16 without count prefix. Field semantics based on old documentation and corresponding call argument flow.",
+      "evidence_sites": [
+        "0x2C04870",
+        "0x2C048BF",
+        "0x2C048F1",
+        "0x2C0491B",
+        "0x2C0493D",
+        "0x2C04B37"
+      ],
+      "mod_use": "character_number@1 and save_slot@9 matchexisting rewriter."
+    },
+    {
+      "name": "MainPlayerDataStartAck",
+      "logical": 2756,
+      "native": 2524,
+      "handler_rva": "0xC7EB20",
+      "status": "audited_prefix_preserved",
+      "payload_size": 25,
+      "fields": [
+        {
+          "name": "actor_key",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "u32",
+          "offset": 4,
+          "size": 4
+        },
+        {
+          "name": "u8",
+          "offset": 8,
+          "size": 1
+        },
+        {
+          "name": "character_number",
+          "offset": 9,
+          "size": 8
+        },
+        {
+          "name": "u64",
+          "offset": 17,
+          "size": 8
+        }
+      ],
+      "mod_use": "Guest local-character lookup atpayload0 remains correct; final8bytes semantics unproven."
+    },
+    {
+      "name": "MoveFieldAck",
+      "logical": 2174,
+      "native": 2653,
+      "handler_rva": "0xC9C2D0",
+      "status": "confirmed_incompatible_entry_extension",
+      "old_single_entry_payload_size": 65,
+      "new_single_entry_payload_size": 73,
+      "prefix_fields": [
+        {
+          "name": "u8",
+          "offset": 0,
+          "size": 1
+        },
+        {
+          "name": "actor_key",
+          "offset": 1,
+          "size": 4
+        },
+        {
+          "name": "move_type",
+          "offset": 5,
+          "size": 4
+        },
+        {
+          "name": "user_key",
+          "offset": 9,
+          "size": 4
+        },
+        {
+          "name": "opaque_u32",
+          "offset": 13,
+          "size": 4
+        }
+      ],
+      "entry_fields": [
+        {
+          "name": "u32",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "actor_key",
+          "offset": 4,
+          "size": 4
+        },
+        {
+          "name": "transform",
+          "offset": 8,
+          "size": 40
+        },
+        {
+          "name": "new_u32_0",
+          "offset": 48,
+          "size": 4
+        },
+        {
+          "name": "new_u32_1",
+          "offset": 52,
+          "size": 4
+        }
+      ],
+      "entry_decoder_rva": "0x263BDF0",
+      "entry_count_rule": "No encoded count: read entries until stream cursor reaches payload length, requiring exact end. Count=(payload_size-17)/56.",
+      "mod_use": "Firstentryposition@25 unchanged; exact65-byte assumptions fail. Extra8bytes occur perentry, not one global trailer."
+    },
+    {
+      "name": "LoadingFieldDataAck",
+      "logical": 2643,
+      "native": 2399,
+      "handler_rva": "0xC9E360",
+      "status": "confirmed_incompatible_entry_extension",
+      "old_payload_size_formula": "20+48*n",
+      "new_payload_size_formula": "20+56*n",
+      "prefix_fields": [
+        {
+          "name": "u8",
+          "offset": 0,
+          "size": 1
+        },
+        {
+          "name": "actor_key",
+          "offset": 1,
+          "size": 4
+        },
+        {
+          "name": "opaque_u32_0",
+          "offset": 5,
+          "size": 4
+        },
+        {
+          "name": "owner_user_key",
+          "offset": 9,
+          "size": 4
+        },
+        {
+          "name": "flag0",
+          "offset": 13,
+          "size": 1
+        },
+        {
+          "name": "flag1",
+          "offset": 14,
+          "size": 1
+        },
+        {
+          "name": "opaque_u32_1",
+          "offset": 15,
+          "size": 4
+        },
+        {
+          "name": "flag2",
+          "offset": 19,
+          "size": 1
+        }
+      ],
+      "prefix_read_sites": [
+        "0xC9E43E",
+        "0xC9E4CB",
+        "0xC9E56E",
+        "0xC9E5A5",
+        "0xC9E5D6",
+        "0xC9E607",
+        "0xC9E638",
+        "0xC9E66F"
+      ],
+      "entry_fields": [
+        {
+          "name": "u32",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "actor_key",
+          "offset": 4,
+          "size": 4
+        },
+        {
+          "name": "transform",
+          "offset": 8,
+          "size": 40
+        },
+        {
+          "name": "new_u32_0",
+          "offset": 48,
+          "size": 4
+        },
+        {
+          "name": "new_u32_1",
+          "offset": 52,
+          "size": 4
+        }
+      ],
+      "entry_decoder_rva": "0x263BDF0",
+      "entry_decoder_call_site": "0xC9E6D0",
+      "entry_count_rule": "No encoded count. Reserve capacity from remaining size divided by56; read entries until cursor==payload_len. Exact-end check0xC9E6E7. Count=(payload_size-20)/56.",
+      "owner_argument_flow": "Read4 into[rbp-0x40] at0xC9E5B3; pass its address asR8 at0xC9E818 to client field loader0x85B440 at0xC9E82B.",
+      "mod_use": "alias_owner writes payload+9 (whole ordinary packet+14), unchanged. Validate20+56*n and preserve all other bytes, especially both newu32 fields in each entry."
+    },
+    {
+      "name": "LoadingCompleteAck",
+      "logical": 2762,
+      "native": 2190,
+      "handler_rva": "0xCA1350",
+      "status": "audited_field_widths_preserved",
+      "payload_size": 13,
+      "fields": [
+        {
+          "name": "actor_key",
+          "offset": 0,
+          "size": 4
+        },
+        {
+          "name": "u8",
+          "offset": 4,
+          "size": 1
+        },
+        {
+          "name": "u64",
+          "offset": 5,
+          "size": 8
+        }
+      ]
+    },
+    {
+      "name": "ActorLoadDataAck",
+      "logical": 2005,
+      "native": 2005,
+      "handler_rva": "0xDE8E60",
+      "status": "prefix_and_captured_type1_tail_confirmed_other_variants_unproven",
+      "handler_jump_rva": "0xA072110",
+      "create_record_rva": "0x9A6BC0",
+      "record_prefix": "Payload has repeated u16recordLength; record reads type_u8 thenactor_key_u32. Non-user record continues owner_key_u32,index_u8,u64 before componentinformation.",
+      "first_record_payload_offsets": {
+        "type": 2,
+        "actor_key": 3,
+        "non_user_owner": 7,
+        "non_user_index": 11,
+        "non_user_u64": 12
+      },
+      "captured_type1_tail": {
+        "origin": "End of the individual type1 record, excluding its preceding u16 length. NOT end of a multi-record payload.",
+        "position_from_end": 158,
+        "quaternion_from_end": 146,
+        "scale_from_end": 130,
+        "old_offsets_wrong_in_current_samples": {
+          "position": 154,
+          "quaternion": 142
+        },
+        "sample_count": 4,
+        "record_sizes": [
+          16789,
+          16652
+        ],
+        "conditions": "Observed type1 player records have zero entries in all three TS lists, hierarchy children and actor children. Do not extrapolate fixed offsets to nonzero lists or other actor types.",
+        "world_sample_position": [
+          -5089.48388671875,
+          404.027099609375,
+          -4711.26318359375
+        ],
+        "nearest_native_movement_distance_m": 0.15762033672093773,
+        "suffix_read_sequence": "Transform40,parent_u64,Transform40,quat16; u32 n2 + n2*u16; u32; vec3; u32 n4 + n4*u32; u32 n12 + n12*vec3; Navigation vec3; Hierarchy u8,u32,u8,u16 nh,nh*u32; actor parent_u32,u16 na,na*u32.",
+        "distance_formula_under_this_component_order": "158+2*n2+4*n4+12*n12+4*nh+4*na",
+        "transform_sync_reader": "0x236BF20",
+        "transform_sync_path_reader": "0x1491240->0xAA1E950",
+        "path_note": "This104-byte TS path differs from the136-byte MoveData Path. Captured position is its FIRST Transform.",
+        "final_ts_field": {
+          "reader": "0x1734230",
+          "count_size": 4,
+          "entry_size": 12,
+          "empty_count_from_record_end": 30
+        },
+        "following_components": {
+          "Navigation_reader": "0x2371D20",
+          "Hierarchy_reader": "0x1815120->0xB27F140"
+        },
+        "evidence": "actor_tail_capture_3527.json includes per-record exact suffix consumption and nearest same-actor movement. payload_actor_tail_helpers2_3527.txt and payload_hierarchy_3527.txt record native read widths.",
+        "historical_limit": "Old executable absent; current final TS list is proven, but attributing the entire four-byte difference specifically to a newly introduced list is not proven."
+      },
+      "unproven": [
+        "all per-type nested lengths and owner/control/local flags used by load rewriting",
+        "complete CreateUser and field initialization semantics"
+      ],
+      "reason": "Actor information0x1928790->0xB4B7F80 iterates runtime component list and calls each vf+0x58. Current transform component0x236BF20 has variable lists; captures prove end158 only for the specified empty-list player samples.",
+      "mod_use": "Opaque native relay is unaffected. Legacy local_capture/remote_puppet end154/end142 rewriting is wrong for current player samples and needs a type/record/shape-aware parser before enabling."
+    }
+  ],
+  "movement_offset_comparison": {
+    "origin": "MoveActorReq/Ack payload start",
+    "actor_key": {
+      "old": 0,
+      "new": 0
+    },
+    "position": {
+      "old": 4,
+      "new": 196
+    },
+    "quaternion": {
+      "old": 16,
+      "new": 180
+    },
+    "auxiliary_u32": {
+      "old": 32,
+      "new": 208
+    },
+    "secondary_transform": {
+      "old": 36,
+      "new": 140
+    },
+    "path": {
+      "old": 76,
+      "new": 4
+    },
+    "parent_u64": {
+      "old": 140,
+      "new": 68
+    },
+    "path_world_position": {
+      "old": 148,
+      "new": 76
+    },
+    "timestamp_u64": {
+      "old": 213,
+      "new": 212
+    },
+    "extra_u32": {
+      "old": null,
+      "new": 220
+    },
+    "first_flag": {
+      "old": 212,
+      "new": 224
+    },
+    "second_flag": {
+      "old": 221,
+      "new": 225
+    },
+    "req_tail": {
+      "old": 222,
+      "new": 226
+    },
+    "req_history": {
+      "old": 234,
+      "new": 238
+    },
+    "ack_server_flag": {
+      "old": 222,
+      "new": 226
+    },
+    "ack_tail": {
+      "old": 223,
+      "new": 227
+    }
+  },
+  "affected_existing_code_examples": [
+    "src/mod/session2/attach_follow_logic.h: fixed514/235/725 and move/action offsets",
+    "src/mod/session2/horse_follow_logic.h: rider-derived MoveActorAck usesoldparent/timestamp",
+    "src/mod/session2/combat_follow_logic.h: synthesizes235-byteMoveActorAck",
+    "src/mod/session2/ride_filter_logic.h: exact725 andoldBparent/target offsets",
+    "src/mod/session2/scene_diag_logic.h: exact725 andoldBtailflag",
+    "src/mod/net/local_capture.cpp and remote_puppet.cpp: ActorLoadData end-relative offsets unverified"
+  ],
+  "adapter_recommendation": [
+    "Keep same-build native payload bytes opaque across the tunnel and preserve outer opcode mapping.",
+    "Introduce explicit build-aware typed movement views/builders for filters and synthetic packets; old2976fixtures stayold.",
+    "Preserve the new MoveDatau32 and MoveFieldentryu32s verbatim when deriving packets; their default values are not verified.",
+    "Do not globally shrink222-byteMoveData to218 or729-byteactions to725; that discards current fields and would require a separatelyversioned lossless envelope.",
+    "Treat Scope fragments as opaque. This report does not authorize partial nested rewrites."
+  ],
+  "source_references": [
+    "docs/research/mirror-ack-formats.md sections1-2",
+    "docs/research/opcion-d-login.md sections4.2-4.4",
+    "docs/research/apariencia-estado-coop.md section3",
+    "src/mod/game/offsets.h kLoadPositionFromEnd/kLoadRotationFromEnd"
+  ],
+  "limitations": [
+    "Static payload read layout is not live multiplayer validation.",
+    "Only captured empty-list type1 actor-load tails are verified. Other actor-type component payloads and semantic enum/local-control flags need further evidence.",
+    "No game memory or runtime source was modified."
+  ],
+  "actor_tail_capture_evidence": {
+    "capture": "..\\bin64\\cdmp_packets_20261104-225244.bin",
+    "captured_bytes": 80465482,
+    "parsed_bytes": 80465482,
+    "snapshot_sha256": "e11718272efa299406246eb9261c5e2bc609f1b298c848c2e40fff09e51c3dea",
+    "types": {
+      "0": {
+        "count": 12,
+        "valid_transform": 0,
+        "sizes": {
+          "9": 12
+        },
+        "matched_movement": 0,
+        "candidate_end_offsets": {},
+        "exact_suffix_end_offsets": {}
+      },
+      "1": {
+        "count": 4,
+        "valid_transform": 4,
+        "sizes": {
+          "16789": 2,
+          "16652": 2
+        },
+        "matched_movement": 4,
+        "candidate_end_offsets": {
+          "158": 4
+        },
+        "exact_suffix_end_offsets": {
+          "158": 4
+        }
+      },
+      "3": {
+        "count": 133,
+        "valid_transform": 0,
+        "sizes": {
+          "7171": 1,
+          "7399": 2,
+          "7404": 1,
+          "7544": 1,
+          "7402": 1,
+          "6863": 1,
+          "9026": 1,
+          "8439": 2,
+          "8447": 2,
+          "8583": 1,
+          "8399": 1,
+          "8531": 1,
+          "7567": 2,
+          "7277": 1,
+          "8573": 2,
+          "8780": 1,
+          "8904": 3,
+          "8764": 3,
+          "7346": 2,
+          "6905": 2,
+          "6899": 1,
+          "8886": 1,
+          "8443": 3,
+          "6885": 1,
+          "8778": 3,
+          "8762": 3,
+          "8906": 4,
+          "8898": 5,
+          "7306": 2,
+          "9176": 1,
+          "7427": 1,
+          "7553": 1,
+          "7411": 1,
+          "8908": 3,
+          "8760": 4,
+          "7701": 1,
+          "7421": 5,
+          "7611": 2,
+          "9060": 1,
+          "8766": 3,
+          "9046": 1,
+          "8758": 3,
+          "8433": 2,
+          "8900": 2,
+          "7477": 2,
+          "7329": 1,
+          "8954": 1,
+          "8774": 2,
+          "9054": 1,
+          "8914": 2,
+          "7197": 1,
+          "6936": 1,
+          "7561": 3,
+          "7751": 1,
+          "8768": 3,
+          "8920": 1,
+          "8918": 1,
+          "8902": 5,
+          "7749": 1,
+          "7403": 6,
+          "7263": 1,
+          "7543": 2,
+          "7547": 1,
+          "7683": 2,
+          "8665": 1,
+          "8575": 1,
+          "7393": 1,
+          "7255": 1,
+          "8491": 1,
+          "8251": 1,
+          "7423": 2,
+          "7283": 1,
+          "7753": 1
+        },
+        "matched_movement": 124,
+        "candidate_end_offsets": {
+          "218": 8,
+          "176": 8,
+          "210": 19,
+          "168": 19,
+          "212": 10,
+          "170": 10,
+          "216": 4,
+          "174": 4,
+          "282": 2,
+          "240": 2,
+          "214": 2,
+          "172": 2
+        },
+        "exact_suffix_end_offsets": {
+          "176": 8,
+          "168": 19,
+          "170": 10,
+          "174": 4,
+          "240": 2,
+          "172": 2
+        }
+      },
+      "4": {
+        "count": 22,
+        "valid_transform": 0,
+        "sizes": {
+          "16776": 1,
+          "16556": 1,
+          "9374": 1,
+          "7522": 6,
+          "7382": 12,
+          "8602": 1
+        },
+        "matched_movement": 2,
+        "candidate_end_offsets": {
+          "212": 2,
+          "170": 2
+        },
+        "exact_suffix_end_offsets": {
+          "170": 2
+        }
+      },
+      "5": {
+        "count": 11,
+        "valid_transform": 0,
+        "sizes": {
+          "11144": 1,
+          "9108": 1,
+          "8255": 2,
+          "7886": 1,
+          "6840": 1,
+          "5954": 1,
+          "8518": 2,
+          "8504": 1,
+          "8502": 1
+        },
+        "matched_movement": 8,
+        "candidate_end_offsets": {
+          "212": 2,
+          "170": 2,
+          "224": 1,
+          "182": 1,
+          "214": 4,
+          "172": 4,
+          "216": 1,
+          "174": 1
+        },
+        "exact_suffix_end_offsets": {
+          "170": 2,
+          "182": 1,
+          "172": 4,
+          "174": 1
+        }
+      },
+      "6": {
+        "count": 543,
+        "valid_transform": 0,
+        "sizes": {
+          "6913": 2,
+          "6897": 6,
+          "6891": 25,
+          "6877": 15,
+          "6953": 4,
+          "7077": 4,
+          "6899": 4,
+          "6904": 1,
+          "6883": 41,
+          "6917": 16,
+          "6935": 8,
+          "6911": 24,
+          "6870": 3,
+          "6933": 7,
+          "6909": 21,
+          "6885": 27,
+          "6869": 7,
+          "6971": 4,
+          "6939": 16,
+          "6921": 7,
+          "6905": 15,
+          "6925": 7,
+          "6893": 35,
+          "6915": 13,
+          "6945": 9,
+          "6929": 18,
+          "6867": 10,
+          "6947": 3,
+          "6931": 6,
+          "6969": 9,
+          "6937": 36,
+          "6875": 43,
+          "6872": 5,
+          "6927": 7,
+          "6895": 34,
+          "6919": 4,
+          "6863": 6,
+          "6887": 8,
+          "6951": 4,
+          "6873": 2,
+          "6949": 4,
+          "6923": 5,
+          "6907": 13,
+          "6880": 1,
+          "6865": 2,
+          "6882": 1,
+          "6901": 1
+        },
+        "matched_movement": 529,
+        "candidate_end_offsets": {
+          "218": 1,
+          "176": 1,
+          "210": 12,
+          "168": 12,
+          "212": 8,
+          "170": 8
+        },
+        "exact_suffix_end_offsets": {
+          "176": 1,
+          "168": 12,
+          "170": 8
+        }
+      },
+      "7": {
+        "count": 448,
+        "valid_transform": 9,
+        "sizes": {
+          "6427": 1,
+          "6786": 1,
+          "6585": 1,
+          "6806": 2,
+          "6762": 1,
+          "6927": 1,
+          "6750": 1,
+          "6776": 1,
+          "6817": 1,
+          "6435": 1,
+          "6705": 2,
+          "6498": 1,
+          "6648": 1,
+          "6681": 1,
+          "6395": 1,
+          "6359": 7,
+          "6355": 1,
+          "6505": 2,
+          "10143": 1,
+          "6365": 1,
+          "6514": 1,
+          "6332": 4,
+          "6421": 1,
+          "7129": 1,
+          "6340": 6,
+          "6686": 1,
+          "6765": 1,
+          "6580": 1,
+          "7100": 1,
+          "6699": 1,
+          "6503": 1,
+          "6693": 1,
+          "6492": 1,
+          "6713": 1,
+          "6669": 1,
+          "6834": 1,
+          "6657": 2,
+          "6683": 1,
+          "6724": 1,
+          "6352": 1,
+          "6707": 1,
+          "6501": 1,
+          "6343": 1,
+          "6362": 1,
+          "6624": 1,
+          "6530": 1,
+          "6549": 6,
+          "6338": 1,
+          "6392": 1,
+          "6637": 1,
+          "6814": 1,
+          "6418": 11,
+          "6336": 6,
+          "6457": 2,
+          "6583": 12,
+          "6354": 12,
+          "6500": 3,
+          "6353": 21,
+          "6436": 1,
+          "6351": 34,
+          "7019": 2,
+          "6334": 24,
+          "6460": 20,
+          "6397": 24,
+          "6346": 2,
+          "6390": 4,
+          "6342": 2,
+          "6536": 8,
+          "7069": 48,
+          "6673": 24,
+          "6370": 48,
+          "6455": 12,
+          "6524": 4,
+          "6488": 20,
+          "6361": 7,
+          "6420": 1,
+          "6484": 12,
+          "6738": 2,
+          "6610": 2,
+          "6797": 2,
+          "6486": 4
+        },
+        "matched_movement": 423,
+        "candidate_end_offsets": {
+          "200": 1,
+          "158": 1,
+          "240": 10,
+          "198": 2,
+          "216": 17,
+          "126": 3,
+          "208": 7,
+          "118": 1,
+          "166": 3,
+          "178": 1,
+          "212": 57,
+          "122": 1,
+          "210": 274,
+          "168": 94,
+          "224": 1,
+          "170": 56,
+          "174": 13,
+          "418": 2,
+          "376": 2,
+          "120": 86,
+          "218": 2,
+          "282": 8,
+          "226": 24,
+          "274": 4,
+          "232": 4,
+          "214": 2,
+          "172": 2
+        },
+        "exact_suffix_end_offsets": {
+          "158": 1,
+          "198": 2,
+          "166": 3,
+          "178": 1,
+          "168": 94,
+          "170": 56,
+          "174": 13,
+          "376": 2,
+          "240": 8,
+          "232": 4,
+          "172": 2
+        }
+      }
+    }
+  }
+}

@@ -107,19 +107,20 @@ void test_remote_update_guard() {
     for (const auto& [k, n] : seen) CHECK(n == 1);
 }
 
-Section sec(const char* name, uint32_t va, uint32_t size) {
+Section sec(const char* name, uint32_t va, uint32_t size, uint32_t flags) {
     Section s;
     std::memcpy(s.name, name, std::min<size_t>(std::strlen(name), 8));
     s.va = va;
     s.size = size;
+    s.flags = flags;
     return s;
 }
 
 void test_sections() {
     // Build 2976's layout (the read-only copy's PE header).
-    const std::vector<Section> secs = {sec(".rsrc", 0x1000, 0x51EA000), sec(".xdata", 0x51EB000, 0x16A8000),
-                                       sec(".rdata", 0x6893000, 0x854000), sec(".xtls", 0x75C9000, 0xF9466E2),
-                                       sec(".text", 0x16F10000, 0x1C3986)};
+    const std::vector<Section> secs = {sec(".rsrc", 0x1000, 0x51EA000, 0x60000020), sec(".xdata", 0x51EB000, 0x16A8000, 0x40000040),
+                                       sec(".rdata", 0x6893000, 0x854000, 0xC0000040), sec(".xtls", 0x75C9000, 0xF9466E2, 0xE0000020),
+                                       sec(".text", 0x16F10000, 0x1C3986, 0x40000020)};
     for (const uint32_t at : {0x4FD491u, 0x8646FCu, 0x864B1Du, 0x1F63F70u, 0x2329700u}) {
         CHECK(in_real_code(secs, at, 16));
         CHECK(std::string_view(section_of(secs, at)->name) == ".rsrc");
@@ -134,9 +135,21 @@ void test_sections() {
     CHECK(!in_real_code(secs, 0x500, 5));
     CHECK(!in_real_code(secs, 0x4FD491, 0));
     CHECK(section_of(secs, 0x500) == nullptr);
-    // A section that is merely named like it (no exact match) is not .rsrc.
-    const std::vector<Section> odd = {sec(".rsrc2", 0x1000, 0x1000)};
+    // The name means nothing, only the flags: data named .rsrc is refused.
+    const std::vector<Section> odd = {sec(".rsrc", 0x1000, 0x1000, 0x40000040)};
     CHECK(!in_real_code(odd, 0x1100, 5));
+    // The protector renames the sections on every build. 3527: .rsrc is the code, .text the RWX one.
+    const std::vector<Section> s3527 = {sec(".rsrc", 0x1000, 0x5594000, 0x60000020), sec(".data", 0x6CD0000, 0x878000, 0xC0000040),
+                                        sec(".text", 0x7A41000, 0xBFD2D54, 0xE0000020)};
+    CHECK(in_real_code(s3527, 0x2548E40, 5));
+    CHECK(!in_real_code(s3527, 0x9A7F860, 5));
+    // 3549: .xtext is the code, .xpdata the RWX one and .text plain data.
+    const std::vector<Section> s3549 = {sec(".xtext", 0x1000, 0x5594000, 0x60000020), sec(".text", 0x7548000, 0x2D9000, 0x40000040),
+                                        sec(".xpdata", 0x7A41000, 0xBE1F9F4, 0xE0000020), sec(".tls", 0x13861000, 0x1BAF42, 0x40000020)};
+    CHECK(in_real_code(s3549, 0x2548E40, 5));
+    CHECK(!in_real_code(s3549, 0x99BADC0, 5));
+    CHECK(!in_real_code(s3549, 0x7548010, 5));
+    CHECK(!in_real_code(s3549, 0x13861010, 5));
 }
 
 void test_line_budget() {

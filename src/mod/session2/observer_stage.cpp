@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/guest_actor_diag_logic.h"
@@ -587,6 +588,7 @@ bool read_sections() {
         std::copy(std::begin(h.Name), std::end(h.Name), s.name);
         s.va = h.VirtualAddress;
         s.size = h.Misc.VirtualSize;
+        s.flags = h.Characteristics;
         g_secs.push_back(s);
     }
     return !g_secs.empty();
@@ -602,6 +604,22 @@ struct Ctx {
     uintptr_t rva;
     std::span<const uint8_t> bytes;
 };
+
+// Build 1.0.0.3527: only the 2810 hook, for observer_scene_copy. The serializer is 0x2CDAB60, DeleteSequencer's call of
+// it is 0x2AD4640 and there the sequencer is in rdi and the manager in r13.
+constexpr uintptr_t kDelete3527 = 0x2CDAB60;
+constexpr uint8_t kDeleteBytes3527[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x4C, 0x89, 0x4C,
+                                        0x24, 0x20, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41};
+
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the serializer moved whole by +0xC70 with the same bytes
+// (0x2CDAB60 -> 0x2CDB7D0, .pdata begins there; it still writes the native opcode 0x8F4). The caller registers the
+// callback reads are observer_scene_copy's to verify (observer_scene_copy_verify_current), as on 3527.
+constexpr uintptr_t kDelete3576 = 0x2CDB7D0;
+constexpr uintptr_t kWorldSlot3576 = 0x71C0100;  // reader_profile() may be null on 3576
+
+void on_delete_3527(safetyhook::Context& ctx) noexcept {
+    observer_scene_copy_on_delete(ctx.rcx, ctx.r8, ctx.r9, ctx.rdi, ctx.r13, ctx.rsp);
+}
 
 struct PointDef {
     Kind kind;
@@ -645,8 +663,47 @@ bool install_point(const PointDef& d) {
                           kKindName[d.kind]);
 }
 
+// 3527/3549 and 3576 (kDeleteBytes3527 unchanged).
+void stage_thread_3527() {
+    if (!read_sections()) {
+        log::error("ObserverStage: the game's section table is unreadable; nothing is hooked");
+        observer_scene_copy_disable("no section table");
+        return;
+    }
+    const bool b3576 = game::current_build() == game::Build::v3576;
+    const auto* profile = game::reader_profile();
+    const uintptr_t world_slot = b3576 ? kWorldSlot3576 : profile ? profile->world_system : 0;
+    for (int i = 0; world_slot && i < 1200; ++i) {
+        uintptr_t world = 0;
+        if (peek(g_base + world_slot, world) && world) break;
+        Sleep(500);
+    }
+    if (!observer_scene_copy_verify_current(g_base)) return;
+    if (!p8_install_mid(g_base, g_secs, b3576 ? kDelete3576 : kDelete3527, kPatch5, kDeleteBytes3527, on_delete_3527,
+                        g_hooks[kKDelete], "ObserverStage", kKindName[kKDelete])) {
+        observer_scene_copy_disable("the 2810 hook is not installed");
+        return;
+    }
+    g_on.store(true);
+    for (uint64_t tick = 1;; ++tick) {
+        Sleep(1000);
+        try {
+            observer_scene_copy_drain();
+        } catch (...) {
+            log::error("ObserverSceneCopy: drain failed (allocation?); events kept in the ring");
+        }
+        if (tick % 60 == 0) {
+            if (const std::string m = observer_scene_copy_counters(); !m.empty()) log::info("{}", m);
+        }
+    }
+}
+
 DWORD WINAPI stage_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (game::current_build() == game::Build::v3527 || game::current_build() == game::Build::v3576) {
+        stage_thread_3527();
+        return 0;
+    }
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     if (g_base != off::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||

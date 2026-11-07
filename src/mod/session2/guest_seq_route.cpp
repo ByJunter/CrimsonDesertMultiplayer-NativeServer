@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "mod/config.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -190,6 +191,80 @@ constexpr uint16_t kOpMainPlayerDataStartAck = 2756;
 constexpr uint32_t kManager_Table = 0x08, kTable_BucketCount = 0x88, kTable_Buckets = 0x98, kTable_Nodes = 0xA0;
 constexpr uint32_t kBucketStride = 0x100, kBucketMaxEntries = (0x100 - 8) / 8, kNode_Key = 0x04, kNode_Actor = 0x08;
 
+// ---------------------------------------------------------------- the points (build 1.0.0.3527, .rsrc)
+//
+// Read with capstone on the installed PE, 2026-11-05 (every RVA below is this build's). Only the four sequencer points:
+// the 2524 and the schedule points (kS*, kP2524) stay refused on this build. No other module hooks them; a sweep of each
+// RUNTIME_FUNCTION and a rel32 scan of the whole PE find no branch into the patched bytes. RAX = the manager vf48 returned
+// at all four, as in 2976. What moved:
+//   2661 0xD33880: 0xD338A4 mov r12,r8 (the wrapper) but 0xD33CD5 / 0xD33CDC overwrite r12 and r13 before the point; the
+//        wrapper is still r8's home [rbp+0x100] (0xD33B70 reloads it from there; nothing else writes it on this path).
+//        0xD33CC9 movzx r14d,byte [rbp+0x108] (the kind: R14B, not BL); 0xD33D24 vf48 on [rbp-0x28];
+//        0xD33D2E cmp r14b,4 ; je 0xD33D7B   THE POINT (6 bytes, two whole instructions)
+//        0xD33D7B lea r9,[rbp-0x80] ; lea r8,[rbp+0x10] ; lea rdx,[rbp+0x100] ; mov rcx,rax ; call 0xBA7D00
+//   2981 0xD35330: r13 = the raw packet from 0xD3535D, never written again before the point; the wrapper is gone (r14 is
+//        overwritten at 0xD357FE and its home [rbp+0xA0] is reused by the binding loop at 0xD35696), so the actor is the
+//        handler's own lookup 0xD357B4: found = byte [rbp+0x30], actor = [rbp+0x28]; 0xD3584A vf48 on [rbp-0x10];
+//        0xD35854 lea rcx,[rbp-0x80] ; mov [rsp+0x30],rcx   THE POINT (9 bytes) ... 0xD35879 mov rcx,rax ; call 0xBA9870
+//   2810 0xD33FA0: every slot +0x10: key [rbp+0x88], found [rbp+0x10], actor [rbp+8], u64 [rbp-0x48], u32 [rbp-0x50];
+//        0xD3421B vf48 on [rbp-0x38]; 0xD34225 movzx ecx,byte [rbp+0x80]   THE POINT (7 bytes) ... 0xD3423C mov rcx,rax
+//   2322 0xC9C9B0: r14 = the raw packet from 0xC9C9D8, never written again; found [rbp+8], actor [rbp]; 0xC9CB91 vf48 on
+//        [rbp-0x48]; 0xC9CB9B mov byte [rax+0x259],2   THE POINT (7 bytes); 0xC9CBA2 loads RAX anew
+constexpr uintptr_t kP2661_3527 = 0xD33D2E, kP2981_3527 = 0xD35854, kP2810_3527 = 0xD34225, kP2322_3527 = 0xC9CB9B;
+constexpr uint8_t kP2661B_3527[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47, 0x48, 0x8D, 0x05, 0xB5, 0x3F, 0xC2, 0x04, 0x48, 0x89, 0x44};
+constexpr uint8_t kFrame2661_3527[] = {0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFF, 0xFF, 0xFF};        // 0xD33895
+constexpr uint8_t kKind2661_3527[] = {0x44, 0x0F, 0xB6, 0xB5, 0x08, 0x01, 0x00, 0x00};         // 0xD33CC9
+constexpr uint8_t kActor2661_3527[] = {0x4D, 0x89, 0x34, 0x24};                                // 0xD33CC5 mov [r12],r14
+constexpr uint8_t kVf48_2661_3527[] = {0x48, 0x8B, 0x4D, 0xD8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xD33D24
+constexpr uint8_t kHome2661_3527[] = {0x4C, 0x89, 0x44, 0x24, 0x18};                           // 0xD33885 mov [rsp+0x18],r8
+constexpr uint8_t kWrap2661_3527[] = {0x4D, 0x8B, 0xE0};                                       // 0xD338A4 mov r12,r8
+constexpr uint8_t kP2981B_3527[] = {0x48, 0x8D, 0x4D, 0x80, 0x48, 0x89, 0x4C, 0x24, 0x30, 0x48, 0x8D, 0x4D, 0xD0, 0x48, 0x89, 0x4C};
+constexpr uint8_t kFrame2981_3527[] = {0x48, 0x8D, 0x6C, 0x24, 0xB0};                          // 0xD35345
+constexpr uint8_t kRaw2981_3527[] = {0x4D, 0x8B, 0x68, 0x18};                                  // 0xD3535D
+constexpr uint8_t kFind2981_3527[] = {0x44, 0x8B, 0x45, 0xC0, 0x48, 0x8D, 0x55, 0x20, 0x49, 0x8B, 0xCF, 0xE8, 0xEC, 0xA0,
+                                      0xC5, 0xFF, 0x90, 0x80, 0x7D, 0x30, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x7D, 0x28};  // 0xD357B4
+constexpr uint8_t kVf48_2981_3527[] = {0x48, 0x8B, 0x4D, 0xF0, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xD3584A
+constexpr uint8_t kP2810B_3527[] = {0x0F, 0xB6, 0x8D, 0x80, 0x00, 0x00, 0x00, 0x88, 0x4C, 0x24, 0x20, 0x4C, 0x8D, 0x4D, 0xB0, 0x4C};
+constexpr uint8_t kFrame2810_3527[] = {0x48, 0x8D, 0x6C, 0x24, 0xD0};                          // 0xD33FB0
+constexpr uint8_t kFind2810_3527[] = {0x44, 0x8B, 0x85, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x55, 0x00, 0x48, 0x8B, 0xCE, 0xE8,
+                                      0x14, 0xB7, 0xC5, 0xFF, 0x90, 0x80, 0x7D, 0x10, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0x08};  // 0xD34189
+constexpr uint8_t kVf48_2810_3527[] = {0x48, 0x8B, 0x4D, 0xC8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xD3421B
+constexpr uint8_t kSeq2810_3527[] = {0x4C, 0x8D, 0x4D, 0xB0, 0x4C, 0x8B, 0x45, 0xB8};          // 0xD34230 lea r9 ; mov r8
+constexpr uint8_t kP2322B_3527[] = {0xC6, 0x80, 0x59, 0x02, 0x00, 0x00, 0x02, 0x48, 0x8D, 0x05, 0x57, 0xB9, 0x02, 0x05};
+constexpr uint8_t kFrame2322_3527[] = {0x48, 0x8D, 0x6C, 0x24, 0xD0};                          // 0xC9C9C0
+constexpr uint8_t kRaw2322_3527[] = {0x49, 0x8B, 0xF8, 0x48, 0x8B, 0xDA, 0x48, 0x8B, 0xF1, 0x45, 0x33,
+                                     0xFF, 0x4D, 0x8B, 0x70, 0x18, 0x41, 0x0F, 0xB7, 0x4E, 0x03};  // 0xC9C9CC
+constexpr uint8_t kFind2322_3527[] = {0x48, 0x8D, 0x55, 0xF8, 0x48, 0x8B, 0xCE, 0xE8, 0x9A, 0x2D, 0xCF, 0xFF,
+                                      0x90, 0x80, 0x7D, 0x08, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0x00};  // 0xC9CB0A
+constexpr uint8_t kVf48_2322_3527[] = {0x48, 0x8B, 0x4D, 0xB8, 0x48, 0x8B, 0x01, 0xFF, 0x50, 0x48};  // 0xC9CB91
+constexpr uint32_t kFieldSlot3527[gsr::kPoints] = {0x28, 0x10, 0x38, 0x48, 0};
+// pa::ClientSequencerStageManager and pa::ClientSequencerPlayDataActorComponent (rtti_3527.json).
+constexpr uintptr_t kVtStageManager3527 = 0x59572E0, kVtSeqPlayComp3527 = 0x594D930;
+// Build 3576 (static, 2026-11-06 evening; not yet run): the four handlers moved as whole functions by +0x420, every point
+// and context array is at old + 0x420 with the same bytes but for the relative fields below (tools/porting/
+// port_module.py); the frames and the manager's fields are 3527's (g_3527 stays the layout flag, g_3576 the addresses).
+constexpr uintptr_t kP2661_3576 = 0xD3414E, kP2981_3576 = 0xD35C74, kP2810_3576 = 0xD34645, kP2322_3576 = 0xC9CFBB;
+constexpr uintptr_t kVtStageManager3576 = 0x5959438, kVtSeqPlayComp3576 = 0x594FAF0;  // vtable_map_3549_3576.json
+constexpr uint8_t kP2661B_3576[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47, 0x48, 0x8D, 0x05, 0x95, 0x59, 0xC2, 0x04, 0x48, 0x89, 0x44};
+constexpr uint8_t kFind2981_3576[] = {0x44, 0x8B, 0x45, 0xC0, 0x48, 0x8D, 0x55, 0x20, 0x49, 0x8B, 0xCF, 0xE8, 0x3C, 0xA0,
+                                      0xC5, 0xFF, 0x90, 0x80, 0x7D, 0x30, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x7D, 0x28};
+constexpr uint8_t kFind2810_3576[] = {0x44, 0x8B, 0x85, 0x88, 0x00, 0x00, 0x00, 0x48, 0x8D, 0x55, 0x00, 0x48, 0x8B, 0xCE, 0xE8,
+                                      0x64, 0xB6, 0xC5, 0xFF, 0x90, 0x80, 0x7D, 0x10, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0x08};
+constexpr uint8_t kFind2322_3576[] = {0x48, 0x8D, 0x55, 0xF8, 0x48, 0x8B, 0xCE, 0xE8, 0xEA, 0x2C, 0xCF, 0xFF,
+                                      0x90, 0x80, 0x7D, 0x08, 0x00, 0x74, 0x29, 0x48, 0x8B, 0x75, 0x00};
+constexpr uint8_t kP2322B_3576[] = {0xC6, 0x80, 0x59, 0x02, 0x00, 0x00, 0x02, 0x48, 0x8D, 0x05, 0xA7, 0xD4, 0x02, 0x05};
+
+// The manager's fields this module reads, per build. 3527 [V capstone]: the marker +0x259 (0xBA2FEB, 0xC9CB9B); 0xBA21F0
+// (2976's 0xA97300) returns at once while the vector {+0x1B8, u32 +0x1C0} (0xBA88D0: stages by id) holds anything, which is
+// what 2976's +0x174 did (0xBA2256, and 0xBA2FF8 in the start check); its three lists are {+0x1C8, n +0x1D0}, {+0x1D8, n
+// +0x1E0} (played one per call at 0xBA2776 in state 3) and {+0x1E8, n +0x1F0} (2976's +0x1B0 / +0x1C0 / +0x1D0: 0xBA22B8,
+// 0xBA22F8, 0xBA2381). created and the engage queue are only logged and were not re-derived: 0 = not read.
+struct MgrOff {
+    uint32_t ready, count, created, list1b0, list1c0, n1d0, engage;
+};
+constexpr MgrOff kMgrOff2976{kMgr_Ready, kMgr_Count, kMgr_Created, kMgr_List1B0, kMgr_List1C0, kMgr_N1D0, kMgr_NEngage};
+constexpr MgrOff kMgrOff3527{0x259, 0x1C0, 0, 0x1C8, 0x1D8, 0x1F0, 0};
+
 enum class How : uint8_t { None, Own, StageDiag, P8Probe, NotWanted };
 const char* how_name(How h) {
     switch (h) {
@@ -202,6 +277,13 @@ const char* how_name(How h) {
 }
 
 uintptr_t g_base = 0;
+// The build, its world slot and the 2661's prefix: written by guest_seq_route_start before any hook or thread.
+bool g_3527 = false;  // 3527's layout (3527, 3549 and 3576)
+bool g_3576 = false;  // 3576's addresses
+uintptr_t g_world_slot = off::kWorldSystemSlot;
+size_t g_prefix = osq::kPreparePrefix;
+const MgrOff* g_mo = &kMgrOff2976;
+uintptr_t vt_mgr() noexcept { return g_3576 ? kVtStageManager3576 : g_3527 ? kVtStageManager3527 : kVtStageManager; }
 std::atomic<bool> g_started{false};         // guest_seq_route is probe or 1
 std::atomic<bool> g_thread_started{false};  // the install thread (guest_seq_route or guest_sched_route)
 std::atomic<uint8_t> g_mode{0};
@@ -378,7 +460,7 @@ bool sched_has(uintptr_t g, uint64_t key) noexcept {
     return false;
 }
 uintptr_t find_actor(uint32_t key) noexcept {
-    const uintptr_t world = rdp(g_base + off::kWorldSystemSlot);
+    const uintptr_t world = rdp(g_base + g_world_slot);
     const uintptr_t mgr = world ? rdp(world + off::kWorldSystem_ActorManager) : 0;
     const uintptr_t table = mgr ? rdp(mgr + kManager_Table) : 0;
     const uint32_t buckets = table ? rdv<uint32_t>(table + kTable_BucketCount) : 0;
@@ -450,11 +532,12 @@ constexpr uint32_t kInst_Stage = 0x58, kStage_Data = 0x38, kData_Branches = 0x08
 // X's state in one u64: +0x231 | loading tasks +0x174 << 8 | created +0x17C << 24 | list +0x1C0 n << 40 | list +0x1B0 n << 52.
 uint64_t mgr_state(uintptr_t m) noexcept {
     if (!m) return ~0ull;
-    const uint64_t ready = rdv<uint8_t>(m + kMgr_Ready, 0xFF);
-    const uint64_t count = rdv<uint32_t>(m + kMgr_Count) & 0xFFFF;
-    const uint64_t created = rdv<uint32_t>(m + kMgr_Created) & 0xFFFF;
-    const uint64_t l1c0 = rdv<uint32_t>(m + kMgr_List1C0 + 8) & 0xFFF;
-    const uint64_t l1b0 = rdv<uint32_t>(m + kMgr_List1B0 + 8) & 0xFFF;
+    const MgrOff& o = *g_mo;
+    const uint64_t ready = rdv<uint8_t>(m + o.ready, 0xFF);
+    const uint64_t count = rdv<uint32_t>(m + o.count) & 0xFFFF;
+    const uint64_t created = o.created ? rdv<uint32_t>(m + o.created) & 0xFFFF : 0;
+    const uint64_t l1c0 = rdv<uint32_t>(m + o.list1c0 + 8) & 0xFFF;
+    const uint64_t l1b0 = rdv<uint32_t>(m + o.list1b0 + 8) & 0xFFF;
     return ready | count << 8 | created << 24 | l1c0 << 40 | l1b0 << 52;
 }
 
@@ -669,7 +752,7 @@ std::string npc_text(const gsr::NpcState& s) {
 uintptr_t play_comp(uintptr_t a) {
     const uintptr_t comps = a ? rdp(a + kActor_Comps) : 0;
     const uintptr_t comp = comps ? rdp(comps + kComps_Play) : 0;
-    return comp && rdp(comp) == g_base + kVtSeqPlayComp ? comp : 0;
+    return comp && rdp(comp) == g_base + (g_3576 ? kVtSeqPlayComp3576 : g_3527 ? kVtSeqPlayComp3527 : kVtSeqPlayComp) ? comp : 0;
 }
 
 gsr::NpcState read_npc(uint32_t key) {
@@ -681,15 +764,19 @@ gsr::NpcState read_npc(uint32_t key) {
     s.ready_c2 = rdv<uint8_t>(a + kActor_C2);
     s.ready_cf = rdv<uint8_t>(a + kActor_CF);
     if (const uintptr_t comp = play_comp(a)) {
+        // G5 only (log lines). 3527: the scene key is still +0x2E0 (0x6C05D4 cmp [rdx+0x2E0],[stage+0x30]), the later flags
+        // moved by +8 (vf13 0xAF2E62 writes +0x3E1, 2976's +0x3D9; +0x3D8 and +0x320 by the same shift [E]); the schedule
+        // stage's are not re-derived, so comp+0x318 stays out there.
+        const uint32_t cs = g_3527 ? 8 : 0;
         s.comp = true;
         s.owner = rdv<uint32_t>(comp + kComp_Owner);
         s.scene = rdv<uint64_t>(comp + kComp_Key);
-        s.flag_3d8 = rdv<uint8_t>(comp + kComp_Flag);
-        s.link_320 = rdv<uint64_t>(comp + kComp_Link);
+        s.flag_3d8 = rdv<uint8_t>(comp + kComp_Flag + cs);
+        s.link_320 = rdv<uint64_t>(comp + kComp_Link + cs);
         // vf13 0x9ED290: comp+0x318 = the stage found in [X+0x148] (0x9ED4C6..), +0x3D9 = 1 if its +0x178 was 0
         // (0x9ED55B / 0x9ED568).
-        s.stage = rdp(comp + kComp_Stage);
-        s.flag_3d9 = rdv<uint8_t>(comp + kComp_Wait);
+        s.stage = g_3527 ? 0 : rdp(comp + kComp_Stage);
+        s.flag_3d9 = rdv<uint8_t>(comp + kComp_Wait + cs);
         if (s.stage) {
             s.stage_active = rdv<uint8_t>(s.stage + kStage_Active);
             s.stage_key = rdv<uint64_t>(s.stage + kStage_Key);
@@ -709,16 +796,17 @@ gsr::NpcState read_npc(uint32_t key) {
 
 gsr::XState read_x(uintptr_t x) {
     gsr::XState s;
-    if (!x || rdp(x) != g_base + kVtStageManager) return s;
+    if (!x || rdp(x) != g_base + vt_mgr()) return s;
+    const MgrOff& o = *g_mo;
     s.readable = true;
-    s.ready = rdv<uint8_t>(x + kMgr_Ready, 0xFF);
-    s.loading = rdv<uint32_t>(x + kMgr_Count);
-    s.created = rdv<uint32_t>(x + kMgr_Created);
-    s.n1b0 = rdv<uint32_t>(x + kMgr_List1B0 + 8);
-    s.n1c0 = rdv<uint32_t>(x + kMgr_List1C0 + 8);
-    s.n1d0 = rdv<uint32_t>(x + kMgr_N1D0);
+    s.ready = rdv<uint8_t>(x + o.ready, 0xFF);
+    s.loading = rdv<uint32_t>(x + o.count);
+    s.created = o.created ? rdv<uint32_t>(x + o.created) : 0;
+    s.n1b0 = rdv<uint32_t>(x + o.list1b0 + 8);
+    s.n1c0 = rdv<uint32_t>(x + o.list1c0 + 8);
+    s.n1d0 = rdv<uint32_t>(x + o.n1d0);
     s.live = rdv<uint32_t>(x + kMgr_NLive);
-    s.engage = rdv<uint32_t>(x + kMgr_NEngage);
+    s.engage = o.engage ? rdv<uint32_t>(x + o.engage) : 0;
     return s;
 }
 
@@ -801,7 +889,7 @@ std::string summary_2524() {
 
 gsr::SchedCensus census(uintptr_t g, std::vector<uint32_t>* npcs) {
     gsr::SchedCensus c;
-    if (!g || rdp(g) != g_base + kVtStageManager) return c;
+    if (!g || rdp(g) != g_base + vt_mgr()) return c;
     const uintptr_t cont = rdp(g + kMgr_Sched);
     const uintptr_t vec = cont ? rdp(cont + kSched_Vec) : 0;
     const uint32_t n = cont ? rdv<uint32_t>(cont + kSched_Count) : 0;
@@ -1027,7 +1115,49 @@ std::vector<SchedDef> sched_points() {
     };
 }
 
+std::vector<PointDef> points_3527() {
+    return {
+        {Point::P2661, kP2661_3527, 6, kP2661B_3527,
+         {{0xD33895, kFrame2661_3527}, {0xD33CC9, kKind2661_3527}, {0xD33CC5, kActor2661_3527},
+          {0xD33D24, kVf48_2661_3527}, {0xD33885, kHome2661_3527}, {0xD338A4, kWrap2661_3527}},
+         on_p2661},
+        {Point::P2981, kP2981_3527, 9, kP2981B_3527,
+         {{0xD35345, kFrame2981_3527}, {0xD3535D, kRaw2981_3527}, {0xD357B4, kFind2981_3527}, {0xD3584A, kVf48_2981_3527}},
+         on_p2981},
+        {Point::P2810, kP2810_3527, 7, kP2810B_3527,
+         {{0xD33FB0, kFrame2810_3527}, {0xD34189, kFind2810_3527}, {0xD3421B, kVf48_2810_3527}, {0xD34230, kSeq2810_3527}},
+         on_p2810},
+        {Point::P2322, kP2322_3527, 7, kP2322B_3527,
+         {{0xC9C9C0, kFrame2322_3527}, {0xC9C9CC, kRaw2322_3527}, {0xC9CB0A, kFind2322_3527}, {0xC9CB91, kVf48_2322_3527}},
+         on_p2322},
+    };
+}
+
+std::vector<PointDef> points_3576() {
+    constexpr uintptr_t d = 0x420;  // every context array of the four handlers (port_module.py)
+    return {
+        {Point::P2661, kP2661_3576, 6, kP2661B_3576,
+         {{0xD33895 + d, kFrame2661_3527}, {0xD33CC9 + d, kKind2661_3527}, {0xD33CC5 + d, kActor2661_3527},
+          {0xD33D24 + d, kVf48_2661_3527}, {0xD33885 + d, kHome2661_3527}, {0xD338A4 + d, kWrap2661_3527}},
+         on_p2661},
+        {Point::P2981, kP2981_3576, 9, kP2981B_3527,
+         {{0xD35345 + d, kFrame2981_3527}, {0xD3535D + d, kRaw2981_3527}, {0xD357B4 + d, kFind2981_3576},
+          {0xD3584A + d, kVf48_2981_3527}},
+         on_p2981},
+        {Point::P2810, kP2810_3576, 7, kP2810B_3527,
+         {{0xD33FB0 + d, kFrame2810_3527}, {0xD34189 + d, kFind2810_3576}, {0xD3421B + d, kVf48_2810_3527},
+          {0xD34230 + d, kSeq2810_3527}},
+         on_p2810},
+        {Point::P2322, kP2322_3576, 7, kP2322B_3576,
+         {{0xC9C9C0 + d, kFrame2322_3527}, {0xC9C9CC + d, kRaw2322_3527}, {0xC9CB0A + d, kFind2322_3576},
+          {0xC9CB91 + d, kVf48_2322_3527}},
+         on_p2322},
+    };
+}
+
 std::vector<PointDef> points() {
+    if (g_3576) return points_3576();
+    if (g_3527) return points_3527();
     return {
         {Point::P2661, kP2661, 5, kP2661Bytes,
          {{0xC05BC0, kFrame2661Bytes}, {0xC060C6, kKind2661Bytes}, {0xC060C2, kActor2661Bytes},
@@ -1129,7 +1259,7 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || !(game::legacy_layout() || g_3576) ||
         !p8_exe_sections(g_base, secs)) {
         log::error("GuestSeqRoute: unsupported game build or unreadable sections; nothing is routed (the gate drops "
                    "every copy)");
@@ -1139,7 +1269,7 @@ DWORD WINAPI install_thread(LPVOID) {
     const std::vector<PointDef> defs = points();
     for (int i = 0; i < 1200; ++i) {  // WorldSystem (up to 10 minutes), as the other guest modules
         uintptr_t world = 0;
-        if (game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world) break;
+        if (game::safe_read(g_base + g_world_slot, &world, sizeof world) && world) break;
         Sleep(500);
     }
     // guest_sched_route first (its points are this module's own: nobody to wait for).
@@ -1187,7 +1317,7 @@ DWORD WINAPI install_thread(LPVOID) {
         for (const Ctx& c : d.ctx) {
             if (!gad::in_real_code(secs, static_cast<uint32_t>(c.rva), static_cast<uint32_t>(c.bytes.size())) ||
                 !bytes_at(c.rva, c.bytes)) {
-                why = std::format("the code it reads at exe+0x{:X} ({} bytes) is not build 2976's .rsrc code", c.rva,
+                why = std::format("the code it reads at exe+0x{:X} ({} bytes) is not this build's .rsrc code", c.rva,
                                   c.bytes.size());
                 break;
             }
@@ -1212,7 +1342,7 @@ DWORD WINAPI install_thread(LPVOID) {
         g_how[i].store(static_cast<uint8_t>(how));
         g_point_on[i].store(how != How::None);
         if (how != How::None) {
-            on += std::format(" {} ({})", gsr::point_name(d.point), how_name(how));
+            on += std::format(" {} exe+0x{:X} ({})", gsr::point_name(d.point), d.rva, how_name(how));
         } else {
             refused += std::format(" {} ({})", gsr::point_name(d.point), why);
         }
@@ -1223,7 +1353,7 @@ DWORD WINAPI install_thread(LPVOID) {
               "character while its point is not ON | 2524: {} | deny (guest_seq_route_deny: a 2661 with such a resource is "
               "created nowhere, its 2981/2524 stay in M):{} | G5 watch:{}",
               mode == gsr::Mode::On ? "ON" : mode == gsr::Mode::Probe ? "PROBE (decides, never writes RAX)" : "off",
-              on.empty() ? " none" : on, refused.empty() ? " none" : refused, kVtStageManager,
+              on.empty() ? " none" : on, refused.empty() ? " none" : refused, vt_mgr(),
               text_2524(mode),
               deny_text(), g_watch_text.empty() ? " (only the routed 2661s' actors)" : " " + g_watch_text);
     return 0;
@@ -1234,9 +1364,31 @@ DWORD WINAPI install_thread(LPVOID) {
 void guest_seq_route_start(const std::string& mode, const std::string& watch_list, bool want_2524,
                            const std::string& deny_list, const std::string& sched_mode, const std::string& bind_mode,
                            const std::string& route_2524, const std::string& allow_2524) {
+    g_3576 = game::current_build() == game::Build::v3576;
+    g_3527 = game::current_build() == game::Build::v3527 || g_3576;
+    if (g_3527) {
+        if (const auto* profile = game::reader_profile()) g_world_slot = profile->world_system;
+        if (g_3576) g_world_slot = 0x71C0100;  // core_globals_3576.json (no reader profile for 3576 yet)
+        g_prefix = osq::kPreparePrefix3527;
+        g_mo = &kMgrOff3527;
+    }
     bool bad_2524 = false;
-    const gsr::Mode2524 m2524 = gsr::parse_mode_2524(route_2524, &bad_2524);
+    gsr::Mode2524 m2524 = gsr::parse_mode_2524(route_2524, &bad_2524);
     if (bad_2524) log::warn("GuestSeqRoute: guest_seq_route_2524={} is not 0, probe or 1: 0", route_2524);
+    if (g_3527) {
+        // Not ported to 1.0.0.3527: the 2524 (its point, its inner check 0xA9E55B: the crash of p8-impl-escenas-play.md
+        // §16) and the schedule stages. Refused here, so nothing below ever reaches their 2976 addresses.
+        if (m2524 != gsr::Mode2524::Legacy || want_2524) {
+            log::warn("GuestSeqRoute: guest_seq_route_2524 / guest_seq_play_live are not ported to build 3527: the 2524 "
+                      "stays native (M), REFUSED");
+        }
+        if (gsr::parse_mode(sched_mode) != gsr::Mode::Off) {
+            log::warn("GuestSchedRoute: guest_sched_route / guest_sched_bind are not ported to build 3527: REFUSED, off");
+        }
+        m2524 = gsr::Mode2524::Legacy;
+        want_2524 = false;
+        g_how[static_cast<size_t>(Point::P2524)].store(static_cast<uint8_t>(How::NotWanted));
+    }
     g_mode_2524.store(static_cast<uint8_t>(m2524));
     g_allow_2524 = gsr::DenyList<32>::parse(allow_2524);
     if (!g_allow_2524.bad.empty()) {
@@ -1244,7 +1396,7 @@ void guest_seq_route_start(const std::string& mode, const std::string& watch_lis
                   g_allow_2524.bad);
     }
     bool sched_bad = false;
-    const gsr::Mode sm = gsr::parse_mode(sched_mode, &sched_bad);
+    const gsr::Mode sm = g_3527 ? gsr::Mode::Off : gsr::parse_mode(sched_mode, &sched_bad);
     if (sched_bad) log::warn("GuestSchedRoute: guest_sched_route={} is not 0, probe or 1: off", sched_mode);
     g_sched_mode.store(static_cast<uint8_t>(sm));
     guest_sched_bind_configure(bind_mode, sm);  // off unless guest_sched_route=1
@@ -1287,31 +1439,49 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
     f.point_on = g_point_on[i].load(std::memory_order_acquire);
     if (!f.point_on) return;  // not verified (yet): as without this module
     f.m = ctx.rax;
-    f.want_vt = g_base + kVtStageManager;
+    f.want_vt = g_base + vt_mgr();
     uintptr_t raw = 0;
     uint64_t seq = 0;
     uint32_t value = 0;
+    // The frame slots on 1.0.0.3527: the block of comments above kP2661_3527.
+    const uintptr_t rbp = ctx.rbp;
     switch (point) {
         case Point::P2661:
+            if (g_3527) {
+                const uintptr_t wrap = rdp(rbp + 0x100);  // r8's home; r12 and r13 are gone here
+                f.kind_ok = (ctx.r14 & 0xFF) == 4;
+                f.actor = rdp(wrap);
+                raw = rdp(wrap + kWrap_Raw);
+                break;
+            }
             f.kind_ok = (ctx.rbx & 0xFF) == 4;
             f.actor = rdp(ctx.r12);
             raw = rdp(ctx.r12 + kWrap_Raw);
             break;
         case Point::P2981:
+            if (g_3527) {
+                f.actor = rdv<uint8_t>(rbp + 0x30) ? rdp(rbp + 0x28) : 0;  // the handler's own lookup
+                raw = ctx.r13;
+                break;
+            }
             f.actor = rdp(ctx.r15);
             raw = rdp(ctx.r15 + kWrap_Raw);
             break;
-        case Point::P2810:
-            f.actor = rdv<uint8_t>(ctx.rbp) ? rdp(ctx.rbp - 8) : 0;
-            f.packet_key = rdv<uint32_t>(ctx.rbp + 0x78);
-            seq = rdv<uint64_t>(ctx.rbp - 0x58);
-            value = rdv<uint32_t>(ctx.rbp - 0x60);
+        case Point::P2810: {
+            const uintptr_t d = g_3527 ? 0x10 : 0;  // every slot of this frame moved by +0x10
+            f.actor = rdv<uint8_t>(rbp + d) ? rdp(rbp + d - 8) : 0;
+            f.packet_key = rdv<uint32_t>(rbp + d + 0x78);
+            seq = rdv<uint64_t>(rbp + d - 0x58);
+            value = rdv<uint32_t>(rbp + d - 0x60);
             break;
-        case Point::P2322:
+        }
+        case Point::P2322: {
+            const uintptr_t d = g_3527 ? 0x10 : 0;
             raw = ctx.r14;
             f.packet_key = rdv<uint32_t>(raw + kHeader);
-            f.actor = rdv<uint8_t>(ctx.rbp - 8) ? rdp(ctx.rbp - 0x10) : 0;  // the handler's own lookup
+            f.actor = rdv<uint8_t>(rbp + d - 8) ? rdp(rbp + d - 0x10) : 0;  // the handler's own lookup
             break;
+        }
         case Point::P2524:  // [R15] = the actor 0xC0810E stored (the one 0xC0811F gave 0x17FA6C0)
             f.actor = rdp(ctx.r15);
             raw = rdp(ctx.r15 + kWrap_Raw);
@@ -1360,9 +1530,9 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
         // Session 10: only while X and this client play (gsr::pre_2524); the scene itself is checked inside
         // 0xA9E480 under the game's lock (on_2524_lookup).
         if (f.x_known && f.x_vt == f.want_vt) {
-            f.ready2524 = static_cast<uint8_t>(gsr::pre_2524(rdv<uint8_t>(f.x + kMgr_Ready),
-                                                             rdv<uint32_t>(f.x + kMgr_Count),
-                                                             f.m ? rdv<uint8_t>(f.m + kMgr_Ready) : 0));
+            f.ready2524 = static_cast<uint8_t>(gsr::pre_2524(rdv<uint8_t>(f.x + g_mo->ready),
+                                                             rdv<uint32_t>(f.x + g_mo->count),
+                                                             f.m ? rdv<uint8_t>(f.m + g_mo->ready) : 0));
             value = raw ? rdv<uint32_t>(raw + kHeader + gsr::kBranchStateAt) : 0;
         }
     }
@@ -1448,9 +1618,9 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
         uint32_t bk[gsr::kSeqBinds] = {};
         size_t nb = 0;
         const uint16_t len = rdv<uint16_t>(raw + 3);
-        const uint32_t n = len >= osq::kPreparePrefix ? (len - osq::kPreparePrefix) / osq::kBindingWire : 0;
+        const uint32_t n = len >= g_prefix ? (len - static_cast<uint32_t>(g_prefix)) / osq::kBindingWire : 0;
         for (uint32_t b = 0; b < n && nb < gsr::kSeqBinds; ++b) {
-            bk[nb++] = rdv<uint32_t>(raw + kHeader + osq::kPreparePrefix + b * osq::kBindingWire + 4);
+            bk[nb++] = rdv<uint32_t>(raw + kHeader + g_prefix + b * osq::kBindingWire + 4);
         }
         g_seq_res.note(seq, resource, v == gsr::Verdict::Denied, std::span<const uint32_t>(bk, nb));
     }
@@ -1458,7 +1628,8 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
     // not the 2524 (it never creates anything in X). With the field the handler's vf48 ran on (review 10): the
     // frame slot it loaded into RCX right before the call (bytes verified with each point's vf48 context).
     if (v == gsr::Verdict::Route && point != Point::P2524) {
-        guest_seq_play_note_x(f.x, f.actor_key, rdp(ctx.rbp - kFieldSlot[i]), point == Point::P2322);
+        guest_seq_play_note_x(f.x, f.actor_key, rdp(ctx.rbp - (g_3527 ? kFieldSlot3527[i] : kFieldSlot[i])),
+                              point == Point::P2322);
     }
     if (v == gsr::Verdict::NotCharacter || v == gsr::Verdict::OwnCharacter || v == gsr::Verdict::Off) return;
     p::Event e;
@@ -1471,10 +1642,10 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
     e.v[11] = resource_known ? (1ull << 32 | resource) : 0;
     if (point == Point::P2661 && raw) {
         const uint16_t len = rdv<uint16_t>(raw + 3);
-        const uint32_t n = len >= osq::kPreparePrefix ? (len - osq::kPreparePrefix) / osq::kBindingWire : 0;
+        const uint32_t n = len >= g_prefix ? (len - static_cast<uint32_t>(g_prefix)) / osq::kBindingWire : 0;
         value = n;
         for (uint32_t b = 0; b < n && b < 8; ++b) {
-            const uint64_t k = rdv<uint32_t>(raw + kHeader + osq::kPreparePrefix + b * osq::kBindingWire + 4);
+            const uint64_t k = rdv<uint32_t>(raw + kHeader + g_prefix + b * osq::kBindingWire + 4);
             e.v[6 + b / 2] |= b % 2 ? k << 32 : k;
         }
     }
@@ -1495,7 +1666,7 @@ void guest_seq_route_hook(Point point, safetyhook::Context& ctx) noexcept {
         // Another character's 2661/2322 that cannot go to its own manager never touches M (gsr::refuse):
         // the 2661 takes the handler's native kind != 4 path (an error line, nothing created); the 2322's
         // byte write lands in a sink of the mod (RAX is not read again: 0xB87A6E loads it anew).
-        if (point == Point::P2661) ctx.rbx = 0;
+        if (point == Point::P2661) (g_3527 ? ctx.r14 : ctx.rbx) = 0;  // the kind the handler compares with 4
         else ctx.rax = reinterpret_cast<uintptr_t>(g_sink);
         g_refused[i].fetch_add(1, std::memory_order_relaxed);
         e.v[0] |= 1ull << 16;
@@ -1519,7 +1690,7 @@ void guest_sched_route_hook(gsr::SchedPoint point, safetyhook::Context& ctx) noe
     f.point_on = true;
     f.need_sched = true;
     f.m = ctx.rax;
-    f.want_vt = g_base + kVtStageManager;
+    f.want_vt = g_base + vt_mgr();
     uint64_t key = 0;
     uint32_t resource = 0, kind = 0;
     // The actor the handler itself resolved (0x8A67E0 on the client actor manager, this call, this thread) and the

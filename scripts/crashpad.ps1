@@ -33,7 +33,10 @@ function Show-Cache {
     Write-Host ("DumpCache: {0} crash reports, {1} attachments, {2} envelopes ({3})" -f $reports.Count, $attach.Count, $env.Count, $state)
 }
 
-if ((Get-Process CrimsonDesert, crashpad_handler -ErrorAction SilentlyContinue) -and ($Off -or $On)) {
+# Other programs ship their own crashpad_handler.exe (TeamViewer, Electron apps...): only the game's copy counts, by path.
+$gameHandler = @(Get-CimInstance Win32_Process -Filter "Name='crashpad_handler.exe'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.ExecutablePath -and ($_.ExecutablePath -ieq $live) })
+if (((Get-Process CrimsonDesert -ErrorAction SilentlyContinue) -or $gameHandler.Count) -and ($Off -or $On)) {
     throw 'The game (or its crashpad_handler) is running; close it first.'
 }
 

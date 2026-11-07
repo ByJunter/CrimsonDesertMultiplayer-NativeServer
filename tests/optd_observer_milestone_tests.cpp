@@ -241,6 +241,94 @@ void test_duplicates() {
     CHECK(l4.decide(facts(), s4).emit);  // user 2's entry still decides
 }
 
+// 3527 run 8, 2026-11-05: the guest completes its own staging field (key 3),
+// then stalls entering the host's field (key 1). Capture evidence is in
+// tools/porting/data/loading_run8_guest_packets_3527.json. Times below are
+// the captured client packet times; the server-thread identity is modeled.
+// The second MoveFieldAck's ORIGINAL owner is the host (verified in the live
+// shared field); its guest-facing copy aliases that owner to the guest.
+// This exercises both trips in ONE ledger: the first trip's native 2322 and
+// completed load must neither suppress the second emission nor satisfy its
+// completion counters. The later successful replies are hypothetical input,
+// not a claim that run 8 ever released the loading screen.
+void test_3527_run8_staging_to_shared_field() {
+    constexpr uint32_t guest_user = 0x90100277, guest_actor = 0xA0100278;
+    constexpr uint64_t shared_post = 149'537'749'968;
+    enum class Result { Emit, Disabled, LostPostAck, WrongSession };
+    for (const Result result : {Result::Emit, Result::Disabled, Result::LostPostAck, Result::WrongSession}) {
+        oms::Ledger l(result == Result::Disabled ? oms::Mode::Off : oms::Mode::Send);
+        Sink s;
+        oms::EntryFacts f = facts();
+        f.user_key = f.user2_user_key = guest_user;
+        f.actor_key = f.user2_actor_key = guest_actor;
+        f.field_owner = guest_user;
+        f.field_key = 3;
+
+        // Native staging-field trip, including its sole 2322 and full exit.
+        l.on_out(oms::kOpMoveFieldAck, true, true, kRecv, 149'491'205'162, guest_user, s);
+        l.on_in(oms::kOpMoveFieldCompleteReq, 149'505'134'878, s);
+        l.on_out(oms::kOpMoveFieldCompleteAck, true, true, kLogic, 149'505'176'031, 0, s);
+        l.on_out(oms::kOpMoveFieldCompletePostAck, true, true, kLogic, 149'505'176'032, 0, s);
+        f.t_us = 149'505'176'033;
+        const oms::Decision own = l.decide(f, s);
+        CHECK(!own.emit && !own.tracked);
+        CHECK(own.why == (result == Result::Disabled ? oms::Why::Off : oms::Why::Owner));
+        l.on_out(oms::kOpMilestone, true, true, kLogic, 149'505'191'723, guest_actor, s);
+        l.on_in(oms::kOpLoadingCompleteReq, 149'521'388'419, s);
+        l.on_out(oms::kOpLoadingCompleteAck, true, true, kLogic, 149'521'409'120, 0, s);
+        CHECK(l.trip().native_2322 == 1 && l.trip().n_2445 == 1 && l.trip().n_2762 == 1);
+        CHECK(l.counters().emits == 0 && l.counters().enqueued == 0);
+
+        // The second trip has no native 2322: exactly the observed stall.
+        l.on_out(oms::kOpMoveFieldAck, true, true, kRecv, 149'525'564'729, kHost, s);
+        CHECK(l.trip().gen == 2 && l.trip().owner == kHost);
+        CHECK(l.trip().native_2322 == 0 && l.trip().n_2445 == 0 && l.trip().n_2762 == 0);
+        CHECK(!l.trip().decided && !l.trip().ours_seen && !l.trip().ours_pushed);
+        l.on_in(oms::kOpMoveFieldCompleteReq, 149'537'360'334, s);
+        l.on_out(oms::kOpMoveFieldCompleteAck, true, true, kLogic, 149'537'749'964, 0, s);
+        l.on_out(oms::kOpMoveFieldCompletePostAck, true, result != Result::LostPostAck,
+                 kLogic, shared_post, 0, s);
+        f.t_us = shared_post + 1;
+        f.field_owner = kHost;
+        f.field_key = 1;
+        if (result == Result::WrongSession) f.user_session = kSession2b;
+        const oms::Decision shared = l.decide(f, s);
+        if (result != Result::Emit) {
+            const oms::Why expected = result == Result::Disabled ? oms::Why::Off
+                                      : result == Result::LostPostAck ? oms::Why::TripPoisoned
+                                                                     : oms::Why::SessionMismatch;
+            CHECK(!shared.emit && shared.why == expected);
+            CHECK(!l.emitting(kLogic));
+            CHECK(l.counters().emits == 0 && l.counters().enqueued == 0);
+            CHECK(l.trip().n_2445 == 0 && l.trip().n_2762 == 0);
+            // Repairing facts cannot retry a rejected trip or borrow the
+            // successful first trip's native milestone.
+            f.user_session = kSession2;
+            CHECK(!l.decide(f, s).emit);
+            continue;
+        }
+
+        CHECK(shared.emit && shared.gen == 2 && shared.why == oms::Why::None);
+        l.on_out(oms::kOpMilestone, true, true, kLogic, shared_post + 10, guest_actor, s);
+        l.on_called(shared.gen, oms::CallResult::Returned, kSession2, shared_post + 20, 10, kLogic, s);
+        CHECK(l.trip().ours_seen && l.trip().ours_pushed && l.trip().ours_count == 1);
+        CHECK(l.trip().native_2322 == 0 && l.counters().native_2322 == 1);
+        CHECK(l.counters().emits == 1 && l.counters().enqueued == 1);
+        const p8p::Event* sent = s.last(oms::kNOurs2322);
+        CHECK(sent && sent->v[0] == 2 && sent->v[2] == guest_actor && sent->v[3] == 1);
+        CHECK(oms::Ledger::outcome_of(l.trip()) == oms::Outcome::Emitted);
+        CHECK(l.decide(f, s).why == oms::Why::AlreadyDecided);
+        CHECK(l.counters().emits == 1);
+
+        // Modeled normal completion belongs only to the second trip.
+        l.on_in(oms::kOpLoadingCompleteReq, shared_post + 1'000'000, s);
+        l.on_out(oms::kOpLoadingCompleteAck, true, true, kLogic, shared_post + 1'020'000, 0, s);
+        CHECK(l.trip().n_2445 == 1 && l.trip().n_2762 == 1);
+        const p8p::Event* done = s.last(oms::kNOut2762);
+        CHECK(done && done->v[0] == 2 && done->v[2] == 1'019'980 && done->v[3] == 20'000);
+    }
+}
+
 // --------------------------------------------------------------------------------------------- invalidation
 
 void test_invalidation() {
@@ -1349,6 +1437,7 @@ int main() {
     test_switch();
     test_order_and_emit();
     test_duplicates();
+    test_3527_run8_staging_to_shared_field();
     test_invalidation();
     test_reconnection();
     test_queue_failure();

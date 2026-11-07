@@ -545,6 +545,22 @@ void test_lifecycle_inband() {
 }
 
 void test_lifecycle_edges() {
+    // A broken link starts over only in READY: never in a live conversation, its logout or a quarantine.
+    {
+        GuestLifecycle lc;
+        CHECK(lc.admit(1));
+        CHECK(lc.state() == GuestState::Active && !lc.link_reset_due(true));
+        CHECK(lc.begin_logout(LogoutTrigger::LinkLost, 0));
+        CHECK(lc.state() == GuestState::Retiring && !lc.link_reset_due(true));
+        CHECK(lc.on_barrier(10, true, passing()) == GuestLifecycle::Step::Clean);
+        CHECK(!lc.link_reset_due(true));
+        // The guest came back during the logout: that connection is the one that may start the next epoch.
+        CHECK(lc.make_ready(1));
+        CHECK(lc.link_reset_due(true) && !lc.link_reset_due(false));
+        CHECK(lc.may_start(2) && !lc.may_start(1));
+        lc.quarantine("test");
+        CHECK(!lc.link_reset_due(true));
+    }
     // Nothing of the epoch reached the server: clean without a 2001.
     {
         GuestLifecycle lc;

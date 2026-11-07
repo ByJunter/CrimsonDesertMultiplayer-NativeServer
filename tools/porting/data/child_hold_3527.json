@@ -1,0 +1,244 @@
+{
+  "build": 3527,
+  "sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "checks": [
+    {
+      "rva": "0x2d96bb0",
+      "bytes": "48895c2408488974241048897c2418554154415541564157",
+      "meaning": "NotifyAppear function entry",
+      "function": {
+        "begin": "0x2d96bb0",
+        "end": "0x2d96ecf"
+      }
+    },
+    {
+      "rva": "0x2d96cbc",
+      "bytes": "498b1e418b4608",
+      "meaning": "sessions pointer and u32 count at +8",
+      "function": {
+        "begin": "0x2d96bb0",
+        "end": "0x2d96ecf"
+      }
+    },
+    {
+      "rva": "0x2d96d27",
+      "bytes": "498b0424488945f0418b442408",
+      "meaning": "actor keys pointer and u32 count at +8",
+      "function": {
+        "begin": "0x2d96bb0",
+        "end": "0x2d96ecf"
+      }
+    },
+    {
+      "rva": "0x2d96d3f",
+      "bytes": "e88c840000",
+      "meaning": "key-to-actor finder call, target 0x2D9F1D0",
+      "function": {
+        "begin": "0x2d96bb0",
+        "end": "0x2d96ecf"
+      }
+    },
+    {
+      "rva": "0x2d8f38b",
+      "bytes": "e820780000",
+      "meaning": "NotifyAppear new-observer caller",
+      "function": {
+        "begin": "0x2d8ed90",
+        "end": "0x2d8fd7d"
+      }
+    },
+    {
+      "rva": "0x2d8f58c",
+      "bytes": "e81f760000",
+      "meaning": "NotifyAppear moving-user caller",
+      "function": {
+        "begin": "0x2d8ed90",
+        "end": "0x2d8fd7d"
+      }
+    },
+    {
+      "rva": "0x2be08c0",
+      "bytes": "48895c24085556574154415541564157488dac24d0fcffff4881ec40040000",
+      "meaning": "StartActionReq vf2 function entry",
+      "function": {
+        "begin": "0x2be08c0",
+        "end": "0x2be0f98"
+      }
+    },
+    {
+      "rva": "0x251905a",
+      "bytes": "498b4740c6403001",
+      "meaning": "CharacterControl restore state +0x40, restored byte +0x30",
+      "function": {
+        "begin": "0x2517a80",
+        "end": "0x25198b3"
+      }
+    },
+    {
+      "rva": "0x29aaf36",
+      "bytes": "b8eb010000c6041801",
+      "meaning": "server thread sets TLS realm +0x1EB",
+      "function": {
+        "begin": "0x29aaf20",
+        "end": "0x29aaf7c"
+      }
+    },
+    {
+      "rva": "0x29aaf77",
+      "bytes": "e904000000",
+      "meaning": "server realm setup tail-jumps to ServerRunThreadLoop 0x29AAF80",
+      "function": {
+        "begin": "0x29aaf20",
+        "end": "0x29aaf7c"
+      }
+    },
+    {
+      "rva": "0x2d9f20b",
+      "bytes": "41bceb010000",
+      "meaning": "NotifyAppear finder uses the same TLS realm +0x1EB",
+      "function": {
+        "begin": "0x2d9f1d0",
+        "end": "0x2d9f412"
+      }
+    },
+    {
+      "rva": "0x2d047aa",
+      "bytes": "488b4868488b99a0010000",
+      "meaning": "actor components +0x68, TransformSync slot +0x1A0",
+      "function": {
+        "begin": "0x2d047a0",
+        "end": "0x2d048cb"
+      }
+    },
+    {
+      "rva": "0x2d04801",
+      "bytes": "488b4308",
+      "meaning": "TransformSync actor backlink +8",
+      "function": {
+        "begin": "0x2d047a0",
+        "end": "0x2d048cb"
+      }
+    },
+    {
+      "rva": "0x2d04820",
+      "bytes": "488b9b48050000",
+      "meaning": "TransformSync current sector +0x548 in ToNearExceptOneControl finder",
+      "function": {
+        "begin": "0x2d047a0",
+        "end": "0x2d048cb"
+      }
+    },
+    {
+      "rva": "0x2d046f0",
+      "bytes": "488b9b48050000",
+      "meaning": "same sector offset in ToNearExceptOneSelf finder",
+      "function": {
+        "begin": "0x2d04670",
+        "end": "0x2d0479b"
+      }
+    },
+    {
+      "rva": "0x2d8ef3f",
+      "bytes": "488b43688b4b7048c1e104",
+      "meaning": "sector observer pointer +0x68, count +0x70, stride 16",
+      "function": {
+        "begin": "0x2d8ed90",
+        "end": "0x2d8fd7d"
+      }
+    },
+    {
+      "rva": "0x2d8ef5b",
+      "bytes": "4883c010",
+      "meaning": "sector observer iteration stride 16",
+      "function": {
+        "begin": "0x2d8ed90",
+        "end": "0x2d8fd7d"
+      }
+    },
+    {
+      "rva": "0x2d8f6d5",
+      "bytes": "498b87a0000000",
+      "meaning": "actor owner +0xA0 in sector-change caller",
+      "function": {
+        "begin": "0x2d8ed90",
+        "end": "0x2d8fd7d"
+      }
+    },
+    {
+      "rva": "0x2be0cdb",
+      "bytes": "498b80880000000fb65001",
+      "meaning": "actor static info +0x88, type byte +1",
+      "function": {
+        "begin": "0x2be08c0",
+        "end": "0x2be0f98"
+      }
+    },
+    {
+      "rva": "0x2be0d36",
+      "bytes": "488b4868",
+      "meaning": "actor components +0x68 for StartActionReq",
+      "function": {
+        "begin": "0x2be08c0",
+        "end": "0x2be0f98"
+      }
+    },
+    {
+      "rva": "0x2be0d5d",
+      "bytes": "488b4940e8ba671200",
+      "meaning": "CharacterControl slot +0x40 passed to action logic 0x2D07520",
+      "function": {
+        "begin": "0x2be08c0",
+        "end": "0x2be0f98"
+      }
+    },
+    {
+      "rva": "0x2d07552",
+      "bytes": "488b5908",
+      "meaning": "CharacterControl actor backlink +8",
+      "function": {
+        "begin": "0x2d07520",
+        "end": "0x2d07936"
+      }
+    },
+    {
+      "rva": "0x2d0757f",
+      "bytes": "8b8b900000003908",
+      "meaning": "actor controller key +0x90 compared against the request user's key",
+      "function": {
+        "begin": "0x2d07520",
+        "end": "0x2d07936"
+      }
+    }
+  ],
+  "rva_mapping": {
+    "0x2B000C0": "0x2D96BB0",
+    "0x2B001B7": "0x2D96CBC",
+    "0x2B0021D": "0x2D96D27",
+    "0x2B00233": "0x2D96D3F",
+    "0x2AF90EB": "0x2D8F38B",
+    "0x2AF92D1": "0x2D8F58C",
+    "0x296CAA0": "0x2BE08C0",
+    "0x5B251D8": "0x5EEC638",
+    "0x2328890": "0x251905A",
+    "0x27733A6": "0x29AAF36"
+  },
+  "changed_members": {
+    "tls_server_realm": [
+      "0x1EC",
+      "0x1EB"
+    ],
+    "transform_sync_sector": [
+      "0x540",
+      "0x548"
+    ]
+  },
+  "integration_required": [
+    "Use build profile for both hooks, all guards, vtable, caller return addresses and logs.",
+    "Use session2 profile for SAM slot and ServerUserActor vtable, preserving test seams.",
+    "Build-aware sector reader: preserve old-build and pure-test +0x540; use +0x548 at runtime for 3527.",
+    "Use +0x1EB server realm before calling native NotifyAppear on 3527.",
+    "Audit optional family parent/settle readers before enabling those policies.",
+    "Run child-hold regression tests and live native publication validation before deployment."
+  ],
+  "runtime_changes": false
+}

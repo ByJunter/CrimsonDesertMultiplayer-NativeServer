@@ -1,4 +1,6 @@
 #include "mod/session2/scene_level_share.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -18,6 +20,7 @@
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/session2/field_share.h"
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/p8_probes.h"
@@ -34,6 +37,37 @@ namespace {
 namespace g2976 = game::build_2976;
 using sls::Mode;
 using sls::User;
+
+// Where everything is, per build (scene_level_share_logic.h). Every struct offset is the same in both.
+struct Addrs {
+    uint32_t pe_timestamp, vt_server_field;
+    uint32_t gate_fn_begin, gate_fn_end, gate_rva, gate_sig_rva;
+    std::span<const uint8_t> gate_sig;
+    uint32_t delete_rva, delete_end, ret_2834, ret_owner_load, ret_loader;
+    uint32_t frame_site_rva;
+    std::span<const uint8_t> frame_site;
+    uint32_t call_site_rva;
+    std::span<const uint8_t> call_site;
+    uintptr_t frame_name, frame_type, frame_hash;
+};
+const Addrs kAddrs2976{sls::kPeTimestamp, sls::kVtServerField, sls::kGateFnBegin, sls::kGateFnEnd, sls::kGateRva,
+                       sls::kGateSigRva, sls::kGateSig, sls::kDeleteRva, sls::kDeleteEnd, sls::kRet2834,
+                       sls::kRetOwnerLoad, sls::kRetLoader, sls::kFrameSiteRva, sls::kFrameSite, sls::kCallSiteRva,
+                       sls::kCallSite, sls::kFrameName, sls::kFrameType, sls::kFrameHash};
+const Addrs kAddrs3527{sls::kPeTimestamp3527, sls::kVtServerField3527, sls::kGateFnBegin3527, sls::kGateFnEnd3527,
+                       sls::kGateRva3527, sls::kGateSigRva3527, sls::kGateSig3527, sls::kDeleteRva3527,
+                       sls::kDeleteEnd3527, sls::kRet28343527, sls::kRetOwnerLoad3527, sls::kRetLoader3527,
+                       sls::kFrameSiteRva3527, sls::kFrameSite3527, sls::kCallSiteRva3527, sls::kCallSite3527,
+                       sls::kFrameName3527, sls::kFrameType3527, sls::kFrameHash3527};
+// 3576: the 3527 signature, delete head and frame site bytes at their new addresses (scene_level_share_logic.h).
+const Addrs kAddrs3576{sls::kPeTimestamp3576, sls::kVtServerField3576, sls::kGateFnBegin3576, sls::kGateFnEnd3576,
+                       sls::kGateRva3576, sls::kGateSigRva3576, sls::kGateSig3527, sls::kDeleteRva3576,
+                       sls::kDeleteEnd3576, sls::kRet28343576, sls::kRetOwnerLoad3576, sls::kRetLoader3576,
+                       sls::kFrameSiteRva3576, sls::kFrameSite3527, sls::kCallSiteRva3576, sls::kCallSite3576,
+                       sls::kFrameName3527, sls::kFrameType3527, sls::kFrameHash3527};
+// Chosen by scene_level_share_start, before the module's thread exists; the hooks read it (a plain pointer: no CRT in a
+// mid hook).
+const Addrs* g_ad = &kAddrs2976;
 
 std::atomic<uint8_t> g_mode{0};
 std::atomic<bool> g_started{false};
@@ -188,7 +222,7 @@ sls::Has entry_ready(uintptr_t mgr, const NameRead& n) noexcept {
 bool host_field(uintptr_t field, uint32_t& owner) noexcept {
     uintptr_t vt = 0;
     const uint32_t host = g_host_user.load(std::memory_order_relaxed);
-    return field && rd(field, vt) && vt == g_base + sls::kVtServerField && rd(field + sls::kFieldOwner, owner) && host &&
+    return field && rd(field, vt) && vt == g_base + g_ad->vt_server_field && rd(field + sls::kFieldOwner, owner) && host &&
            owner == host;
 }
 
@@ -204,7 +238,7 @@ void on_gate(safetyhook::Context& ctx) noexcept {
         g_gate_faults.fetch_add(1, std::memory_order_relaxed);
         return;  // the original compares as it would
     }
-    in.field_ok = rd(ctx.r8, vt) && vt == g_base + sls::kVtServerField;
+    in.field_ok = rd(ctx.r8, vt) && vt == g_base + g_ad->vt_server_field;
     in.keys_live = g_live.load(std::memory_order_relaxed);
     in.host_user = g_host_user.load(std::memory_order_relaxed);
     in.user2_user = g_u2_user.load(std::memory_order_relaxed);
@@ -253,7 +287,7 @@ __declspec(noinline) void delete_detour(uintptr_t mgr, uintptr_t name, uintptr_t
     sls::DeleteIn in;
     in.mode = static_cast<Mode>(g_mode.load(std::memory_order_relaxed));
     const uint32_t ret_rva = ret >= g_base && ret - g_base < 0x80000000ull ? static_cast<uint32_t>(ret - g_base) : 0;
-    in.caller = sls::caller_of(ret_rva);
+    in.caller = sls::caller_of(ret_rva, g_ad->ret_2834, g_ad->ret_owner_load, g_ad->ret_loader);
     in.type_ok = rd(type, in.type);
     uintptr_t field = 0;
     uint32_t owner = 0;
@@ -270,7 +304,8 @@ __declspec(noinline) void delete_detour(uintptr_t mgr, uintptr_t name, uintptr_t
     if (in.name_ok) h = sls::name_hashes(n.bytes, n.len);
     uint32_t packet_hash = 0;
     if (in.caller == sls::Caller::Unload2834 && g_frame_ok.load(std::memory_order_relaxed)) {
-        in.packet_hash_ok = sls::frame_matches(frame, name, type) && rd(frame + sls::kFrameHash, packet_hash);
+        in.packet_hash_ok = sls::frame_matches(frame, name, type, g_ad->frame_name, g_ad->frame_type) &&
+                            rd(frame + g_ad->frame_hash, packet_hash);
         if (!in.packet_hash_ok) g_del_frame_bad.fetch_add(1, std::memory_order_relaxed);
         if (in.packet_hash_ok && in.name_ok) g_hash.record(h, packet_hash);
     }
@@ -328,8 +363,9 @@ bool build_and_pdata(uint32_t begin, uint32_t end, std::string& why) {
     if (g_base != sls::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) || dos.e_magic != IMAGE_DOS_SIGNATURE ||
         dos.e_lfanew <= 0 || dos.e_lfanew > 0x100000 ||
         !game::safe_read(g_base + static_cast<uint32_t>(dos.e_lfanew), &nt, sizeof nt) ||
-        nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != sls::kPeTimestamp) {
-        why = "no es la build 1.0.0.2976 (base/PE)";
+        nt.Signature != IMAGE_NT_SIGNATURE ||
+        (nt.FileHeader.TimeDateStamp != g_ad->pe_timestamp && !(g_ad == &kAddrs3527 && game::is_3549()))) {
+        why = "ni 1.0.0.2976 ni 1.0.0.3527 ni 1.0.0.3549 ni 1.0.0.3576 (base/PE)";
         return false;
     }
     const auto pd = nt.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
@@ -354,20 +390,21 @@ bool build_and_pdata(uint32_t begin, uint32_t end, std::string& why) {
 }
 
 bool install_a(std::span<const gad::Section> secs) {
+    const Addrs& ad = *g_ad;
     std::string why;
-    if (!build_and_pdata(sls::kGateFnBegin, sls::kGateFnEnd, why)) {
-        log::warn("SceneLevelShare: A REFUSED en 0x{:X}: {}; A queda apagada", sls::kGateRva, why);
+    if (!build_and_pdata(ad.gate_fn_begin, ad.gate_fn_end, why)) {
+        log::warn("SceneLevelShare: A REFUSED en 0x{:X}: {}; A queda apagada", ad.gate_rva, why);
         return false;
     }
-    if (!bytes_at(sls::kGateSigRva, sls::kGateSig)) {
+    if (!bytes_at(ad.gate_sig_rva, ad.gate_sig)) {
         log::warn("SceneLevelShare: A REFUSED: la firma de 40 B en 0x{:X} no es la esperada; A queda apagada",
-                  sls::kGateSigRva);
+                  ad.gate_sig_rva);
         return false;
     }
     // The cmp (7 bytes, what the hook relocates) and its jnz, from the signature.
-    const std::span<const uint8_t> at(sls::kGateSig.data() + sls::kGateSigPatchAt, 13);
-    if (!p8_install_mid(g_base, secs, sls::kGateRva, sls::kGatePatch, at, &on_gate, g_gate_hook, "SceneLevelShare",
-                        "A, la puerta de dueno 0x283044D (cmp [r8+0x180],eax)")) {
+    const std::span<const uint8_t> at(ad.gate_sig.data() + sls::kGateSigPatchAt, 13);
+    if (!p8_install_mid(g_base, secs, ad.gate_rva, sls::kGatePatch, at, &on_gate, g_gate_hook, "SceneLevelShare",
+                        "A, la puerta de dueno (cmp [r8+0x180],eax)")) {
         log::warn("SceneLevelShare: A REFUSED (ver el error anterior); A queda apagada");
         return false;
     }
@@ -376,20 +413,21 @@ bool install_a(std::span<const gad::Section> secs) {
 }
 
 bool install_b(std::span<const gad::Section> secs) {
+    const Addrs& ad = *g_ad;
     std::string why;
-    if (!build_and_pdata(sls::kDeleteRva, sls::kDeleteEnd, why)) {
-        log::warn("SceneLevelShare: B REFUSED en 0x{:X}: {}; B queda apagada", sls::kDeleteRva, why);
+    if (!build_and_pdata(ad.delete_rva, ad.delete_end, why)) {
+        log::warn("SceneLevelShare: B REFUSED en 0x{:X}: {}; B queda apagada", ad.delete_rva, why);
         return false;
     }
-    if (!gad::in_real_code(secs, sls::kDeleteRva, static_cast<uint32_t>(sls::kDeleteHead.size())) ||
-        !bytes_at(sls::kDeleteRva, sls::kDeleteHead)) {
+    if (!gad::in_real_code(secs, ad.delete_rva, static_cast<uint32_t>(sls::kDeleteHead.size())) ||
+        !bytes_at(ad.delete_rva, sls::kDeleteHead)) {
         log::warn("SceneLevelShare: B REFUSED: la entrada 0x{:X} no es el codigo esperado (.rsrc, 16 B); B queda apagada",
-                  sls::kDeleteRva);
+                  ad.delete_rva);
         return false;
     }
     const auto accept = [](const std::vector<uint8_t>& b) { return sls::delete_patch_ok(b); };
-    auto h = game::prepare_inline(g_base + sls::kDeleteRva, reinterpret_cast<void*>(&delete_detour), accept,
-                                  "SceneLevelShare", "B, el borrado de SceneLevel 0x2829E60");
+    auto h = game::prepare_inline(g_base + ad.delete_rva, reinterpret_cast<void*>(&delete_detour), accept,
+                                  "SceneLevelShare", "B, el borrado de SceneLevel");
     if (!h || !accept(h->original_bytes())) {
         log::warn("SceneLevelShare: B REFUSED: el gancho no se pudo preparar con exactamente los 5 B verificados; B queda "
                   "apagada");
@@ -397,7 +435,7 @@ bool install_b(std::span<const gad::Section> secs) {
     }
     g_del_hook = std::move(*h);
     // The 2834 handler's frame (the packet's hash): checked before the hook can read it.
-    const bool frame = bytes_at(sls::kFrameSiteRva, sls::kFrameSite) && bytes_at(sls::kCallSiteRva, sls::kCallSite);
+    const bool frame = bytes_at(ad.frame_site_rva, ad.frame_site) && bytes_at(ad.call_site_rva, ad.call_site);
     g_frame_ok.store(frame, std::memory_order_relaxed);
     g_b_on.store(true, std::memory_order_release);
     if (!g_del_hook.enable()) {
@@ -408,21 +446,40 @@ bool install_b(std::span<const gad::Section> secs) {
     if (!frame) {
         log::warn("SceneLevelShare: B: el marco del 2834 (0x{:X} / 0x{:X}) no es el esperado: sin hash de paquete no se "
                   "verifica nada y B solo observa",
-                  sls::kFrameSiteRva, sls::kCallSiteRva);
+                  ad.frame_site_rva, ad.call_site_rva);
     }
     return true;
 }
 
 bool code_ready() {
-    return bytes_at(sls::kGateSigRva, sls::kGateSig) && bytes_at(sls::kDeleteRva, sls::kDeleteHead);
+    return bytes_at(g_ad->gate_sig_rva, g_ad->gate_sig) && bytes_at(g_ad->delete_rva, sls::kDeleteHead);
 }
 
 bool player_in_world() {
     uintptr_t world = 0, mgr = 0, vt = 0, actor = 0, avt = 0;
-    return rd(g_base + g2976::kWorldSystemSlot, world) && world && rd(world + g2976::kWorldSystem_ActorManager, mgr) &&
-           mgr && rd(mgr, vt) && vt == g_base + g2976::kVtClientActorManager &&
+    const game::ReaderProfile* const p = game::reader_profile();  // the same values as g2976's in 2976
+    // 3576 while reader_profile() is not ported there (docs/research/port-3576.md): world 0x71C0100, ClientActorManager
+    // 0x5946C40 and ClientChildOnlyInGameActor 0x5914D58 by RTTI; the +0x30 / +0x50 offsets as on 3527.
+    const bool b3576 = !p && game::current_build() == game::Build::v3576;
+    if (!p && !b3576) return false;
+    const uintptr_t world_slot = p ? p->world_system : 0x71C0100, vt_mgr = p ? p->vt_actor_manager : 0x5946C40,
+                    vt_actor = p ? p->vt_controlled_actor : 0x5914D58;
+    return rd(g_base + world_slot, world) && world && rd(world + g2976::kWorldSystem_ActorManager, mgr) &&
+           mgr && rd(mgr, vt) && vt == g_base + vt_mgr &&
            rd(mgr + g2976::kActorManager_ControlledActor, actor) && actor && rd(actor, avt) &&
-           avt == g_base + g2976::kVtControlledActor;
+           avt == g_base + vt_actor;
+}
+
+// 3527 and 3576: user2_stages is not ported (its sampling never starts there), so user 2's field is read here, the path
+// server_host_field reads the host's: [user+0xD0] main character, TS = [[pj+0x68]+0x1A0], field = [TS + the build's
+// FieldMover + 0x10]. Guarded reads only.
+bool user2_in_host_field_3527(uint32_t host_key) {
+    constexpr uintptr_t kUserMain = 0xD0, kActorComps = 0x68, kCompsTs = 0x1A0;
+    uintptr_t user = 0, pj = 0, comps = 0, ts = 0, field = 0, vt = 0;
+    uint32_t owner = 0;
+    return host_key && server_user2(user) && user && rd(user + kUserMain, pj) && pj && rd(pj + kActorComps, comps) && comps &&
+           rd(comps + kCompsTs, ts) && ts && rd(ts + runtime_field_layout().ts_field_mover + fld::kFmField, field) && field &&
+           rd(field, vt) && vt == g_base + g_ad->vt_server_field && rd(field + sls::kFieldOwner, owner) && owner == host_key;
 }
 
 // ---------------------------------------------------------------- the module thread
@@ -448,7 +505,8 @@ void refresh_keys() {
     g_live.store(live, std::memory_order_relaxed);
     // user2_stages samples the field once a second; one unreadable sample is not a departure: out only after 2 s of
     // readings out (or at once when user 2 is gone).
-    const bool raw_in_field = live && user2_stages_user2_in_host_field();
+    const bool current = game::current_build() == game::Build::v3527 || game::current_build() == game::Build::v3576;
+    const bool raw_in_field = live && (current ? user2_in_host_field_3527(host_key) : user2_stages_user2_in_host_field());
     g_out_of_field = raw_in_field ? 0 : g_out_of_field + 1;
     const bool in_field = live && (raw_in_field || (g_was_in_field && g_out_of_field < 20));
     g_u2_in_host_field.store(in_field, std::memory_order_relaxed);
@@ -499,10 +557,10 @@ void format_gate(const p8p::Event& e) {
                       : why == sls::GateWhy::Owner    ? "[owner native]"
                                                       : "[gate]";
     log::info("SceneLevelShare {} {} nivel {} hash-nombre 0x{:08X} base 0x{:08X} cache {} | actor 0x{:08X} usuario "
-              "0x{:08X} dueno-campo 0x{:08X} | troc del usuario 2 {} opcode {} ({}) [0x283044D{}]",
+              "0x{:08X} dueno-campo 0x{:08X} | troc del usuario 2 {} opcode {} ({}) [0x{:X}{}]",
               tag, p8_when(e.qpc_us), name_of(e, len, ok), static_cast<uint32_t>(e.v[3]),
               static_cast<uint32_t>(e.v[3] >> 32), hex_or_none(static_cast<uint32_t>(e.v[4])), key, eax, owner,
-              same ? "sobre este actor" : "no", opcode, sls::gate_why_name(why),
+              same ? "sobre este actor" : "no", opcode, sls::gate_why_name(why), g_ad->gate_rva,
               why == sls::GateWhy::Ready ? ": eax := dueno" : "");
 }
 
@@ -703,23 +761,25 @@ DWORD WINAPI module_thread(LPVOID) {
     bool hooked = false;
     user2_funnels_subject_now(subject, opcode, hooked);
     log::info("SceneLevelShare: modo {} | A en 0x{:X} {} | B en 0x{:X} {} | sujeto de ExecuteTroc (user2_funnels) {}{}",
-              sls::mode_name(mode), sls::kGateRva,
+              sls::mode_name(mode), g_ad->gate_rva,
               a ? std::format("(mid 7 B 41 39 80 80 01 00 00; firma 40 B en 0x{:X} y .pdata [0x{:X},0x{:X}) verificadas): "
                               "{}",
-                              sls::kGateSigRva, sls::kGateFnBegin, sls::kGateFnEnd,
+                              g_ad->gate_sig_rva, g_ad->gate_fn_begin, g_ad->gate_fn_end,
                               mode == Mode::On ? "2598/2104 del usuario 2 en el campo del anfitrion -> eax := dueno"
                                                : "solo cuenta [would ready]")
                 : std::string("REFUSED"),
-              sls::kDeleteRva,
+              g_ad->delete_rva,
               b ? std::format("(entrada 5 B 44 88 4C 24 20, .pdata [0x{:X},0x{:X}) verificada; marco del 2834 {}): {}",
-                              sls::kDeleteRva, sls::kDeleteEnd, g_frame_ok.load() ? "verificado" : "NO verificado",
+                              g_ad->delete_rva, g_ad->delete_end, g_frame_ok.load() ? "verificado" : "NO verificado",
                               mode == Mode::On ? "omite SOLO el borrado del 2834 de un nivel que otro usuario tiene "
-                                                 "cargado (hash verificado); 0x2836110 y el cargador solo observan"
+                                                 "cargado (hash verificado); la carga del dueno y el cargador solo observan"
                                                : "solo mide [would keep]")
                 : std::string("REFUSED"),
               hooked ? "enganchado" : "SIN GANCHO: A nunca actua y B no sabe quien provoca (llama siempre al original)",
-              " | el usuario 2 cuenta como 'en el campo del anfitrion' solo con user2_stages activo (si no, su conjunto "
-              "nunca protege nada)");
+              game::current_build() == game::Build::v3527 || game::current_build() == game::Build::v3576
+                  ? " | el campo del usuario 2 se lee aqui (user2_stages no esta portado a 3527 / 3576)"
+                  : " | el usuario 2 cuenta como 'en el campo del anfitrion' solo con user2_stages activo (si no, su "
+                    "conjunto nunca protege nada)");
     if (!a && !b) return 0;
     for (uint64_t tick = 1;; ++tick) {
         Sleep(100);
@@ -740,11 +800,14 @@ void scene_level_share_start(const std::string& raw, bool guest) {
         return;
     }
     if (g_started.exchange(true)) return;
+    if (game::current_build() == game::Build::v3527) g_ad = &kAddrs3527;
+    if (game::current_build() == game::Build::v3576) g_ad = &kAddrs3576;
     g_mode.store(static_cast<uint8_t>(p.mode));
     g_ingress_on.store(true, std::memory_order_release);
-    log::info("SceneLevelShare ON (scene_level_share={}): A = listo tambien para el usuario 2 en 0x283044D, B = no borrar "
-              "un SceneLevel que otro usuario sigue teniendo cargado en 0x2829E60 ({})",
-              sls::mode_name(p.mode), p.mode == Mode::On ? "1: A cambia eax; B omite solo borrados de 2834" : "probe: solo mide");
+    log::info("SceneLevelShare ON (scene_level_share={}): A = listo tambien para el usuario 2 en 0x{:X}, B = no borrar "
+              "un SceneLevel que otro usuario sigue teniendo cargado en 0x{:X} ({})",
+              sls::mode_name(p.mode), g_ad->gate_rva, g_ad->delete_rva,
+              p.mode == Mode::On ? "1: A cambia eax; B omite solo borrados de 2834" : "probe: solo mide");
     CloseHandle(CreateThread(nullptr, 0, module_thread, nullptr, 0, nullptr));
 }
 
@@ -761,7 +824,8 @@ void scene_level_share_server_ingress(uint16_t op, uintptr_t packet, uint16_t si
         return;
     }
     uint8_t buf[kMax];  // not zeroed (no memset in a mid hook); only `size` bytes are read
-    if (!game::fast_read(packet, buf, size)) {
+    if (!game::fast_read(packet, buf, size) ||
+        !native_opcode::decode_packet(game::current_build(), std::span(buf, size), troc::Dir::ToHostServer)) {
         g_ingress_faults.fetch_add(1, std::memory_order_relaxed);
         g_tracker.invalidate(u);
         return;

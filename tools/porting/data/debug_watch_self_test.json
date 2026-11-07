@@ -1,0 +1,373 @@
+{
+  "dump": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\debug-watch-self-test\\cdmp_debug.34620.20261104-235707-616.1.second.dmp",
+  "bytes": 46195,
+  "architecture": "AMD64",
+  "module_count": 12,
+  "thread_count": 4,
+  "stack_scan_note": "Candidates only: not an unwound call stack; data can resemble code pointers.",
+  "exceptions": [
+    {
+      "thread_id": 62072,
+      "code": "0xC0000409",
+      "code_name": "EXCEPTION_UNKNOWN",
+      "flags": "0x1",
+      "exception_address": {
+        "address": "0x7FF6A23FCFC8",
+        "module": "cdmp_debug_watch.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+        "module_base": "0x7FF6A23C0000",
+        "rva": "0x3CFC8",
+        "location": "cdmp_debug_watch.exe+0x3CFC8"
+      },
+      "information": [
+        "0x5"
+      ],
+      "registers": {
+        "Rax": "0x0",
+        "Rbx": "0x1A13D0A49E0",
+        "Rcx": "0x5",
+        "Rdx": "0x0",
+        "Rsi": "0x0",
+        "Rdi": "0x1A13D0A4AC0",
+        "Rbp": "0x0",
+        "Rsp": "0x51278FFC30",
+        "R8": "0x51278FFB68",
+        "R9": "0x0",
+        "R10": "0x0",
+        "R11": "0x246",
+        "R12": "0x0",
+        "R13": "0x0",
+        "R14": "0x0",
+        "R15": "0x0",
+        "Rip": "0x7FF6A23FCFC8",
+        "EFlags": "0x202"
+      },
+      "rip": {
+        "address": "0x7FF6A23FCFC8",
+        "module": "cdmp_debug_watch.exe",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+        "module_base": "0x7FF6A23C0000",
+        "rva": "0x3CFC8",
+        "location": "cdmp_debug_watch.exe+0x3CFC8"
+      },
+      "context_source": "exception stream",
+      "code_at_rip": {
+        "captured_bytes": "cd 29 48 8b 7b 08 48 8b cf e8 47 46 fc ff 48 83 f8 10 0f 85 e2 00 00 00 4c 8b c0 48 8d 15 8e f4 0f 00 48 8b cf e8 5d 78 fc ff 85 c0 0f 85 c8 00 00 00 ff 15 60 40 16 00 8b d0 48 8d 0d 97 f4 0f 00 e8 9c 6d fc ff b9 01 00 00 00 e8 c1 a7 fc ff 48 8b c8 e8 46 8e fc ff b9 30 75 00 00 ff 15 2d",
+        "instructions": [
+          {
+            "address": "0x7FF6A23FCFC8",
+            "bytes": "cd 29",
+            "mnemonic": "int",
+            "operands": "0x29"
+          },
+          {
+            "address": "0x7FF6A23FCFCA",
+            "bytes": "48 8b 7b 08",
+            "mnemonic": "mov",
+            "operands": "rdi, qword ptr [rbx + 8]"
+          },
+          {
+            "address": "0x7FF6A23FCFCE",
+            "bytes": "48 8b cf",
+            "mnemonic": "mov",
+            "operands": "rcx, rdi"
+          },
+          {
+            "address": "0x7FF6A23FCFD1",
+            "bytes": "e8 47 46 fc ff",
+            "mnemonic": "call",
+            "operands": "0x7ff6a23c161d"
+          },
+          {
+            "address": "0x7FF6A23FCFD6",
+            "bytes": "48 83 f8 10",
+            "mnemonic": "cmp",
+            "operands": "rax, 0x10"
+          },
+          {
+            "address": "0x7FF6A23FCFDA",
+            "bytes": "0f 85 e2 00 00 00",
+            "mnemonic": "jne",
+            "operands": "0x7ff6a23fd0c2"
+          },
+          {
+            "address": "0x7FF6A23FCFE0",
+            "bytes": "4c 8b c0",
+            "mnemonic": "mov",
+            "operands": "r8, rax"
+          },
+          {
+            "address": "0x7FF6A23FCFE3",
+            "bytes": "48 8d 15 8e f4 0f 00",
+            "mnemonic": "lea",
+            "operands": "rdx, [rip + 0xff48e]"
+          },
+          {
+            "address": "0x7FF6A23FCFEA",
+            "bytes": "48 8b cf",
+            "mnemonic": "mov",
+            "operands": "rcx, rdi"
+          },
+          {
+            "address": "0x7FF6A23FCFED",
+            "bytes": "e8 5d 78 fc ff",
+            "mnemonic": "call",
+            "operands": "0x7ff6a23c484f"
+          },
+          {
+            "address": "0x7FF6A23FCFF2",
+            "bytes": "85 c0",
+            "mnemonic": "test",
+            "operands": "eax, eax"
+          },
+          {
+            "address": "0x7FF6A23FCFF4",
+            "bytes": "0f 85 c8 00 00 00",
+            "mnemonic": "jne",
+            "operands": "0x7ff6a23fd0c2"
+          }
+        ],
+        "source": "captured dump memory only"
+      },
+      "stack": {
+        "rsp": "0x51278FFC30",
+        "requested_bytes": 8192,
+        "captured_bytes": 976,
+        "first_qwords": [
+          {
+            "offset": "0x0",
+            "value": "0x1A13D0A49E0"
+          },
+          {
+            "offset": "0x8",
+            "value": "0x7FF600000000"
+          },
+          {
+            "offset": "0x10",
+            "value": "0xFFFFFFFFFE363C80"
+          },
+          {
+            "offset": "0x18",
+            "value": "0x1A13D0A4AE0"
+          },
+          {
+            "offset": "0x20",
+            "value": "0x7FF6A24F7230"
+          },
+          {
+            "offset": "0x28",
+            "value": "0x0"
+          },
+          {
+            "offset": "0x30",
+            "value": "0x418080000B40F40"
+          },
+          {
+            "offset": "0x38",
+            "value": "0x178BFBFFFED8320B"
+          },
+          {
+            "offset": "0x40",
+            "value": "0x7FF6A24F78E0"
+          },
+          {
+            "offset": "0x48",
+            "value": "0x7FF6A245CDE9"
+          },
+          {
+            "offset": "0x50",
+            "value": "0xE7"
+          },
+          {
+            "offset": "0x58",
+            "value": "0x0"
+          },
+          {
+            "offset": "0x60",
+            "value": "0x0"
+          },
+          {
+            "offset": "0x68",
+            "value": "0xEBBB1C07A423"
+          },
+          {
+            "offset": "0x70",
+            "value": "0x1A13D0AE260"
+          },
+          {
+            "offset": "0x78",
+            "value": "0x7FF6A245C800"
+          }
+        ],
+        "candidates": [
+          {
+            "stack_address": "0x51278FFC50",
+            "stack_offset": "0x20",
+            "address": "0x7FF6A24F7230",
+            "module": "cdmp_debug_watch.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+            "module_base": "0x7FF6A23C0000",
+            "rva": "0x137230",
+            "location": "cdmp_debug_watch.exe+0x137230",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0x51278FFC70",
+            "stack_offset": "0x40",
+            "address": "0x7FF6A24F78E0",
+            "module": "cdmp_debug_watch.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+            "module_base": "0x7FF6A23C0000",
+            "rva": "0x1378E0",
+            "location": "cdmp_debug_watch.exe+0x1378E0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0x51278FFC78",
+            "stack_offset": "0x48",
+            "address": "0x7FF6A245CDE9",
+            "module": "cdmp_debug_watch.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+            "module_base": "0x7FF6A23C0000",
+            "rva": "0x9CDE9",
+            "location": "cdmp_debug_watch.exe+0x9CDE9",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0x51278FFCA8",
+            "stack_offset": "0x78",
+            "address": "0x7FF6A245C800",
+            "module": "cdmp_debug_watch.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+            "module_base": "0x7FF6A23C0000",
+            "rva": "0x9C800",
+            "location": "cdmp_debug_watch.exe+0x9C800",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0x51278FFCB8",
+            "stack_offset": "0x88",
+            "address": "0x7FF6A245C989",
+            "module": "cdmp_debug_watch.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+            "module_base": "0x7FF6A23C0000",
+            "rva": "0x9C989",
+            "location": "cdmp_debug_watch.exe+0x9C989",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0x51278FFCE8",
+            "stack_offset": "0xB8",
+            "address": "0x7FFF6E9EDDA7",
+            "module": "kernel32.dll",
+            "module_path": "C:\\Windows\\System32\\kernel32.dll",
+            "module_base": "0x7FFF6E9C0000",
+            "rva": "0x2DDA7",
+            "location": "kernel32.dll+0x2DDA7",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0x51278FFD18",
+            "stack_offset": "0xE8",
+            "address": "0x7FFF6FEF9C5C",
+            "module": "ntdll.dll",
+            "module_path": "C:\\Windows\\System32\\ntdll.dll",
+            "module_base": "0x7FFF6FE30000",
+            "rva": "0xC9C5C",
+            "location": "ntdll.dll+0xC9C5C",
+            "possible_preceding_calls": []
+          }
+        ],
+        "thread_descriptor_start": "0x51278FFC30",
+        "thread_descriptor_bytes": 976
+      }
+    }
+  ],
+  "modules": [
+    {
+      "name": "cdmp_debug_watch.exe",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\bin\\RelWithDebInfo\\cdmp_debug_watch.exe",
+      "base": "0x7FF6A23C0000",
+      "size": "0x1A9000",
+      "timestamp": "0x6AEB8E03"
+    },
+    {
+      "name": "ntdll.dll",
+      "path": "C:\\Windows\\System32\\ntdll.dll",
+      "base": "0x7FFF6FE30000",
+      "size": "0x26C000",
+      "timestamp": "0x67156ED3"
+    },
+    {
+      "name": "kernel32.dll",
+      "path": "C:\\Windows\\System32\\kernel32.dll",
+      "base": "0x7FFF6E9C0000",
+      "size": "0xCB000",
+      "timestamp": "0x7046C443"
+    },
+    {
+      "name": "KERNELBASE.dll",
+      "path": "C:\\Windows\\System32\\KERNELBASE.dll",
+      "base": "0x7FFF6CFF0000",
+      "size": "0x409000",
+      "timestamp": "0x9F91EE4"
+    },
+    {
+      "name": "apphelp.dll",
+      "path": "C:\\Windows\\System32\\apphelp.dll",
+      "base": "0x7FFF68A50000",
+      "size": "0x9F000",
+      "timestamp": "0x9F3DB4E8"
+    },
+    {
+      "name": "dbghelp.dll",
+      "path": "C:\\Windows\\System32\\dbghelp.dll",
+      "base": "0x7FFF69CE0000",
+      "size": "0x24C000",
+      "timestamp": "0x74B6B8A9"
+    },
+    {
+      "name": "ucrtbase.dll",
+      "path": "C:\\Windows\\System32\\ucrtbase.dll",
+      "base": "0x7FFF6D870000",
+      "size": "0x14C000",
+      "timestamp": "0x3F426C5B"
+    },
+    {
+      "name": "dbgcore.dll",
+      "path": "C:\\Windows\\System32\\dbgcore.dll",
+      "base": "0x7FFF4B050000",
+      "size": "0x3B000",
+      "timestamp": "0x7E56F2A5"
+    },
+    {
+      "name": "combase.dll",
+      "path": "C:\\Windows\\System32\\combase.dll",
+      "base": "0x7FFF6E0B0000",
+      "size": "0x3A5000",
+      "timestamp": "0xBB9366F0"
+    },
+    {
+      "name": "rpcrt4.dll",
+      "path": "C:\\Windows\\System32\\rpcrt4.dll",
+      "base": "0x7FFF6E460000",
+      "size": "0x118000",
+      "timestamp": "0x4DD745B4"
+    },
+    {
+      "name": "oleaut32.dll",
+      "path": "C:\\Windows\\System32\\oleaut32.dll",
+      "base": "0x7FFF6FB70000",
+      "size": "0xD9000",
+      "timestamp": "0xE6DCAEA3"
+    },
+    {
+      "name": "msvcp_win.dll",
+      "path": "C:\\Windows\\System32\\msvcp_win.dll",
+      "base": "0x7FFF6DA60000",
+      "size": "0xA3000",
+      "timestamp": "0xEC24E540"
+    }
+  ],
+  "parser_warnings": "PEB parsing error!\nTraceback (most recent call last):\n  File \"D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\porting-python-deps\\minidump\\minidumpfile.py\", line 86, in _parse\n    self.__parse_peb()\n  File \"D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\porting-python-deps\\minidump\\minidumpfile.py\", line 235, in __parse_peb\n    self.peb = PEB.from_minidump(self)\n               ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\porting-python-deps\\minidump\\structures\\peb.py\", line 85, in from_minidump\n    buff_reader.move(minidumpfile.threads.threads[0].Teb + PEB_OFFSETS[offset_index][\"peb\"])\n  File \"D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\porting-python-deps\\minidump\\minidumpreader.py\", line 136, in move\n    self._select_segment(address)\n  File \"D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\build\\porting-python-deps\\minidump\\minidumpreader.py\", line 104, in _select_segment\n    raise Exception('Memory address 0x%08x is not in process memory space' % requested_position)\nException: Memory address 0x51276bc060 is not in process memory space\n"
+}

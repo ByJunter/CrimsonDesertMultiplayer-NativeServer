@@ -1,0 +1,144 @@
+{
+  "timestamp": "0x6AED2E85",
+  "sha256": "c94ad6c3ea54970a6d2da7a2719753210a7728a91698ed3405dd9125470ed98f",
+  "status": "static evidence; object member offsets still require runtime verification",
+  "mappings": [
+    {
+      "symbol": "kWorldSystemSlot",
+      "old": "0x6D69190",
+      "new": "0x71C0100",
+      "evidence": [
+        {
+          "pattern": "world_system_ref",
+          "site": "0xC9DB6B",
+          "target": "0x71C0100",
+          "disp_offset": 3,
+          "instruction_end": 7,
+          "bytes": "48 8b 0d 8e 25 52 06"
+        },
+        {
+          "pattern": "world_system_ref_p3",
+          "site": "0x3AB7A6",
+          "target": "0x71C0100",
+          "disp_offset": 3,
+          "instruction_end": 7,
+          "bytes": "48 8b 05 53 49 e1 06"
+        }
+      ],
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kStaticPlayerPos",
+      "old": "0x6D77858",
+      "new": "0x71CF140",
+      "evidence": [
+        {
+          "pattern": "player_static_pos_write",
+          "site": "0xA310EA",
+          "target": "0x71CF140",
+          "disp_offset": 4,
+          "instruction_end": 8,
+          "bytes": "c5 fb 11 3d 4e e0 79 06"
+        }
+      ],
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kStaticPlayerPosZ",
+      "old": "0x6D77860",
+      "new": "0x71CF148",
+      "evidence": [
+        {
+          "pattern": "player_static_pos_write",
+          "site": "0xA310EA",
+          "target": "0x71CF148",
+          "disp_offset": 11,
+          "instruction_end": 15,
+          "bytes": "c5 fb 11 3d 4e e0 79 06 44 89 3d 4f e0 79 06"
+        }
+      ],
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kChunkOrigin",
+      "old": "0x6D56500",
+      "new": "0x71AC2C0",
+      "evidence": [
+        {
+          "pattern": "world_offset_sub",
+          "site": "0x397DCB1",
+          "target": "0x71AC2C0",
+          "disp_offset": 25,
+          "instruction_end": 29,
+          "bytes": "48 8b 8b c0 02 00 00 c5 fb 10 44 24 60 c4 e3 79 21 44 24 68 20 c5 f8 5c 05 f2 e5 82 03"
+        }
+      ],
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kCameraSlot",
+      "old": "0x6C8CF30",
+      "new": "0x70DC130",
+      "evidence": [
+        {
+          "pattern": "camera_global_ref",
+          "site": "0x2FC2CD7",
+          "target": "0x70DC130",
+          "disp_offset": 3,
+          "instruction_end": 7,
+          "bytes": "48 8b 05 52 94 11 04"
+        }
+      ],
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kVtCamera",
+      "old": "0x5D20718",
+      "new": "0x60ED268",
+      "evidence": {
+        "unique_virtual_slots_1_2": [
+          "0x3BCE5C0",
+          "0x3E33900"
+        ]
+      },
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kVtClientActorManager",
+      "old": "0x55B62C8",
+      "new": "0x5946c40",
+      "evidence": {
+        "primary_rtti_class": ".?AVClientActorManager@pa@@"
+      },
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kVtControlledActor",
+      "old": "0x5585C40",
+      "new": "0x5914d58",
+      "evidence": {
+        "primary_rtti_class": ".?AVClientChildOnlyInGameActor@pa@@"
+      },
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kVtCharacterControl",
+      "old": "0x55B5460",
+      "new": "0x59459f0",
+      "evidence": {
+        "primary_rtti_class": ".?AVClientCharacterControlActorComponent@pa@@"
+      },
+      "runtime_validated": false
+    },
+    {
+      "symbol": "kVtStatusComponent",
+      "old": "0x558D868",
+      "new": "0x591c7c0",
+      "evidence": {
+        "primary_rtti_class": ".?AVClientStatusActorComponent@pa@@"
+      },
+      "runtime_validated": false
+    }
+  ],
+  "unresolved": []
+}

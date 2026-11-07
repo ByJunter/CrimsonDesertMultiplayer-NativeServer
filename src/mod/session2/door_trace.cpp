@@ -1,4 +1,6 @@
 #include "mod/session2/door_trace.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -264,7 +266,8 @@ void door_trace_ingress(uint16_t op, uintptr_t packet, uint16_t size,
     return;
   }
   std::array<uint8_t, 1024> copy;
-  if (!game::fast_read(packet, copy.data(), size)) {
+  if (!game::fast_read(packet, copy.data(), size) ||
+      !native_opcode::decode_packet(game::current_build(), std::span(copy.data(), size), troc::Dir::ToHostServer)) {
     g_faults.fetch_add(1);
     return;
   }

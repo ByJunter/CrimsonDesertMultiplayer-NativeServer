@@ -63,6 +63,8 @@ bool mount_sync_live();     // 1: holds, defers and native calls
 // A second source next to the server-side parent link: user2_stages never logs out (nor assigns) a vehicle that a
 // player rides.
 bool mount_sync_rides(uint32_t key) noexcept;
+// The client's actor by key (0: not loaded). SEH-guarded reads, any thread.
+uintptr_t mount_sync_find_actor(uint32_t key) noexcept;
 
 // Keys (network threads). Local: this client's own character (host: its user's +0xD0; guest: its 2756).
 // Remote (guest): the host's character from the host's control state 4 (the host reads server_user2_player_key).

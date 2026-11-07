@@ -1,0 +1,239 @@
+{
+  "pid": 5068,
+  "access": "PROCESS_VM_READ only",
+  "captured_utc": "2026-11-04T20:57:34.053409+00:00",
+  "regions": [
+    {
+      "rva": "0x2d04590",
+      "name": "kCurrentCode0",
+      "meaning": "ToTarget constructor: RCX=finder, RDX=actor; vfE8 returns session",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2d04530",
+      "name": "kCurrentCode1",
+      "meaning": "ToTarget scalar deleting destructor; flag0 only resets base vtable",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2d045e0",
+      "name": "kCurrentCode2",
+      "meaning": "ToTarget recipient append from finder+10",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2d04640",
+      "name": "kCurrentCode3",
+      "meaning": "ToTarget session equality",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2c142a0",
+      "name": "kCurrentCode4",
+      "meaning": "2322/native2384 emitter original head",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2c142a5",
+      "name": "kCurrentCode5",
+      "meaning": "Emitter frame, actor/finder ABI, TLS250, recipients2B0/count2B8, ScopeFind",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2c1437c",
+      "name": "kCurrentCode6",
+      "meaning": "Emitter serializes actor key+60 as exactly four bytes",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2c14397",
+      "name": "kCurrentCode7",
+      "meaning": "Emitter native2384 opcode0x950",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2adb2c4",
+      "name": "kCurrentCode8",
+      "meaning": "Native stack ToTarget recipe before emitter call",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2adb2fc",
+      "name": "kCurrentCode9",
+      "meaning": "Native actor/finder argument setup, emitter call, stack destructor reset",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6a324",
+      "name": "kCurrentCode10",
+      "meaning": "2144/native2340 finder recipe and emitter call",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2c147d3",
+      "name": "kCurrentCode11",
+      "meaning": "2144 writer native2340 opcode0x924",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6a39f",
+      "name": "kCurrentCode12",
+      "meaning": "2144 wrapper sets R8 field, RCX component and calls MoveFieldCompleteCore",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6a72a",
+      "name": "kCurrentCode13",
+      "meaning": "Core register provenance: R15=R8 field; R14=[RCX+8] actor",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6b1de",
+      "name": "kCurrentCode14",
+      "meaning": "3066/native3029 finder recipe and emitter call before milestone",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2c14c67",
+      "name": "kCurrentCode15",
+      "meaning": "3066 writer native3029 opcode0xBD5",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6b5e0",
+      "name": "kCurrentCode16",
+      "meaning": "Actor+A0 user, user+60 identity compared with fieldR15+180; nonowner skips native2322",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6b628",
+      "name": "kCurrentCode17",
+      "meaning": "Owner user+D0 main, main+68 components, components+A8 sequencer, component+18 manager",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6b659",
+      "name": "kCurrentCode18",
+      "meaning": "Owner-only native2322 call then owner/nonowner converge before hook",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e6b675",
+      "name": "kCurrentCode19",
+      "meaning": "Milestone hook: original seven-byte instruction reads fieldR15+2D8",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2bd571a",
+      "name": "kCurrentCode20",
+      "meaning": "Scope lookup TLS250, mode2AC and count2A0",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2bd5c86",
+      "name": "kCurrentCode21",
+      "meaning": "Current scope flush TLS250, current2A8 and array298",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x29aaf36",
+      "name": "kCurrentCode22",
+      "meaning": "ServerRunThread realm TLS1EB=1",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0xbe5a10",
+      "name": "kCurrentCode23",
+      "meaning": "ServerChildOnlyInGameActor vfE8 returns actor+D0 session",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2d0c4f0",
+      "name": "kCurrentCode24",
+      "meaning": "ServerUserActor vfE8 returns user+1F8 session",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0xc9cb91",
+      "name": "kCurrentCode25",
+      "meaning": "2322 client handler obtains field sequencer and writes readiness+259=2",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x856090",
+      "name": "kCurrentCode26",
+      "meaning": "Loading state11 waits for owner sequencer+259>=2 then BA2F70 predicate before state12",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e61263",
+      "name": "kCurrentCode27",
+      "meaning": "The same object supplies its ServerField",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e61a23",
+      "name": "kCurrentCode28",
+      "meaning": "MoveField obtains the actor component table",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2e61a27",
+      "name": "kCurrentCode29",
+      "meaning": "MoveField obtains TransformSync",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2D0467A",
+      "name": "kCurrentTsFieldChain",
+      "meaning": "actor+68 -> components+1A0 -> TS+508 GetField; its field at +10 gives TS+518",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2D8CA6F",
+      "name": "kCurrentFieldThis",
+      "meaning": "ServerField constructor preserves this in RDI",
+      "matches": true,
+      "observed": null
+    },
+    {
+      "rva": "0x2D8CDDF",
+      "name": "kCurrentFieldKey",
+      "meaning": "ServerField constructor initializes its key at +2D0",
+      "matches": true,
+      "observed": null
+    }
+  ],
+  "all_match": true
+}

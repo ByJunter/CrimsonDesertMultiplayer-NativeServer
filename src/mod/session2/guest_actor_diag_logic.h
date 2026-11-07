@@ -84,6 +84,7 @@ private:
 struct Section {
     char name[9] = {};
     uint32_t va = 0, size = 0;
+    uint32_t flags = 0;  // IMAGE_SECTION_HEADER.Characteristics
 };
 
 inline const Section* section_of(std::span<const Section> secs, uint32_t rva) {
@@ -93,11 +94,16 @@ inline const Section* section_of(std::span<const Section> secs, uint32_t rva) {
     return nullptr;
 }
 
-// The only code the mod may patch: [rva, rva + len) entirely inside .rsrc (the
-// game's real code in this build), never .xtls (Denuvo) or anything else.
+inline constexpr uint32_t kScnExecute = 0x20000000, kScnWrite = 0x80000000;
+// The game's real code: executable and not writable. Never by name, the protector renames the sections on every build:
+// that section is .rsrc on 2976 and 3527 and .xtext on 3549, and .text is RWX on 3527 and plain data on 3549.
+inline bool is_real_code(const Section& s) { return (s.flags & kScnExecute) && !(s.flags & kScnWrite); }
+
+// The only code the mod may patch: [rva, rva + len) entirely inside the real code,
+// never the protected RWX section (Denuvo) or anything else.
 inline bool in_real_code(std::span<const Section> secs, uint32_t rva, uint32_t len) {
     const Section* s = section_of(secs, rva);
-    if (!s || std::string_view(s->name) != ".rsrc" || len == 0) return false;
+    if (!s || !is_real_code(*s) || len == 0) return false;
     return static_cast<uint64_t>(rva) + len <= static_cast<uint64_t>(s->va) + s->size;
 }
 

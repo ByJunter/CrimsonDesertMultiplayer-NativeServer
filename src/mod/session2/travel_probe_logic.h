@@ -20,6 +20,7 @@
 #include <cstring>
 #include <optional>
 #include <span>
+#include "common/movement_layout.h"
 
 namespace cdmp::session2::tpl {
 
@@ -44,9 +45,14 @@ inline constexpr size_t kRecord = 0x30;
 
 // ---------------------------------------------------------------- the owner alias (2174 and 2643)
 
-inline bool owner_layout_ok(uint16_t opcode, size_t n) {
-    if (opcode == kOpMoveFieldAck) return n >= kMoveFieldHead && (n - kMoveFieldHead) % kRecord == 0;
-    if (opcode == kOpLoadingFieldDataAck) return n >= kLoadingFieldHead && (n - kLoadingFieldHead) % kRecord == 0;
+inline bool owner_layout_ok(uint16_t opcode, size_t n, movement::Build build = movement::Build::v2976) {
+    const auto* layout = movement::layout(build);
+    if (!layout) return false;
+    if (opcode == kOpMoveFieldAck) return n >= kMoveFieldHead && (n - kMoveFieldHead) % layout->move_field_record == 0;
+    // 3527 handler0xC9E360 uses the same56-byte record reader0x263BDF0
+    // as MoveFieldAck, with its own20-byte prefix. No encoded record count.
+    if (opcode == kOpLoadingFieldDataAck)
+        return n >= kLoadingFieldHead && (n - kLoadingFieldHead) % layout->move_field_record == 0;
     return false;
 }
 
@@ -69,12 +75,13 @@ struct AliasIn {
     uint32_t owner = 0;       // the u32 +9 the server wrote
     uint32_t me = 0;          // user 2's user key (its MainUserDataStartAck), 0 = unknown
     bool enabled = true;      // 2174: always; 2643: user2_loading_owner_alias
+    movement::Build build = movement::Build::v2976;
 };
 
 inline AliasOut decide_owner_alias(const AliasIn& in) {
     if (in.opcode != kOpMoveFieldAck && in.opcode != kOpLoadingFieldDataAck) return AliasOut::NotOwnerAck;
     if (!in.enabled) return AliasOut::Off;
-    if (!owner_layout_ok(in.opcode, in.payload_size)) return AliasOut::BadLayout;
+    if (!owner_layout_ok(in.opcode, in.payload_size, in.build)) return AliasOut::BadLayout;
     if (!in.me) return AliasOut::NoKey;
     if (!is_user_key(in.owner)) return AliasOut::NotAUser;
     if (in.owner == in.me) return AliasOut::AlreadyMine;
@@ -98,7 +105,7 @@ inline const char* alias_name(AliasOut o) {
 // header + 9 when the decision is Rewrite. Returns the decision; `owner_out` = the owner the server wrote (0 when the
 // layout is not the known one).
 inline AliasOut alias_owner(std::span<uint8_t> packet, size_t header, uint16_t opcode, uint32_t me, bool enabled,
-                            uint32_t* owner_out = nullptr) {
+                            uint32_t* owner_out = nullptr, movement::Build build = movement::Build::v2976) {
     if (owner_out) *owner_out = 0;
     if (packet.size() < header) return AliasOut::BadLayout;
     AliasIn in;
@@ -106,7 +113,8 @@ inline AliasOut alias_owner(std::span<uint8_t> packet, size_t header, uint16_t o
     in.payload_size = packet.size() - header;
     in.me = me;
     in.enabled = enabled;
-    if (owner_layout_ok(opcode, in.payload_size)) {
+    in.build = build;
+    if (owner_layout_ok(opcode, in.payload_size, build)) {
         std::memcpy(&in.owner, packet.data() + header + kOwnerAt, 4);
         if (owner_out) *owner_out = in.owner;
     }
@@ -129,8 +137,9 @@ struct LoadingFieldData {
 };
 
 // `p` may be only the head of a payload of `total` bytes (at least its first 20).
-inline std::optional<LoadingFieldData> parse_loading_field_data(std::span<const uint8_t> p, size_t total) {
-    if (!owner_layout_ok(kOpLoadingFieldDataAck, total) || p.size() < kLoadingFieldHead) return std::nullopt;
+inline std::optional<LoadingFieldData> parse_loading_field_data(std::span<const uint8_t> p, size_t total,
+                                                             movement::Build build = movement::Build::v2976) {
+    if (!owner_layout_ok(kOpLoadingFieldDataAck, total, build) || p.size() < kLoadingFieldHead) return std::nullopt;
     LoadingFieldData d;
     d.kind = p[0];
     std::memcpy(&d.actor, p.data() + 1, 4);
@@ -140,7 +149,7 @@ inline std::optional<LoadingFieldData> parse_loading_field_data(std::span<const 
     d.flag14 = p[14];
     std::memcpy(&d.selection, p.data() + 15, 4);
     d.append = p[19];
-    d.records = (total - kLoadingFieldHead) / kRecord;
+    d.records = (total - kLoadingFieldHead) / movement::layout(build)->move_field_record;
     return d;
 }
 

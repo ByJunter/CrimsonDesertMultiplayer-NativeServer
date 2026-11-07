@@ -1,4 +1,15 @@
 #pragma once
+// Build 3527 port: child_hold, character_hold, observer_hold and its family and
+// settle policies use verified native entry points, TLS realm, actor-manager
+// globals and sector layout. The parent key was measured on live server actors:
+// +0xAC named a resolvable actor for 238 of 262 parents, and agreed with hierarchy
+// +0x1C in every case (the serializer at 0xB27F140 confirms +0x1C). The publication
+// gate and the key retirement stay off on that build: they are not verified. Build
+// 2976 and the fake-memory test seams retain their existing behavior.
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the same hooks and checks at 3527's sites + 0xC70 (NotifyAppear,
+// its callers, StartActionReq::vf2), + 0xDD0 (the restore writer), + 0xC50 (the realm mark), all with 3527's bytes; TLS
+// realm +0x1EB and TransformSync sector +0x548 unchanged (child_hold.cpp, kHoldChecks3576). The publication gate and
+// the key retirement stay off there too.
 // Option D, D-53 (docs/research/pendientes/companeros-publicacion.md §3): the
 // server does not publish a child of ANY user (pet, horse, companion; the
 // host's as well as user 2's) to the other users until that child has its
@@ -179,6 +190,7 @@ inline constexpr uint32_t kCcRestore = 0x40;         // CC -> restore state (0x2
 inline constexpr uint32_t kRestoreByte = 0x30;       // u8: 1 once the first action was accepted (0x2328894)
 inline constexpr uint32_t kTsActor = 0x08;           // TS -> its actor
 inline constexpr uint32_t kTsSector = 0x540;         // TS -> current sector (.xtls 0x10648425, read only)
+inline constexpr uint32_t kTsSector3527 = 0x548;     // 3527 ToNear/OnActorSectorChanged (child_hold_3527.json); 3576 too
 inline constexpr uint32_t kSectorObservers = 0x68;   // {ServerUserActor*, refs}[n] (0x2AF2F24)
 inline constexpr uint32_t kSectorObserverCount = 0x70;
 inline constexpr uint32_t kObserverStride = 0x10;

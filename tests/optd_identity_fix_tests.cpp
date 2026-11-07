@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "mod/session2/identity_fix.h"
+#include "mod/session2/identity_probe.h"
 
 namespace cdmp::session2 {
 // The real ones are in server.cpp (need the game); here no user 2 exists.
@@ -205,6 +206,8 @@ void test_lobby_memory() {
 }
 
 void test_status() {
+    CHECK(identity_status_number_offset_for_build(false) == idf::kStatusNumber);
+    CHECK(identity_status_number_offset_for_build(true) == idf::kStatusNumber3527);
     FakeCharacter c(0xA010052C);
     uint64_t before = 0;
     const uintptr_t pointer_before = get<uintptr_t>(c.status, idf::kStatusNumber);
@@ -213,6 +216,22 @@ void test_status() {
     // Status+0x70 stays the same pointer: the u64 it points to changed.
     CHECK(get<uintptr_t>(c.status, idf::kStatusNumber) == pointer_before);
     CHECK(status_normalise(c.a(), kStatusVt, kF002, before) == StatusEdit::Already && before == kF002);
+
+    // Build 3527: the identity pointer moved to +0x90. The old +0x70 is now
+    // an unrelated scalar and +0x98 begins adjacent inline name storage.
+    FakeCharacter current(0xA010052D);
+    constexpr uint64_t old70 = 0x00000000FFFFFF06ull;
+    constexpr uint8_t name98[] = {0x53, 0x32, 0x2D, 0x4E, 0x41, 0x4D, 0x45, 0x00,
+                                  0xA5, 0x5A, 0xC3, 0x3C, 0x11, 0x22, 0x33, 0x44};
+    put(current.status, idf::kStatusNumber, old70);
+    put(current.status, idf::kStatusNumber3527, addr(&current.number));
+    std::memcpy(current.status + 0x98, name98, sizeof name98);
+    CHECK(status_normalise_at(current.a(), kStatusVt, kF002, before, idf::kStatusNumber3527) ==
+          StatusEdit::Written);
+    CHECK(before == kNative && current.number == kF002);
+    CHECK(get<uint64_t>(current.status, idf::kStatusNumber) == old70);
+    CHECK(get<uintptr_t>(current.status, idf::kStatusNumber3527) == addr(&current.number));
+    CHECK(std::memcmp(current.status + 0x98, name98, sizeof name98) == 0);
 
     // Only the native constant is replaced (a child's -1, anything else: untouched).
     FakeCharacter child(0xA0100099);
@@ -238,6 +257,7 @@ void test_status() {
     CHECK(status_normalise(odd.a(), kStatusVt, kF002, before) == StatusEdit::Unreadable);
     CHECK(get<uint64_t>(raw, 1) == kNative);
     CHECK(status_normalise(0, kStatusVt, kF002, before) == StatusEdit::Unreadable);
+    CHECK(status_normalise_at(c.a(), kStatusVt, kF002, before, 0x88) == StatusEdit::Unreadable);
     FakeCharacter host(0xA0100001);
     CHECK(status_normalise(host.a(), kStatusVt, kNative, before) == StatusEdit::NotAllowed && host.number == kNative);
 }

@@ -1,0 +1,92 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "old_entry": "0x232D5C0",
+  "entry": "0x251dfc0",
+  "entry_patch_bytes": 5,
+  "entry_head": "4c894c24204c894424188854241048894c2408",
+  "function_range": {
+    "begin": 38920128,
+    "end": 38923053,
+    "unwind": 109604260,
+    "offset": 0
+  },
+  "old_read": "0x232D5FB",
+  "read": "0x251DFFB",
+  "old_crash": "0x232D5FF",
+  "crash": "0x251DFFF",
+  "old_action_count_offset": "0xE4",
+  "action_count_offset": "0xE8",
+  "calling_convention": {
+    "RCX": "CharacterControl*",
+    "DL": "layer index",
+    "R8": "stack snapshot of layer+0/+8/+0x10",
+    "R9": "second snapshot"
+  },
+  "fields": {
+    "cc_actor": "0x08",
+    "cc_layer0": "0x88",
+    "cc_layer1": "0x90",
+    "layer_current": "0x10",
+    "layer_playback": "0x18",
+    "layer_chart": "0x118"
+  },
+  "entry_return_semantics": "No game effects precede count==0 branch. Zero count goes directly to epilogue; caller ignores return value. At untouched entry a bare ret skips the same event-processing body.",
+  "direct_incoming": [
+    {
+      "source": "0x251dfae",
+      "target": "0x251dfc0",
+      "kind": "rel32"
+    }
+  ],
+  "interior_incoming": [],
+  "evidence": [
+    {
+      "rva": "0x251dfc0",
+      "bytes": "4c894c24204c894424188854241048894c2408",
+      "meaning": "Unchanged entry argument home stores; first instruction is exactly5 bytes"
+    },
+    {
+      "rva": "0x251dffb",
+      "bytes": "498b40100fb780e8000000",
+      "meaning": "Read current action at snapshot+0x10, then u16 count at action+0xE8"
+    },
+    {
+      "rva": "0x251e00b",
+      "bytes": "6685c00f84050b0000",
+      "meaning": "Zero count branches directly to pure epilogue0x251EB19"
+    },
+    {
+      "rva": "0x251eb19",
+      "bytes": "4881c438030000415f415e415d415c5f5e5b5dc3",
+      "meaning": "Restore stack/registers and return; no game effects"
+    },
+    {
+      "rva": "0x251df0c",
+      "bytes": "c5f81011c5f811542430c5fb104110c5fb11442440",
+      "meaning": "Snapshot copies layer offsets0/8/0x10 to stack+0x30"
+    },
+    {
+      "rva": "0x251dfa3",
+      "bytes": "4c8d4424300fb6d3488bcfe80d000000",
+      "meaning": "Caller sets R8=snapshot,DL=layer,RCX=CC and calls entry"
+    },
+    {
+      "rva": "0x251dfb3",
+      "bytes": "e9d1fdffff",
+      "meaning": "Caller immediately continues layer loop; does not consume return value"
+    },
+    {
+      "rva": "0x944f64",
+      "bytes": "e8e78cbd01",
+      "meaning": "CharacterControl Update first calls parent0x251DC50"
+    },
+    {
+      "rva": "0x9453f8",
+      "bytes": "e85388bd01",
+      "meaning": "CharacterControl Update second calls parent0x251DC50"
+    }
+  ],
+  "runtime_validated": false,
+  "limitation": "Static mapping only. Live bytes still require existing runtime signature checks. Does not prove every diagnostic actor flag offset."
+}

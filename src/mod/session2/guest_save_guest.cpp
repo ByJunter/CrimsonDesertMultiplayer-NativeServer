@@ -57,7 +57,7 @@ GuestHold g_hold;
 Prepared g_prep;    // the start offer (and its retries)
 Prepared g_reprep;  // the slot a 3093 asked for
 bool g_prep_done = false;
-std::map<std::string, uint32_t> g_applied;  // host folder -> the generation aplicar-progreso-invitado.ps1 applied
+std::map<std::string, uint32_t> g_applied;  // host folder -> the generation apply-guest-progress.ps1 applied
 bool g_tunnel_up = false, g_uploaded = false, g_want_upload = false, g_may_upload = true;
 uint32_t g_link_epoch = 0;  // the tunnel's session epoch (ClientSession::epoch)
 std::deque<std::vector<uint8_t>> g_out;   // control frames for the host
@@ -279,7 +279,7 @@ Prepared prepare(std::optional<uint32_t> want, bool wait_for_account) {
     return p;
 }
 
-// guest_progress\<host>\applied.txt (written by aplicar-progreso-invitado.ps1): generation=N.
+// guest_progress\<host>\applied.txt (written by apply-guest-progress.ps1): generation=N.
 void read_applied() {
     std::map<std::string, uint32_t> applied;
     for (const std::wstring& host : list_dirs(g_progress_root)) {
@@ -396,7 +396,7 @@ void store_result(Job& j) {
         g_last_stored_gen.store(r.gen);
         g_stored.fetch_add(1);
         log::info("Session2 guest save: gen{} of the host STORED{} in '{}' ({}; for slot{}, line {}; lobby {} B, save {} "
-                  "B, SHA-256 checked) | apply it with the game CLOSED: tools\\scripts\\aplicar-progreso-invitado.ps1 "
+                  "B, SHA-256 checked) | apply it with the game CLOSED: tools\\scripts\\apply-guest-progress.ps1 "
                   "(it applies a generation only to a slot that holds a save of its line)",
                   r.gen, already ? " (already there)" : "", narrow(final_dir), gsw::reason_name(r.reason), r.slot,
                   gsw::digest_zero(r.root) ? std::string("NONE: never applied") : sha256::hex(r.root).substr(0, 16) + "...",
@@ -641,7 +641,7 @@ void guest_save_guest_configure(const std::string& raw) {
     log::warn("Session2 guest save (P8 S25, phase B): guest_own_save={} on the GUEST | {} | the slot Continue would "
               "load under '{}\\<account>' is picked and checked now, uploaded at the host's first packet (caps 0x{:02X}) | "
               "results stored in '{}\\<host>\\incoming\\gen<n>' (never under save\\: apply them with the game closed, "
-              "tools\\scripts\\aplicar-progreso-invitado.ps1)",
+              "tools\\scripts\\apply-guest-progress.ps1)",
               gsv::mode_name(p.mode),
               p.mode == gsv::Mode::On
                   ? "the client's 3093 waits for the host's SAVE_ACK (30 s at most), its goodbye waits behind one "

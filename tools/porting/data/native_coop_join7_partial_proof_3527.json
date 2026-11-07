@@ -1,0 +1,36 @@
+{
+  "structural_checks": {
+    "exactly_two_server_users": true,
+    "two_distinct_player_character_keys": true,
+    "field_list_contains_both_users": true,
+    "field_actor_sum_matches": true,
+    "both_main_characters_share_field": true,
+    "field_owner_is_host": true,
+    "host_client_resolves_both": true,
+    "guest_client_resolves_both": true
+  },
+  "native_visibility_proven": true,
+  "shared_server_field_proven": true,
+  "movement_crossproof_observed": false,
+  "movement_note": "No character crossed 0.05 m in all three views during this window; not a failure.",
+  "characters": {
+    "0xA0100001": {
+      "server_to_host_client_metres": 0.0,
+      "server_to_guest_client_metres": 0.0,
+      "host_to_guest_client_metres": 0.0,
+      "server_displacement_metres": 0.0,
+      "host_client_displacement_metres": 0.0,
+      "guest_client_displacement_metres": null,
+      "movement_seen_in_all_three_views": false
+    },
+    "0xA0100324": {
+      "server_to_host_client_metres": 0.0,
+      "server_to_guest_client_metres": 0.15738133715045524,
+      "host_to_guest_client_metres": 0.15738133715045524,
+      "server_displacement_metres": 0.0,
+      "host_client_displacement_metres": null,
+      "guest_client_displacement_metres": 6960.522926081502,
+      "movement_seen_in_all_three_views": false
+    }
+  }
+}

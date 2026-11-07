@@ -226,6 +226,9 @@ struct Slot {
     std::atomic<uint64_t> arr_last{0};          // the newest ts that arrived
     std::atomic<uint32_t> d2_fix{0};            // probe: the class's delay beside the one in force (1/16 ms)
     std::atomic<uint64_t> combat_at{0};         // the clock of its last frame in the class (0 = never)
+    // 2026-11-05, the players' class (remote_interp_players): how late this character's samples arrive, a decaying peak.
+    std::atomic<uint32_t> late_fix{0};          // 1/16 ms
+    std::atomic<uint64_t> late_at{0};           // the clock of its last update
 
     void reinit(uint32_t k, uint64_t now) noexcept {
         key.store(k, std::memory_order_relaxed);
@@ -241,6 +244,8 @@ struct Slot {
         arr_last.store(0, std::memory_order_relaxed);
         d2_fix.store(0, std::memory_order_relaxed);
         combat_at.store(0, std::memory_order_relaxed);
+        late_fix.store(0, std::memory_order_relaxed);
+        late_at.store(0, std::memory_order_relaxed);
         touched.store(now, std::memory_order_relaxed);
     }
     // P8 re-entry (s25/reentrada.md §1.4): the table generation the state was made in (SlotTable::new_generation).
@@ -674,6 +679,73 @@ struct CombatStep {
 // Delays per class frame (ms): <=120, <=140, <=160, <=200, <=300, <=400, <=700, <=1000, more.
 inline constexpr std::array<uint32_t, 8> kCombatDelayBounds = {120, 140, 160, 200, 300, 400, 700, 1000};
 
+// ---------------------------------------------------------------- the players' class (2026-11-05)
+//
+// A player's character (0xA) seen on the other client sends ~30 Moves a second, but over Steam each reaches the
+// other client late by the one-way trip, the tunnel's batching and, after a loss, its resend. With the game's fixed
+// 200 ms the interpolation runs past the newest sample whenever one is later than that, and the character stands
+// still, then jumps (no extrapolation in the game). The first two-PC sessions (RTT 110-130 ms, 166 resends in 13 min)
+// showed it. [session2] remote_interp_players = 0 | probe | 1: the delay of the other player's character follows how
+// late its samples arrive, D = clamp(peak lateness + kPlayerMargin, max(200, the game's), kPlayerMax), the peak falling
+// 1 ms per kLateDecayDiv x 16 ms (a 100 ms spike is forgotten in 25.6 s: with 1.6 s, then 6.4 s, the delay fell back to
+// the floor between walks and the next walk began with hitches; live on two copies in mode 1 the rest were 4% of the
+// samples against 44% with the game's fixed 200 ms), reached through the same no-jump approach as the 0xB actors. probe: measured (the hitches: a
+// sample that came after the interpolation had run past the one before it while the character kept moving, with the
+// game's delay and with the one it would use), nothing changed.
+inline constexpr uint32_t kPlayerMargin = 60;
+inline constexpr uint32_t kPlayerMax = 450;
+inline constexpr uint32_t kLateDecayDiv = 16;         // the peak falls 1/16 ms per 16 ms: 100 ms in 25.6 s
+inline constexpr uint32_t kMaxLateness = 5000;        // a sample older than this is a pause, not the network
+inline constexpr uint32_t kStreamGap = 300;           // two samples closer than this (ts): the character kept moving
+
+inline uint32_t decay_peak(uint32_t peak_fix, uint64_t dt_ms) {
+    const uint64_t d = dt_ms / kLateDecayDiv;
+    return d >= peak_fix ? 0 : peak_fix - static_cast<uint32_t>(d);
+}
+
+// The slot's lateness peak (ms) at `now`, after a new sample `late_ms` late (0 = none: only the decay).
+inline uint32_t note_lateness(Slot& s, uint64_t now, uint32_t late_ms) noexcept {
+    const uint64_t at = s.late_at.load(std::memory_order_relaxed);
+    uint32_t peak = decay_peak(s.late_fix.load(std::memory_order_relaxed), at && now > at ? now - at : 0);
+    if (late_ms && late_ms <= kMaxLateness) peak = std::max(peak, to_fix(late_ms));
+    s.late_fix.store(peak, std::memory_order_relaxed);
+    s.late_at.store(now, std::memory_order_relaxed);
+    return from_fix(peak);
+}
+
+inline uint32_t player_target(uint32_t peak_ms, uint32_t game_delay) {
+    const uint32_t lo = delay_floor(game_delay);
+    return std::clamp(peak_ms + kPlayerMargin, lo, std::max(lo, kPlayerMax));
+}
+
+// The per-frame step of the other player's character (update position): its delay one step towards its target.
+// Returns the delay after the step (ms).
+inline uint32_t update_player(Slot& s, uint64_t now, uint32_t game_delay) noexcept {
+    if (!s.updated.load(std::memory_order_relaxed)) s.updated.store(1, std::memory_order_relaxed);
+    uint32_t d = s.d_fix.load(std::memory_order_relaxed);
+    if (d == 0) d = to_fix(game_delay ? game_delay : kMinDelay);
+    const uint64_t at = s.d_at.load(std::memory_order_relaxed);
+    const uint64_t dt = at && now > at ? now - at : 0;
+    const uint32_t target = player_target(note_lateness(s, now, 0), game_delay);
+    d = approach(d, target, dt);
+    s.d_fix.store(d, std::memory_order_relaxed);
+    s.d_at.store(now, std::memory_order_relaxed);
+    return from_fix(d);
+}
+
+// A hitch, seen when the next sample arrives: the interpolation had already run past the previous one (it stood still
+// for that long) although the character kept moving (the two samples are close in its own time). 0 = none. A player
+// who stopped and walks again is not one (its samples are far apart).
+inline uint32_t player_hitch(uint64_t now, uint32_t d_ms, uint64_t prev_ts, uint64_t new_ts) {
+    if (!prev_ts || new_ts <= prev_ts || new_ts - prev_ts > kStreamGap || !no_sample_ahead(now, d_ms, prev_ts)) return 0;
+    return static_cast<uint32_t>(std::min<uint64_t>(now - d_ms - prev_ts, kMaxLateness));
+}
+
+// Lateness and the players' delays per frame (ms).
+inline constexpr std::array<uint32_t, 8> kPlayerBounds = {50, 100, 150, 200, 250, 300, 400, 600};
+// Hitch lengths (ms).
+inline constexpr std::array<uint32_t, 6> kHitchBounds = {16, 33, 66, 133, 250, 500};
+
 // The per-frame step (update position, once per frame per mode-2 actor): marks the buffer as read
 // by a mode-2 update and, for an 0xB actor, moves its delay one step towards its target. The first
 // step starts from the game's value (what the buffer was read with until now).
@@ -743,6 +815,8 @@ struct DelayIn {
     bool updated = false;     // the slot's buffer is read by a per-frame update (mode 2)
     uint32_t d_fix = 0;       // the slot's delay (0 = none yet)
     uint32_t game_delay = kMinDelay;
+    bool players = false;     // remote_interp_players=1: the other player's character (0xA) gets its own delay too (last:
+                              // the tests build this positionally)
 };
 struct DelayOut {
     uint32_t value = kMinDelay;  // what the read yields (the game's own unless replaced)
@@ -756,7 +830,8 @@ inline DelayOut decide_delay(const DelayIn& in) {
     DelayOut o;
     o.value = in.game_delay;
     o.would = in.game_delay;
-    if (in.mode == Mode::Off || !in.have_slot || in.cls != KeyClass::Npc || !in.updated || in.d_fix == 0) return o;
+    const bool own_delay = in.cls == KeyClass::Npc || (in.cls == KeyClass::Character && in.players);
+    if (in.mode == Mode::Off || !in.have_slot || !own_delay || !in.updated || in.d_fix == 0) return o;
     o.would = from_fix(in.d_fix);
     if (in.mode == Mode::On && in.applying && o.would != in.game_delay) {
         o.value = o.would;

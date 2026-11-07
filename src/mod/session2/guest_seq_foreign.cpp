@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -100,7 +101,71 @@ constexpr uint32_t kOrder_Stage = 0x10;
 // call 0x1795490(Status, 0x200, 0, ...) ; 0x17954E4 mov ebx,[r14+0x390] (the flags it changes).
 constexpr uint32_t kActor_Comps = 0x68, kComps_Status = 0x20, kStatus_Flags = 0x390, kStatusHidden = 0x200;
 constexpr uint32_t kActor_Key = 0x60, kActor_User = 0xA0, kActor_Local = 0x94, kMgr_LocalUser = 0x58;
-constexpr uint32_t kStage_Info = 0x48, kInfo_Name = 0x1B8;
+
+// ---------------------------------------------------------------- verified code (build 1.0.0.3527, capstone 2026-11-05)
+//
+// The handler 0xD33880 (.pdata 0xD33880-0xD33F91) and its create 0xBA7D00 (.pdata 0xBA7D00-0xBA888E):
+//   0xD3394C mov [rbp-0x80],rbx ; mov [rbp-0x78],r14   (the vector zeroed: the same slots as 2976)
+//   0xD33B3B mov [rbp-0x80],rbx ; mov [rbp-0x74],r15d ; lea rax,[r12+8]   (the pointer and the capacity)
+//   0xD33B50 each entry initialized {u32 -1, u32 0, u16 7, u8 0}, stride 0xC (the very bytes of 2976)
+//   0xD33B77 mov [rbp-0x78],r15d (the count)
+//   0xD33B90 mov eax,r14d ; lea rcx,[rax+rax*2] ; lea rdx,[rbx+rcx*4] ; ... call 0x2643930: entry i, filled by a reader in
+//            .text this time (its order comes from the wire: the captures show u32 node | u32 actor | u8 type | 2 x u8
+//            at @92, and 0xBA7EC8 reads the type at +8, 0xBA7ED9 the actor at +4)
+//   0xD338F8 mov [rbp+0x10],r14d: the play data is at [rbp+0x10] (0xD33A53 lea rdx,[rbp+0x10]), not [rbp]
+//   0xD33D7B lea r9,[rbp-0x80] ; lea r8,[rbp+0x10] ; lea rdx,[rbp+0x100] ; mov rcx,rax ; call 0xBA7D00
+//   0xD33E35 test rbx,rbx ; je ...  (the vector freed in this call)
+//   0xBA7D29 mov rsi,r9 ; 0xBA7E75 mov r14,[rsi] ; mov eax,[rsi+8] ; ...  (the walk: the same 14 bytes as 2976)
+//   0xBA7EC8 movzx eax,byte [r14+8] ; cmp al,4 ; je ; cmp al,5 ; jne 0xBA7F5B: only 4 / 5 get an actor reference
+//   0xBA7F63 vmovsd xmm0,[r14] ; vmovsd [rbp-0x78],xmm0 ; mov eax,[r14+8]: each entry copied
+// P1: 0x6C02C0 (.pdata 0x6C02C0-0x6C0A70), its only call 0xBA908A in 0xBA8FD0 (rcx = [rbx], the stage). P2, P3 and P4 are not
+// ported to this build: their points are not re-derived, the keys that want them log that and go on without them.
+constexpr uint8_t kVecZero3527[] = {0x48, 0x89, 0x5D, 0x80, 0x4C, 0x89, 0x75, 0x88};
+constexpr uint8_t kVecStore3527[] = {0x48, 0x89, 0x5D, 0x80, 0x44, 0x89, 0x7D, 0x8C, 0x49, 0x8D, 0x44, 0x24, 0x08};
+constexpr uint8_t kVecInit3527[] = {0xC7, 0x40, 0xF8, 0xFF, 0xFF, 0xFF, 0xFF, 0x89, 0x50, 0xFC, 0x66,
+                                    0xC7, 0x00, 0x07, 0x00, 0x88, 0x50, 0x02, 0x48, 0x8D, 0x40, 0x0C};
+constexpr uint8_t kVecCount3527[] = {0x44, 0x89, 0x7D, 0x88};
+constexpr uint8_t kVecStride3527[] = {0x41, 0x8B, 0xC6, 0x48, 0x8D, 0x0C, 0x40, 0x48, 0x8D, 0x14, 0x8B};
+constexpr uint8_t kPlayData3527[] = {0x44, 0x89, 0x75, 0x10};
+constexpr uint8_t kCreateCall3527[] = {0x4C, 0x8D, 0x4D, 0x80, 0x4C, 0x8D, 0x45, 0x10, 0x48, 0x8D, 0x95, 0x00,
+                                       0x01, 0x00, 0x00, 0x48, 0x8B, 0xC8, 0xE8, 0x6E, 0x3F, 0xE7, 0xFF};
+constexpr uint8_t kVecFree3527[] = {0x48, 0x85, 0xDB, 0x74, 0x35};
+constexpr uint8_t kCreateArg3527[] = {0x49, 0x8B, 0xF1};
+constexpr uint8_t kCreateWalk3527[] = {0x4C, 0x8B, 0x36, 0x8B, 0x46, 0x08, 0x48, 0x8D, 0x0C, 0x40, 0x4D, 0x8D, 0x2C, 0x8E};
+constexpr uint8_t kCreateType3527[] = {0x41, 0x0F, 0xB6, 0x46, 0x08, 0x3C, 0x04, 0x74, 0x08,
+                                       0x3C, 0x05, 0x0F, 0x85, 0x82, 0x00, 0x00, 0x00};
+constexpr uint8_t kCreateCopy3527[] = {0xC4, 0xC1, 0x7B, 0x10, 0x06, 0xC5, 0xFB, 0x11, 0x45, 0x88, 0x41, 0x8B, 0x46, 0x08};
+constexpr uint8_t kRoutePoint3527[] = {0x41, 0x80, 0xFE, 0x04, 0x74, 0x47};  // 0xD33D2E cmp r14b,4 ; je 0xD33D7B
+const Ctx kFixCode3527[] = {{0xD3394C, kVecZero3527},   {0xD33B3B, kVecStore3527},  {0xD33B50, kVecInit3527},
+                            {0xD33B77, kVecCount3527},  {0xD33B90, kVecStride3527}, {0xD338F8, kPlayData3527},
+                            {0xD33D7B, kCreateCall3527}, {0xD33E35, kVecFree3527},  {0xBA7D29, kCreateArg3527},
+                            {0xBA7E75, kCreateWalk3527}, {0xBA7EC8, kCreateType3527}, {0xBA7F63, kCreateCopy3527}};
+// Not in the list: 0xD33D2E (kRoutePoint3527) is guest_seq_route's own hook point. That module checks those bytes
+// before it hooks them, and once it has hooked them they are its jump: checked here they failed every time the fix was
+// wanted (live 2026-11-05, "the code at exe+0xD33D2E (6 bytes) is not this build's"), and this fix only ever runs
+// inside that hook.
+constexpr uint32_t kHandlerBegin3527 = 0xD33880, kHandlerEnd3527 = 0xD33F91, kCreateBegin3527 = 0xBA7D00,
+                   kCreateEnd3527 = 0xBA888E;
+constexpr uint8_t kP1Sig3527[] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55, 0x53, 0x56, 0x57,
+                                  0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x88, 0xEF,
+                                  0xFF, 0xFF, 0xB8, 0x78, 0x11, 0x00, 0x00, 0xE8, 0xC8, 0x70, 0x4E, 0x04};  // 0x6C02C0
+constexpr uint8_t kP1Caller3527[] = {0x48, 0x8B, 0x0B, 0x48, 0x8D, 0x54, 0x24, 0x58, 0x4C, 0x8B, 0xC6, 0xE8, 0x31, 0x72,
+                                     0xB1, 0xFF};  // 0xBA907F mov rcx,[rbx] ; lea rdx,[rsp+0x58] ; mov r8,rsi ; call 0x6C02C0
+
+// Build 3576 (static, 2026-11-06 evening; not yet run): the 2661 handler and 0xBA7D00 moved as whole functions by +0x420
+// (.pdata [0xD33CA0,0xD343B1) and [0xBA8120,0xBA8CAE), the same sizes), every fix array there with the same bytes; P1 by
+// +0x660 ([0x6C0920,0x6C10D0)), its signature and its caller's with new rel32s.
+const Ctx kFixCode3576[] = {{0xD33D6C, kVecZero3527},   {0xD33F5B, kVecStore3527},  {0xD33F70, kVecInit3527},
+                            {0xD33F97, kVecCount3527},  {0xD33FB0, kVecStride3527}, {0xD33D18, kPlayData3527},
+                            {0xD3419B, kCreateCall3527}, {0xD34255, kVecFree3527},  {0xBA8149, kCreateArg3527},
+                            {0xBA8295, kCreateWalk3527}, {0xBA82E8, kCreateType3527}, {0xBA8383, kCreateCopy3527}};
+constexpr uint32_t kHandlerBegin3576 = 0xD33CA0, kHandlerEnd3576 = 0xD343B1, kCreateBegin3576 = 0xBA8120,
+                   kCreateEnd3576 = 0xBA8CAE;
+constexpr uint8_t kP1Sig3576[] = {0x4C, 0x89, 0x4C, 0x24, 0x20, 0x48, 0x89, 0x54, 0x24, 0x10, 0x55, 0x53, 0x56, 0x57,
+                                  0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xAC, 0x24, 0x88, 0xEF,
+                                  0xFF, 0xFF, 0xB8, 0x78, 0x11, 0x00, 0x00, 0xE8, 0x48, 0x7A, 0x4E, 0x04};  // 0x6C0920
+constexpr uint8_t kP1Caller3576[] = {0x48, 0x8B, 0x0B, 0x48, 0x8D, 0x54, 0x24, 0x58, 0x4C, 0x8B, 0xC6, 0xE8, 0x71, 0x74,
+                                     0xB1, 0xFF};  // 0xBA949F
 
 enum ProbeId : uint8_t { kP1, kP21, kP22, kP3, kP4, kProbes };
 struct ProbeDef {
@@ -116,6 +181,11 @@ struct ProbeDef {
 // ---------------------------------------------------------------- state
 
 uintptr_t g_base = 0;
+// The build and its stage fields: written by guest_seq_foreign_start before any hook or thread.
+bool g_3527 = false;  // 3527's layout (3527, 3549, 3576)
+bool g_3576 = false;  // 3576's addresses
+const gsf::StageOffsets* g_so = &gsf::kStage2976;
+uintptr_t g_world_slot = off::kWorldSystemSlot;
 std::atomic<bool> g_probe{false};
 std::atomic<bool> g_present{false};  // S45 guest_seq_foreign_present(_probe): P1 for guest_seq_present's S-A / R-A
 std::atomic<bool> g_settled{false};
@@ -194,9 +264,9 @@ void emit(Kind k, p::Event& e) noexcept {
 // SEH makes it safe against faults; a torn read only gives a wrong line / learns nothing new).
 size_t read_stage_binds(uintptr_t stage, gsf::StageBind* out, size_t cap, bool& readable) noexcept {
     readable = false;
-    const uintptr_t vec = rdp(stage + gsf::kStage_Binds);
+    const uintptr_t vec = rdp(stage + g_so->binds);
     uint32_t n = 0;
-    if (!rd(stage + gsf::kStage_BindCount, n) || n > gsf::kMaxStageBinds || (n && !vec)) return 0;
+    if (!rd(stage + g_so->bind_count, n) || n > gsf::kMaxStageBinds || (n && !vec)) return 0;
     readable = true;
     size_t k = 0;
     for (uint32_t i = 0; i < n && k < cap; ++i) {
@@ -219,8 +289,8 @@ uint64_t pack_bind(const gsf::StageBind& b, uint32_t owner, uint32_t own) noexce
            static_cast<uint64_t>(b.key && b.key == owner) << 48 | static_cast<uint64_t>(b.key && own && b.key == own) << 49;
 }
 void put_name(uintptr_t stage, p::Event& e) noexcept {
-    const uintptr_t info = rdp(stage + kStage_Info);
-    const uintptr_t name = info ? rdp(info + kInfo_Name) : 0;
+    const uintptr_t info = rdp(stage + g_so->info);
+    const uintptr_t name = info ? rdp(info + g_so->name) : 0;
     for (int k = 0; k < 3 && name; ++k) e.v[9 + k] = rdv<uint64_t>(name + 8 * k);
 }
 // Up to 3 binds of a stage, the owner's first: e.v[4..6] packed, their whole node ids in e.v[7] (two) and e.v[8].
@@ -249,7 +319,7 @@ void on_p1(safetyhook::Context& ctx) noexcept {
     const uint32_t resource = g_seqres.find(seq);
     // S45 S-A (read-only) and R-A (guest_seq_foreign_present): two atomic loads when both keys are 0.
     guest_seq_present_p1(stage, resource);
-    const uint32_t owner = rdv<uint32_t>(stage + gsf::kStage_Owner);
+    const uint32_t owner = rdv<uint32_t>(stage + g_so->owner);
     const uint32_t own = guest_seq_route_own_key();
     gsf::StageBind b[gsf::kMaxStageBinds];
     bool readable = false;
@@ -278,9 +348,9 @@ void on_p1(safetyhook::Context& ctx) noexcept {
         g_p1_not_player_neutralized.fetch_add(1, std::memory_order_relaxed);
     }
     p::Event e;
-    e.v[0] = static_cast<uint64_t>(c) | static_cast<uint64_t>(rdv<uint8_t>(stage + gsf::kStage_B60)) << 8 |
-             static_cast<uint64_t>(rdv<uint8_t>(stage + gsf::kStage_B61)) << 16 |
-             static_cast<uint64_t>(rdv<uint32_t>(stage + gsf::kStage_BindCount) & 0xFFFF) << 24 |
+    e.v[0] = static_cast<uint64_t>(c) | static_cast<uint64_t>(rdv<uint8_t>(stage + g_so->b60)) << 8 |
+             static_cast<uint64_t>(rdv<uint8_t>(stage + g_so->b61)) << 16 |
+             static_cast<uint64_t>(rdv<uint32_t>(stage + g_so->bind_count) & 0xFFFF) << 24 |
              static_cast<uint64_t>(owner_nt) << 40 | static_cast<uint64_t>(owner_link) << 48;
     e.v[1] = seq;
     e.v[2] = owner | static_cast<uint64_t>(own) << 32;
@@ -294,9 +364,9 @@ void on_p1(safetyhook::Context& ctx) noexcept {
 void on_p2(safetyhook::Context& ctx, int which) noexcept {
     if (!g_probe.load(std::memory_order_relaxed)) return;
     const uintptr_t stage = ctx.rcx;
-    const uint32_t owner = rdv<uint32_t>(stage + gsf::kStage_Owner);
+    const uint32_t owner = rdv<uint32_t>(stage + g_so->owner);
     const uint32_t own = guest_seq_route_own_key();
-    const bool started = rdv<uint8_t>(stage + gsf::kStage_Started) != 0;
+    const bool started = rdv<uint8_t>(stage + g_so->started) != 0;
     const uintptr_t data = rdp(ctx.r8 + gsf::kDesc_Data);
     const uintptr_t idp = data ? rdp(data + gsf::kData_Ids) : 0;
     const uint32_t nid_all = data && idp ? rdv<uint32_t>(data + gsf::kData_IdCount) : 0;
@@ -343,7 +413,7 @@ void on_p3(safetyhook::Context& ctx) noexcept {
     const uint32_t own = guest_seq_route_own_key();
     const gsf::P3 c = gsf::classify_p3(key, own);
     g_p3[static_cast<size_t>(c)].fetch_add(1, std::memory_order_relaxed);
-    const uintptr_t world = rdp(g_base + off::kWorldSystemSlot);
+    const uintptr_t world = rdp(g_base + g_world_slot);
     const uintptr_t mgr = world ? rdp(world + off::kWorldSystem_ActorManager) : 0;
     const uintptr_t local_user = mgr ? rdp(mgr + kMgr_LocalUser) : 0;
     const uintptr_t user = actor ? rdp(actor + kActor_User) : 0;
@@ -353,7 +423,7 @@ void on_p3(safetyhook::Context& ctx) noexcept {
     p::Event e;
     e.v[0] = static_cast<uint64_t>(c) | static_cast<uint64_t>(local) << 8 | static_cast<uint64_t>(b94) << 16;
     e.v[1] = rdv<uint64_t>(stage + gsf::kStage_Seq);
-    e.v[2] = rdv<uint32_t>(stage + gsf::kStage_Owner) | static_cast<uint64_t>(own) << 32;
+    e.v[2] = rdv<uint32_t>(stage + g_so->owner) | static_cast<uint64_t>(own) << 32;
     e.v[3] = key;
     put_name(stage, e);
     emit(kEP3, e);
@@ -366,7 +436,7 @@ void on_p4(safetyhook::Context& ctx) noexcept {
     const uintptr_t stage = rdp(ctx.rcx + kOrder_Stage);
     const uintptr_t node = rdp(ctx.r8);
     const uint32_t id = node ? rdv<uint32_t>(node + gsf::kNode_Id) : 0;
-    const uint32_t owner = stage ? rdv<uint32_t>(stage + gsf::kStage_Owner) : 0;
+    const uint32_t owner = stage ? rdv<uint32_t>(stage + g_so->owner) : 0;
     const uint32_t own = guest_seq_route_own_key();
     gsf::StageBind b[gsf::kMaxStageBinds];
     bool readable = false;
@@ -632,8 +702,8 @@ bool read_pdata(std::vector<RUNTIME_FUNCTION>& out, std::string& why) {
     if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) || dos.e_magic != IMAGE_DOS_SIGNATURE ||
         dos.e_lfanew <= 0 || dos.e_lfanew > 0x100000 ||
         !game::safe_read(g_base + static_cast<uint32_t>(dos.e_lfanew), &nt, sizeof nt) ||
-        nt.Signature != IMAGE_NT_SIGNATURE || nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
-        why = "not build 1.0.0.2976 (base / PE timestamp)";
+        nt.Signature != IMAGE_NT_SIGNATURE || !(game::legacy_layout() || g_3576)) {
+        why = "not build 1.0.0.2976 nor 1.0.0.3527 (base / PE timestamp)";
         return false;
     }
     const auto pd = nt.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
@@ -655,13 +725,17 @@ bool has_function(const std::vector<RUNTIME_FUNCTION>& pdata, uint32_t begin, ui
 
 bool install_fix(std::span<const gad::Section> secs, const std::vector<RUNTIME_FUNCTION>& pdata) {
     std::string why;
-    if (!has_function(pdata, kHandlerBegin, kHandlerEnd) || !has_function(pdata, kCreateBegin, kCreateEnd)) {
+    if (g_3576   ? !has_function(pdata, kHandlerBegin3576, kHandlerEnd3576) || !has_function(pdata, kCreateBegin3576, kCreateEnd3576)
+        : g_3527 ? !has_function(pdata, kHandlerBegin3527, kHandlerEnd3527) || !has_function(pdata, kCreateBegin3527, kCreateEnd3527)
+                 : !has_function(pdata, kHandlerBegin, kHandlerEnd) || !has_function(pdata, kCreateBegin, kCreateEnd)) {
         why = ".pdata of 0xC05BB0 / 0xA9CA40 not the expected";
     }
-    for (const Ctx& c : kFixCode) {
+    for (const Ctx& c : g_3576   ? std::span<const Ctx>(kFixCode3576)
+                        : g_3527 ? std::span<const Ctx>(kFixCode3527)
+                                 : std::span<const Ctx>(kFixCode)) {
         if (!why.empty()) break;
         if (!gad::in_real_code(secs, c.rva, static_cast<uint32_t>(c.bytes.size())) || !bytes_at(c.rva, c.bytes)) {
-            why = std::format("the code at exe+0x{:X} ({} bytes) is not build 2976's", c.rva, c.bytes.size());
+            why = std::format("the code at exe+0x{:X} ({} bytes) is not this build's", c.rva, c.bytes.size());
         }
     }
     g_layout_ok.store(why.empty(), std::memory_order_release);
@@ -691,7 +765,15 @@ bool install_fix(std::span<const gad::Section> secs, const std::vector<RUNTIME_F
 // P1 also for S45's guest_seq_foreign_present_probe (present): its S-A rides P1.
 void install_probes(std::span<const gad::Section> secs, const std::vector<RUNTIME_FUNCTION>& pdata, bool fix, bool probe,
                     bool present) {
-    const ProbeDef defs[] = {
+    const ProbeDef defs3527[] = {
+        {kP1, 0x6C02C0, 5, 0x6C02C0, 0x6C0A70, kP1Sig3527, {{0xBA907F, kP1Caller3527}},
+         "P1 0x6C02C0 entry (scene start, build 3527)"},
+    };
+    const ProbeDef defs3576[] = {
+        {kP1, 0x6C0920, 5, 0x6C0920, 0x6C10D0, kP1Sig3576, {{0xBA949F, kP1Caller3576}},
+         "P1 0x6C0920 entry (scene start, build 3576)"},
+    };
+    const ProbeDef defs2976[] = {
         {kP1, 0x602940, 5, 0x602940, 0x6030C8, kP1Sig, {}, "P1 0x602940 entry (scene start)"},
         {kP21, 0x601470, 5, 0x601470, 0x601C04, kP21Sig, {}, "P2 vf21 0x601470 entry (SequencerControl start)"},
         {kP22, 0x601C10, 5, 0x601C10, 0x6021E1, kP22Sig, {}, "P2 vf22 0x601C10 entry (SequencerControl end)"},
@@ -704,18 +786,23 @@ void install_probes(std::span<const gad::Section> secs, const std::vector<RUNTIM
     };
     const safetyhook::MidHookFn fns[kProbes] = {on_p1, on_p21, on_p22, on_p3, on_p4};
     std::string on, refused;
-    for (const ProbeDef& d : defs) {
+    if (g_3527 && (probe || fix)) {
+        refused += " P4 and, with guest_seq_foreign_probe, P2 / P3 (not ported to build 3527: read-only, no effect on the scenes);";
+    }
+    for (const ProbeDef& d : g_3576   ? std::span<const ProbeDef>(defs3576)
+                             : g_3527 ? std::span<const ProbeDef>(defs3527)
+                                      : std::span<const ProbeDef>(defs2976)) {
         const bool wanted = probe || (fix && (d.id == kP1 || d.id == kP4)) || (present && d.id == kP1);
         if (!wanted) continue;
         std::string why;
         if (!has_function(pdata, d.fn_begin, d.fn_end)) {
             why = std::format(".pdata [0x{:X},0x{:X}) not found", d.fn_begin, d.fn_end);
         } else if (!gad::in_real_code(secs, d.rva, static_cast<uint32_t>(d.sig.size())) || !bytes_at(d.rva, d.sig)) {
-            why = "its 40-byte signature is not build 2976's";
+            why = "its 40-byte signature is not this build's";
         }
         for (const Ctx& c : d.ctx) {
             if (!why.empty()) break;
-            if (!bytes_at(c.rva, c.bytes)) why = std::format("the code it relies on at exe+0x{:X} is not build 2976's", c.rva);
+            if (!bytes_at(c.rva, c.bytes)) why = std::format("the code it relies on at exe+0x{:X} is not this build's", c.rva);
         }
         if (why.empty() && !p8_install_mid(g_base, secs, d.rva, d.patch, d.sig, fns[d.id], g_hooks[d.id],
                                            "GuestSeqForeign", d.what)) {
@@ -743,7 +830,7 @@ DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
     for (int i = 0; i < 1200; ++i) {  // WorldSystem (up to 10 minutes), as the other guest modules
         uintptr_t world = 0;
-        if (game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world) break;
+        if (game::safe_read(g_base + g_world_slot, &world, sizeof world) && world) break;
         Sleep(500);
     }
     std::vector<gad::Section> secs;
@@ -767,6 +854,13 @@ bool guest_seq_foreign_settled() noexcept { return g_settled.load(std::memory_or
 bool guest_seq_foreign_p1_hooked() noexcept { return g_on[kP1].load(std::memory_order_acquire); }
 
 void guest_seq_foreign_start(bool probe, const std::string& player, const std::string& route_mode, bool present) {
+    g_3576 = game::current_build() == game::Build::v3576;
+    g_3527 = game::current_build() == game::Build::v3527 || g_3576;
+    if (g_3527) {
+        g_so = &gsf::kStage3527;
+        if (const auto* profile = game::reader_profile()) g_world_slot = profile->world_system;
+        if (g_3576) g_world_slot = 0x71C0100;  // core_globals_3576.json
+    }
     bool bad = false;
     const gsf::Mode m = gsf::parse_mode(player, &bad);
     if (bad) log::warn("GuestSeqForeign: guest_seq_foreign_player={} is not 0, probe or 1: 0", player);
@@ -800,7 +894,7 @@ void guest_seq_foreign_2661(safetyhook::Context& ctx, bool routed, bool would_ro
     size_t n = 0;
     if (f.layout_ok && (routed || would_route)) {
         g_seqres.note(seq, resource);  // P1 keys what it learns from this stage by its resource
-        f.owner_pd = rdv<uint32_t>(ctx.rbp);
+        f.owner_pd = rdv<uint32_t>(ctx.rbp + (g_3527 ? 0x10 : 0));  // the play data's +0: 0xD33D7F lea r8,[rbp+0x10] on 3527
         f.vec = rdp(ctx.rbp + gsf::kVecPtrSlot);
         f.count = rdv<uint32_t>(ctx.rbp + gsf::kVecCountSlot);
         f.capacity = rdv<uint32_t>(ctx.rbp + gsf::kVecCapSlot);

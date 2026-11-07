@@ -211,6 +211,14 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_tunnel_compress = read_uint(ini_path, L"session2", L"tunnel_compress", 0) != 0;
     c.s2_c4_safe_reads = read_uint(ini_path, L"session2", L"c4_safe_reads", 0) != 0;
     c.s2_ui_pause_block = narrow(read_string(ini_path, L"session2", L"ui_pause_block", "0"));
+    c.s2_seq_marker_guard = read_uint(ini_path, L"session2", L"seq_marker_guard", 1) != 0;
+    c.s2_seq_marker_trace = read_uint(ini_path, L"session2", L"seq_marker_trace", 0) != 0;
+    c.s2_change_pivot_guard = read_uint(ini_path, L"session2", L"change_pivot_guard", 1) != 0;
+    c.s2_focus_follow = read_uint(ini_path, L"session2", L"focus_follow", 1) != 0;
+    c.s2_field_leave_guard = read_uint(ini_path, L"session2", L"field_leave_guard", 1) != 0;
+    c.s2_docking_dedupe = read_uint(ini_path, L"session2", L"docking_dedupe", 1) != 0;
+    c.s2_achievement_guard = read_uint(ini_path, L"session2", L"achievement_guard", 1) != 0;
+    c.s2_manager_probe = read_uint(ini_path, L"session2", L"manager_probe", 0) != 0;
     c.s2_s1_scene_diag = read_uint(ini_path, L"session2", L"s1_scene_diag", 0) != 0;
     c.s2_guest_scene_diag = read_uint(ini_path, L"session2", L"guest_scene_diag", 0) != 0;
     // P8 gameplay for user 2 (pendientes/p8-impl-rango-embudos.md).
@@ -256,6 +264,7 @@ Config load_config(const std::wstring& ini_path) {
     // P8 mount ride (pendientes/p8-impl-monturas-cabalgata.md).
     c.s2_horse_follow_reverse = narrow(read_string(ini_path, L"session2", L"horse_follow_reverse", "0"));
     c.s2_remote_interp_pair = read_uint(ini_path, L"session2", L"remote_interp_pair", 0) != 0;
+    c.s2_remote_interp_players = narrow(read_string(ini_path, L"session2", L"remote_interp_players", "0"));
     // P8 S1 option A, sequencers (pendientes/p8-impl-opcion-a.md).
     c.s2_observer_seq_copy = narrow(read_string(ini_path, L"session2", L"observer_seq_copy", "0"));
     c.s2_observer_seq_copy_only = narrow(read_string(ini_path, L"session2", L"observer_seq_copy_only", ""));
@@ -362,6 +371,23 @@ Config load_config(const std::wstring& ini_path) {
     c.s2_docked_gimmicks = narrow(read_string(ini_path, L"session2", L"docked_gimmicks", "0"));
     // P8 session 29, the same for the other player's character (research/s25/gimmicks-dueno.md section 8).
     c.s2_docked_gimmicks_other = narrow(read_string(ini_path, L"session2", L"docked_gimmicks_other", "0"));
+    c.s2_guest_gimmick_interact = narrow(read_string(ini_path, L"session2", L"guest_gimmick_interact", "0"));
+    c.s2_guest_gimmick_interact_events =
+        narrow(read_string(ini_path, L"session2", L"guest_gimmick_interact_events", ""));
+    c.s2_interact_gate = narrow(read_string(ini_path, L"session2", L"interact_gate", "0"));
+    c.s2_interact_gate_errors = narrow(read_string(ini_path, L"session2", L"interact_gate_errors", ""));
+    c.s2_interact_gate_pass = narrow(read_string(ini_path, L"session2", L"interact_gate_pass", "3"));
+    c.s2_interact_gate_types = narrow(read_string(ini_path, L"session2", L"interact_gate_types", "7"));
+    c.s2_store_gate = narrow(read_string(ini_path, L"session2", L"store_gate", "0"));
+    c.s2_guest_shop_branch = narrow(read_string(ini_path, L"session2", L"guest_shop_branch", "0"));
+    c.s2_shop_ui_trace = narrow(read_string(ini_path, L"session2", L"shop_ui_trace", "0"));
+    c.s2_guest_shop_window = narrow(read_string(ini_path, L"session2", L"guest_shop_window", "0"));
+    c.s2_housing_share = narrow(read_string(ini_path, L"session2", L"housing_share", "0"));
+    c.s2_housing_share_live_ops = narrow(read_string(ini_path, L"session2", L"housing_share_live_ops", ""));
+    c.s2_housing_share_edits = read_uint(ini_path, L"session2", L"housing_share_edits", 0) != 0;
+    c.s2_housing_share_guest_spawn = read_uint(ini_path, L"session2", L"housing_share_guest_spawn", 0) != 0;
+    c.s2_housing_share_rekey = narrow(read_string(ini_path, L"session2", L"housing_share_rekey", "0"));
+    c.s2_housing_share_drop_gimmicks = narrow(read_string(ini_path, L"session2", L"housing_share_drop_gimmicks", "0"));
     // P8 session 28, the duplicated gimmick projectiles 2779 (research/s25/gimmicks-dueno.md section 7).
     c.s2_gimmick_event_dedup = narrow(read_string(ini_path, L"session2", L"gimmick_event_dedup", "0"));
     // P8 session 25, the guest's own save, phase A (noche/progreso-invitado.md).

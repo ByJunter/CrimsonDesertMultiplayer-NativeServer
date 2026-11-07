@@ -96,6 +96,54 @@ inline constexpr uint32_t kQuestEventVf40Ret = 0x290DC0B, kMissionUiVf40Ret = 0x
                           kChallengeTimerVf40Ret = 0x2C3409D, kChangeCharacterVf40Ret = 0x2A4A32B;
 inline constexpr uint16_t kOpTraceMission = 2372, kOpMissionTrigger = 2112, kOpMissionUiState = 2477,
                           kOpMissionNewAlarm = 2354, kOpChangePlayable = 2369;
+// 1.0.0.3527 [V capstone on the PE, 2026-11-05]: the same vf40 callers on this build (each found from its Troc's
+// vtable slot 2), mapped to the 2976 addresses the logic speaks. The fast-travel step keeps its literal, see
+// vf40_caller_allowed. No 2976 address above is a vf40 return on this build (the bytes before each were read).
+struct Vf40Ret3527 {
+    uint32_t native, logical;
+};
+inline constexpr Vf40Ret3527 kVf40Rets3527[] = {
+    {0x2D9AA1C, kRespawnVf40Ret},            // 0x2D9A8F0: 13 callers, the manager's +0x68/+0x78/+0x80 hash after it
+    {0x2EEE85F, kTriggerVf40Ret},            // 0x2EEE800, from the 2112 handler 0x2CD5220: events 0x11 / 0x12 after it
+    {0x2B79B6B, kQuestEventVf40Ret},         // 0x2B79B30, ServerQuestActorComponent vfB0's callback
+    {0xE500077, kChallengeDiscoverVf40Ret},  // .text 0xE4FFF10, the 2215 handler 0x2CD6910's jmp; compared, not hooked
+    {0xE44CF57, kChallengeDiscoverVf40Ret},  // 1.0.0.3549: the same jmp reaches 0xE44CDF0, the call [rax+0x40] at the same +0x167
+    {0x2ED751D, kChallengeTimerVf40Ret},     // the 2051 handler 0x2ED74A0
+    {0x2EEEA20, kChangeCharacterVf40Ret},    // 0x2EEE9D0, from the 2369 handler 0x2CD5E30
+    {0x2EEE59D, kTraceVf40Ret},              // 0x2EEE540, from the 2372 handler 0x2CD4F60
+    {0x2CD4CB3, kMissionUiVf40Ret},          // the 2477 handler 0x2CD4970
+    {0x2CD5CA1, kMissionAlarmVf40Ret},       // the 2354 handler 0x2CD5B60
+    {0x2AF3FB2, 0x2896347},                  // the fast-travel apply 0x2AF3A40's quest step
+};
+inline uint32_t vf40_ret_of_3527(uint32_t rva) {
+    for (const Vf40Ret3527& r : kVf40Rets3527) {
+        if (r.native == rva) return r.logical;
+    }
+    return rva;
+}
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the same callers, each its function moved whole (+0xC70; the
+// fast-travel apply +0xC50) and the call at the same offset in it. The function starts come from the Trocs' vtable
+// slot 2 by RTTI (2112 0x2CD5E90, 2369 0x2CD6AA0, 2372 0x2CD5BD0, 2477 0x2CD55E0, 2354 0x2CD67D0, 2051 0x2ED8110,
+// 2283 0x2CEE250) or from their calls. The respawn one is a direct `call 0x2D98440` (vf40) at 0x2D9B687, like 3527's.
+inline constexpr Vf40Ret3527 kVf40Rets3576[] = {
+    {0x2D9B68C, kRespawnVf40Ret},            // 0x2D9B560 + 0x12C
+    {0x2EEF4CF, kTriggerVf40Ret},            // 0x2EEF470, from the 2112 handler 0x2CD5E90
+    {0x2B7A7DB, kQuestEventVf40Ret},         // 0x2B7A7A0 (thunk 0x2B9C660 registered by vfB0 0x2B744B0)
+    {0xE3F9CC7, kChallengeDiscoverVf40Ret},  // .tls$ 0xE3F9B50 (the 2215 handler 0x2CD7580's jmp); protected code: the
+                                             // call [rax+0x40] is at +0x174 here (3527 +0x167); compared, not hooked
+    {0x2ED818D, kChallengeTimerVf40Ret},     // the 2051 handler 0x2ED8110
+    {0x2EEF690, kChangeCharacterVf40Ret},    // 0x2EEF640, from the 2369 handler 0x2CD6AA0
+    {0x2EEF20D, kTraceVf40Ret},              // 0x2EEF1B0, from the 2372 handler 0x2CD5BD0
+    {0x2CD5923, kMissionUiVf40Ret},          // the 2477 handler 0x2CD55E0
+    {0x2CD6911, kMissionAlarmVf40Ret},       // the 2354 handler 0x2CD67D0
+    {0x2AF4C02, 0x2896347},                  // the fast-travel apply 0x2AF4690's quest step
+};
+inline uint32_t vf40_ret_of_3576(uint32_t rva) {
+    for (const Vf40Ret3527& r : kVf40Rets3576) {
+        if (r.native == rva) return r.logical;
+    }
+    return rva;
+}
 // Measured only at the ingress (the open decision about the guest's dialog choices, politica-misiones.md).
 inline constexpr uint16_t kOpQuestDialogEnd = 2342, kOpSetQuestDialog = 2857, kOpStageBranchState = 2436,
                           kOpUpdateStageChartEvent = 2591;

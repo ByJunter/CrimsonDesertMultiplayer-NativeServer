@@ -1,5 +1,36 @@
 # Prueba con dos PC (anfitrión + invitado)
 
+## Primera prueba (build 1.0.0.3549)
+
+**Los dos PC tienen que tener la misma versión del juego y el mismo zip**, `dist\cdmp-coop-20261105-3549-v3.zip`. Si no
+coinciden, los dos lados se niegan a conectarse. La primera sesión real entre dos PC ya se hizo: resultados en
+`docs/ESTADO-3527.md`. **El invitado sale antes que el anfitrión**, o pierde el progreso de la sesión. **No cambiéis de personaje:**
+en esa sesión el invitado se cerró poco después.
+
+Lo de más abajo es de una versión anterior del mod. Empezad por esto (unos 15 minutos):
+
+1. **Kit:** el mismo zip en los dos PC (`kit\coop\README.txt` explica cómo instalarlo). Si cambia el mod, `.\scripts\package_coop.ps1`.
+   Poned `record=1` en `[sniffer]` en los dos para tener capturas.
+2. **Conectar:** el anfitrión entra en el mundo y después el invitado pulsa Jugar. Es lo único que no se ha podido
+   probar en un solo PC, así que es lo primero que hay que mirar. En `cdmp.log` del invitado debe salir
+   `connection REMOTE (host's server)` y `Session2 guest load: state 0x18`.
+3. **Verse y moverse:** los dos, un minuto.
+4. **Monturas:** invocar, `H`, `E` y `R` (`docs/ESTADO-3527.md`).
+5. **Viaje rápido:** primero el invitado y luego el anfitrión.
+6. **La partida del invitado:** en `cdmp.log` del invitado debe salir `the host ACCEPTED the upload` antes de 30 s. Si no,
+   la subida no da tiempo por Steam (`README.txt`, último apartado).
+7. **Pelear:** los dos en el Nexo del Abismo junto a Valvegard Garrison. En `cdmp.log` del anfitrión deben salir
+   `User2Funnels rank [1]` y, si el invitado mata a algo, `User2Funnels dead`. Morir, revivir y escalar solo se han
+   probado con dos copias en un PC: conviene repetirlos aquí.
+8. **Salir y volver:** el invitado cierra el juego por el menú, lo abre y pulsa Jugar. El anfitrión no tiene que hacer nada.
+9. **Progreso:** tras salir, `apply-guest-progress.ps1` en el PC del invitado (`README.txt`, apartado 6).
+
+Si falla el paso 2, pasad `cdmp.log` de los dos PC. Con `Steam:` y `Net:` se ve hasta dónde llegó la conexión.
+
+Para ver qué está comprobado y qué no, lee `docs/ESTADO-3527.md`.
+
+## Protocolo anterior (build 2976)
+
 Primera sesión seria con el amigo. Sale del protocolo de `docs/research/pendiente-robustez.md` §7,
 adaptado a lo que ya funciona (fases 0-3 de `docs/PLAN-PENDIENTES.md`).
 

@@ -1,0 +1,37 @@
+{
+  "captured_utc": "2026-11-04T19:10:53.753350+00:00",
+  "host_pid": 42600,
+  "guest_pid": null,
+  "host_client": {
+    "actor": "0x2d8c3579d80",
+    "key": "0xa0100001",
+    "controller": "0x90100000",
+    "position": [
+      -89.51091003417969,
+      404.06658935546875,
+      -711.418212890625
+    ]
+  },
+  "host_server": {
+    "session": "0x2d8e5c6ec40",
+    "user": "0x2d9441a0000",
+    "character": "0x2d9440f0200",
+    "transform_sync": "0x2d9441ef500",
+    "field": "0x2d924ccd510",
+    "field_open": 1,
+    "owner": "0x90100000",
+    "user_count": 1,
+    "users": [
+      {
+        "user": "0x2d9441a0000",
+        "key": "0x90100000",
+        "session": "0x2d8e5c6ec40",
+        "actors": 9
+      }
+    ],
+    "field_key": "0x81020001",
+    "mover_key": "0x81020001",
+    "level_entry": "0x2d932640520",
+    "field_key_matches_mover": true
+  }
+}

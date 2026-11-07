@@ -21,6 +21,7 @@
 #include "common/equip_state.h"
 #include "mod/game/actor_lookup.h"
 #include "mod/game/offsets.h"
+#include "mod/game/character_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/net/enemy_relay.h"
@@ -627,7 +628,7 @@ uint32_t puppet_layer_without_action(uintptr_t control, bool& remote, uint32_t& 
             // the current action (companion probe: its r8 copies layer +0..+0x18).
             const bool no_play = *reinterpret_cast<const uintptr_t*>(layer + off::kLayer_Playback) == 0;
             const bool no_cur = *reinterpret_cast<const uintptr_t*>(layer + kLayer_CurrentAction) == 0;
-            if (*reinterpret_cast<const uintptr_t*>(layer + off::kLayer_Chart) != 0 && (no_play || no_cur)) {
+            if (*reinterpret_cast<const uintptr_t*>(layer + game::character_profile::layer_chart_offset()) != 0 && (no_play || no_cur)) {
                 t_guard_reason = static_cast<uint8_t>(((no_cur ? 1 : 0) | (no_play ? 2 : 0)) << (2 * i));
                 return key;
             }
@@ -1571,10 +1572,9 @@ bool puppet_install_layer_guards() {
     std::lock_guard lock(g_layer_guards_mutex);
     if (g_layer_guards_on.load()) return true;
     const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+    if (!game::validate_native_catalog()) return false;
     {
-        uint8_t h[sizeof off::kActionLayerAdvanceHead];
-        if (game::safe_read(base + off::kActionLayerAdvance, h, sizeof h) &&
-            std::memcmp(h, off::kActionLayerAdvanceHead, sizeof h) == 0) {
+        if (game::character_profile::matches(base, off::kActionLayerAdvance, off::kActionLayerAdvanceHead)) {
             g_ret_stub = static_cast<uint8_t*>(
                 VirtualAlloc(nullptr, 16, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE));
             if (g_ret_stub) {
@@ -1582,14 +1582,12 @@ bool puppet_install_layer_guards() {
                 DWORD old = 0;
                 VirtualProtect(g_ret_stub, 16, PAGE_EXECUTE_READ, &old);
                 FlushInstructionCache(GetCurrentProcess(), g_ret_stub, 16);
-                auto hook = safetyhook::MidHook::create(reinterpret_cast<void*>(base + off::kActionLayerAdvance),
+                auto hook = safetyhook::MidHook::create(reinterpret_cast<void*>(base + game::character_profile::rva(off::kActionLayerAdvance)),
                                                         action_layer_advance);
                 if (hook) g_layer_guard_hook = std::move(*hook);
-                uint8_t h2[sizeof off::kActionLayersAdvanceHead];
-                if (game::safe_read(base + off::kActionLayersAdvance, h2, sizeof h2) &&
-                    std::memcmp(h2, off::kActionLayersAdvanceHead, sizeof h2) == 0) {
+                if (game::character_profile::matches(base, off::kActionLayersAdvance, off::kActionLayersAdvanceHead)) {
                     auto skip = safetyhook::MidHook::create(
-                        reinterpret_cast<void*>(base + off::kActionLayersAdvance), action_layers_advance);
+                        reinterpret_cast<void*>(base + game::character_profile::rva(off::kActionLayersAdvance)), action_layers_advance);
                     if (skip) g_layers_skip_hook = std::move(*skip);
                 }
             }

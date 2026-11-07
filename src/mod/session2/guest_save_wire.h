@@ -989,7 +989,7 @@ inline std::optional<Files> kv_files(const KeyValues& kv) {
 struct IncomingManifest {
     uint32_t gen = 0;
     uint64_t host_id = 0;
-    uint32_t slot = 0;  // N: the guest slot it belongs to (aplicar-progreso-invitado.ps1 applies it there)
+    uint32_t slot = 0;  // N: the guest slot it belongs to (apply-guest-progress.ps1 applies it there)
     uint8_t reason = 0;
     uint64_t time_unix = 0;
     std::string received_utc;

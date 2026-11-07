@@ -1,4 +1,6 @@
 #include "mod/session2/guest_stage_diag.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -306,7 +308,7 @@ Raw raw_of(uintptr_t wrapper) noexcept {
     Raw r;
     const uintptr_t raw = wrapper ? rdp(wrapper + kWrap_Raw) : 0;
     if (!raw) return r;
-    r.op = rdv<uint16_t>(raw);
+    r.op = native_opcode::decode(game::current_build(), rdv<uint16_t>(raw)).value_or(0);
     r.len = rdv<uint16_t>(raw + 3);
     r.wrapper_len = rdv<uint16_t>(wrapper + kWrap_Len);
     r.p = raw + kHeader;
@@ -861,6 +863,7 @@ bool read_sections() {
         std::copy(std::begin(h.Name), std::end(h.Name), s.name);
         s.va = h.VirtualAddress;
         s.size = h.Misc.VirtualSize;
+        s.flags = h.Characteristics;
         g_secs.push_back(s);
     }
     return !g_secs.empty();

@@ -13,11 +13,13 @@
 #include <string>
 #include <vector>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/hook_prepare.h"
 #include "mod/game/game_fault.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
+#include "mod/session2/focus_follow.h"
 #include "mod/session2/freeze_watchdog.h"
 #include "mod/session2/guest.h"
 #include "mod/session2/guest_actor_diag_logic.h"
@@ -47,26 +49,84 @@ constexpr uint8_t kEntry7[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x44, 0
 constexpr uint8_t kRideEnter[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x70, 0x18, 0x55, 0x57, 0x41, 0x54, 0x41};
 constexpr uint8_t kHandler[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57};
 constexpr uint8_t kVf54[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x57};
-constexpr uint8_t kThunkVf53[] = {0xE9, 0x5B, 0x39, 0x38, 0x09};    // jmp 0x9DC90A0 (.xtls body: calls 0x2228260)
-constexpr uint8_t kThunkRideOff[] = {0xE9, 0x1B, 0xA0, 0x4C, 0x0C};  // jmp 0xE6F2E60 (.xtls body)
 
-constexpr uintptr_t kCommonVf53 = 0x2228260, kClientVf53 = 0xA45740, kRideOffThunk = 0x2228E40, kClientVf54 = 0xA45760;
-constexpr uintptr_t kRideOnEnter = 0x681C80, kRideOffEnter = 0x682C20, kH2663 = 0xBB4130, kH2916 = 0xBB4AC0,
-                    kH2991 = 0xB57720;
-constexpr uintptr_t kCodeEnd = 0x51EB000;
+// Where everything is, per build. The function heads above are byte-identical in both; the jmp thunks carry their
+// target. Log lines and comments keep the 2976 names (the research is written against that build).
+struct Addrs {
+    uintptr_t common_vf53, client_vf53, rideoff_thunk, client_vf54, ride_on, ride_off, h2663, h2916, h2991, code_end;
+    uintptr_t gate, gate_ret, gate_site, gate_or, hold, action_req;
+    uint8_t thunk_vf53[5], thunk_rideoff[5];
+    const uint8_t* gate_head;
+    uint32_t gate_head_len;
+    uint8_t gate_site_bytes[16];
+    uint32_t mc_method, mc_methods, rideoff_key, vf178_actor, vf178_user;
+};
+constexpr uint8_t kGateThunk2976[] = {0xE9, 0xAB, 0xEF, 0xB2, 0x0C};  // jmp 0xEE58A40 (.xtls, never touched)
+// 3527: the gate is no longer a thunk. Its first instruction (mov [rsp+10h],rbx) is the 5 bytes patched.
+constexpr uint8_t kGateHead3527[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18, 0x55, 0x57, 0x41, 0x56, 0x48, 0x8D};
+constexpr Addrs kAddrs2976{0x2228260, 0xA45740, 0x2228E40, 0xA45760, 0x681C80, 0x682C20, 0xBB4130, 0xBB4AC0, 0xB57720, 0x51EB000,
+                           0x2329A90, 0x8639CD, 0x8639C0, 0x1EC9C26, 0x88E6A0, 0xA45AC0,
+                           {0xE9, 0x5B, 0x39, 0x38, 0x09},  // jmp 0x9DC90A0 (.xtls body: calls 0x2228260)
+                           {0xE9, 0x1B, 0xA0, 0x4C, 0x0C},  // jmp 0xE6F2E60 (.xtls body)
+                           kGateThunk2976, sizeof kGateThunk2976,
+                           {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF, 0xE8, 0xC3, 0x60, 0xAC, 0x01, 0x45, 0x89, 0x26},
+                           0xF0, 0xF8, 0xD4, 0x4FE260, 0x8A67D0};
+// 1.0.0.3527 [V capstone on the PE; live on 2026-11-05]: vtables ClientVehicle 0x5944B90 slots 53/54, CommonVehicle
+// 0x5CEFC28 slot 53, RideOn/RideOff slot 7. RideOff thunk = vf53's own call at 0x23FD276. mc+0x60 = CC unchanged; the
+// live movement component holds its 23 methods from +0x140 (6 RideOn, 7 RideOff), current index at +0x13C (0x965CCC). RideOff's
+// cached horse key is written at 0x750DA3 (+0xD0).
+constexpr Addrs kAddrs3527{0x23FD080, 0xB4D8D0, 0x23FDCC0, 0xB4D8F0, 0x74FBB0, 0x750B80, 0xCD89E0, 0xCD94B0, 0xC64250, 0x5595000,
+                           0x251A350, 0x948E73, 0x948E66, 0x207A756, 0x976320, 0xB4DD20,
+                           {0xE9, 0x5B, 0xC9, 0xE2, 0x08},  // jmp 0x997A230
+                           {0xE9, 0x9B, 0xF8, 0x98, 0x0A},  // jmp 0xCD8D560
+                           kGateHead3527, sizeof kGateHead3527,
+                           {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF, 0xE8, 0xDD, 0x14, 0xBD, 0x01, 0x45, 0x89, 0x26},
+                           0x13C, 0x140, 0xD0, 0x5B3440, 0x98F8A0};
+// 1.0.0.3549: the same table; only the two thunks' rel32 moved with the protected section.
+constexpr Addrs kAddrs3549{0x23FD080, 0xB4D8D0, 0x23FDCC0, 0xB4D8F0, 0x74FBB0, 0x750B80, 0xCD89E0, 0xCD94B0, 0xC64250, 0x5595000,
+                           0x251A350, 0x948E73, 0x948E66, 0x207A756, 0x976320, 0xB4DD20,
+                           {0xE9, 0x7B, 0x20, 0xD5, 0x08},  // jmp 0x989F950
+                           {0xE9, 0x5B, 0x2A, 0x94, 0x0A},  // jmp 0xCD40720
+                           kGateHead3527, sizeof kGateHead3527,
+                           {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF, 0xE8, 0xDD, 0x14, 0xBD, 0x01, 0x45, 0x89, 0x26},
+                           0x13C, 0x140, 0xD0, 0x5B3440, 0x98F8A0};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). Vtables by RTTI name (vtable_map_3549_3576.json): ClientVehicle
+// 0x5946C98 slots 53/54 = the thunk 0xB4DCF0 (`jmp 0x99BB920`, protected) and 0xB4DD10 (+0x420), CommonVehicle 0x5CF1D38
+// slot 53 = 0x23FDDC0 (+0xD40), RideOn 0x59268E8 / RideOff 0x5926940 slot 7 = 0x750210 / 0x7511E0 (+0x660); the three
+// handlers are slot 2 of their Troc singletons' vtables (StartActionAck 0x599BCB0, InteractionPreemptionStepSuccessAck
+// 0x59996B0, InteractionDoStepSuccessAck 0x59996F0): 0xC64670 / 0xCD8E00 / 0xCD98D0 (+0x420). Every head above is the
+// same bytes. The RideOff thunk: vf53's call `lea rcx,[rsp+40h]; ... mov byte [rsp+20h],0Eh; call` at 0x23FDFCA ->
+// 0x23FEA20 (`jmp 0xCD5F320`; 13 callers). NOTE: in 3527 that call was vf53+0x1F6 and the thunk vf53+0xC40; here
+// +0x20A and +0xC60, so vf53's body is 0x14 bytes longer before it (not byte-compared: the 3527 exe is gone; its head,
+// its arguments and that call's arguments are 3527's). Gate (fix B) 0x251B120 (+0xDD0, same 16-byte head), its call
+// site 0x9491D6 (+0x370; `call` lands on 0x251B120, return 0x9491E3), the network mark 0x207B396 (+0xC40, the only
+// match in the code); the mode-2 update 0x976690 (+0x370) and the action request 0xB4E140 (+0x420), same heads.
+// vf178 (slot +0x178): 0x5B3AA0 of ClientActor / ClientNormalInGameActor / ClientChildOnlyInGameActor (reads
+// [[0x71C0100]+0x30]+0x58 vs [this+0xA0], then [this+0x94]) and 0x98FC10 of ClientUserActor (`movzx eax,[rcx+94h]`).
+// RideOff::Enter still writes the horse key at +0xD0 (0x751403 = 3527's 0x750DA3 + 0x660); the movement controller's
+// method byte +0x13C and table +0x140 are in remote_motion's verified gate bytes (+0x13C, +0x168 = slot 5).
+constexpr Addrs kAddrs3576{0x23FDDC0, 0xB4DCF0, 0x23FEA20, 0xB4DD10, 0x750210, 0x7511E0, 0xCD8E00, 0xCD98D0, 0xC64670, 0x5597000,
+                           0x251B120, 0x9491E3, 0x9491D6, 0x207B396, 0x976690, 0xB4E140,
+                           {0xE9, 0x2B, 0xDC, 0xE6, 0x08},  // jmp 0x99BB920
+                           {0xE9, 0xFB, 0x08, 0x96, 0x0A},  // jmp 0xCD5F320
+                           kGateHead3527, sizeof kGateHead3527,
+                           {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF, 0xE8, 0x3D, 0x1F, 0xBD, 0x01, 0x45, 0x89, 0x26},
+                           0x13C, 0x140, 0xD0, 0x5B3AA0, 0x98FC10};
+const Addrs& addrs() noexcept {
+    static const Addrs& a = game::current_build() == game::Build::v3576 ? kAddrs3576
+                            : game::is_3549()                           ? kAddrs3549
+                            : game::current_build() == game::Build::v3527 ? kAddrs3527
+                                                                          : kAddrs2976;
+    return a;
+}
 
 // P8 S18 fix B (pendientes/p8-s18-desmontar-nativo.md §6, mount_sync_logic.h "the request gate") [V, capstone on the
 // installed PE]: the thunk 0x2329A90 `jmp 0xEE58A40` (5 B, a function start in .rsrc; no E8/E9 lands in +1..+4); its
 // network caller 0x863880 calls it at 0x8639C8 (`lea rdx,[rsp+0x20]; mov rcx,r15; call 0x2329A90; mov [r14],r12d`),
 // so the detour's return address is exe+0x8639CD; 0x1EC9C26 `or r8b,2; or [rcx+0x50],r8b` marks every received entry.
-constexpr uint8_t kThunkGate[] = {0xE9, 0xAB, 0xEF, 0xB2, 0x0C};  // jmp 0xEE58A40 (.xtls, never touched)
-constexpr uintptr_t kGateThunk = 0x2329A90, kGateNetRet = 0x8639CD, kGateCallSite = 0x8639C0, kGateNetOr = 0x1EC9C26;
-constexpr uint8_t kGateCallSiteBytes[] = {0x48, 0x8D, 0x54, 0x24, 0x20, 0x49, 0x8B, 0xCF,
-                                          0xE8, 0xC3, 0x60, 0xAC, 0x01, 0x45, 0x89, 0x26};
 constexpr uint8_t kGateNetOrBytes[] = {0x41, 0x80, 0xC8, 0x02, 0x44, 0x08, 0x41, 0x50};
 // CC fields the gate reads [V 0xEE58A40]: [CC+8] actor, [CC+0x80] pending entries, CC+0xA8 "pending taken" flag.
 constexpr uint32_t kCcActor = 0x08, kCcPending = 0x80, kCcPendingBusy = 0xA8;
-constexpr uint32_t kMcMethods = 0xF8, kRideOffHorseKey = 0xD4;  // [mc+0xF8+8*method]; RideOff's cached horse key
 constexpr uint32_t kActorChartGate = 0x96;  // 0x85FBA0: a player-type actor runs its chart only if != 0
 
 // Offsets [V, mounts-20261011 native/INFORME.txt §2-§6; remote_motion.cpp].
@@ -75,7 +135,7 @@ constexpr uint32_t kCompsCC = 0x40, kCompsVehicle = 0x48;
 constexpr uint32_t kVcActor = 0x08, kVcLink = 0x18, kVcSeats = 0x48, kVcReserves = 0x88, kVcCount = 0xC8, kVcHasSeats = 0xEB;
 constexpr uint32_t kLinkResVehicle = 0x08, kLinkResSeat = 0x0C, kLinkVehicle = 0x10, kLinkSeat = 0x14;
 constexpr uint32_t kMethodActor = 0x20;
-constexpr uint32_t kCcMc = 0xC8, kMcMethod = 0xF0, kCcLayer0 = 0x88, kCcLayer1 = 0x90, kLayerCurrent = 0x10, kActionHash = 0x18;
+constexpr uint32_t kCcMc = 0xC8, kCcLayer0 = 0x88, kCcLayer1 = 0x90, kLayerCurrent = 0x10, kActionHash = 0x18;
 constexpr uint32_t kPktBuffer = 0x18;  // the handlers' R8: [R8+0x18] = header (u16 op, i8 slot, u16 len) + payload
 // ClientActorManager hash table (game/actor_lookup.cpp).
 constexpr uint32_t kMgrTable = 0x08, kTableBucketCount = 0x88, kTableBuckets = 0x98, kTableNodes = 0xA0;
@@ -89,13 +149,11 @@ constexpr uint32_t kCcAttach = 0x100, kAttachType = 0x08, kCc228 = 0x228, kComps
                    kActorTypeTab = 0x88, kMcCc = 0x60, kHierType = 0x18, kActorLocalCtl = 0x94;
 // TransformSync (+0xB4 sector-local position, +0xC0 sector x/z, +0xA4 rotation; read_world, hold_after).
 constexpr uint32_t kCompsTs = 0x1A0, kTsQuat = 0xA4, kTsPos = 0xB4, kTsSector = 0xC0;
-constexpr uintptr_t kHoldUpdate = 0x88E6A0;
 // P8 S22 [V Ghidra + capstone]: vf54 ends with `if (rider->vf178()) 0xA45AC0(rider vc, horse key, 1)`, an action
 // request launched on the LOCAL player's components (vf42's tail does the same with 0 on dismount, .xtls 0x9DCF13B).
 // Every client in-game actor class has vf178 = 0x4FE260: `[this+0xA0] == [[WorldSystem+0x30]+0x58] && [this+0x94]`
 // (the remote player's character reads +0x94 = 1, but its +0xA0 is the other user). Judged by msl::seat_local_user;
 // a veto at 0xA45AC0's entry (2 callers, cold) drops any such request for the remote player's character (expected 0).
-constexpr uintptr_t kActionReq = 0xA45AC0;
 constexpr uint8_t kActionReqBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x20, 0x55, 0x57, 0x41, 0x56};
 constexpr uint32_t kActorUser = 0xA0, kMgrLocalUser = 0x58;
 constexpr uint8_t kHoldEntry[] = {0x48, 0x8B, 0xC4, 0x48, 0x89, 0x58, 0x10, 0x48, 0x89, 0x70,
@@ -236,9 +294,14 @@ uintptr_t vc_of(uintptr_t actor) noexcept {
     return comps ? rdp(comps + kCompsVehicle) : 0;
 }
 
+uintptr_t world_slot() noexcept {
+    const auto* profile = game::reader_profile();
+    return g_base + (profile ? profile->world_system : off::kWorldSystemSlot);
+}
+
 uintptr_t find_actor(uint32_t key) noexcept {
     if (!key) return 0;
-    const uintptr_t world = rdp(g_base + off::kWorldSystemSlot);
+    const uintptr_t world = rdp(world_slot());
     const uintptr_t mgr = world ? rdp(world + off::kWorldSystem_ActorManager) : 0;
     const uintptr_t table = mgr ? rdp(mgr + kMgrTable) : 0;
     const uint32_t buckets = table ? rdv<uint32_t>(table + kTableBucketCount) : 0;
@@ -315,10 +378,10 @@ msl::PairState read_pair(uintptr_t rider, uintptr_t horse, uintptr_t horse_vc, u
         const uintptr_t rcc = rcomps ? rdp(rcomps + kCompsCC) : 0;
         const uintptr_t mc = rcc ? rdp(rcc + kCcMc) : 0;
         if (mc) {
-            s.rider_method = rdv<uint8_t>(mc + kMcMethod, 0xFF);
+            s.rider_method = rdv<uint8_t>(mc + addrs().mc_method, 0xFF);
             if (s.rider_method == msl::kMethodRideOff) {
-                const uintptr_t m7 = rdp(mc + kMcMethods + 8ull * msl::kMethodRideOff);
-                s.rideoff_key = m7 ? rdv<uint32_t>(m7 + kRideOffHorseKey) : 0;
+                const uintptr_t m7 = rdp(mc + addrs().mc_methods + 8ull * msl::kMethodRideOff);
+                s.rideoff_key = m7 ? rdv<uint32_t>(m7 + addrs().rideoff_key) : 0;
             }
         }
     }
@@ -347,7 +410,7 @@ void read_actions(uintptr_t actor, uint8_t& method, uint32_t& a0, uint32_t& a1) 
     const uintptr_t cc = comps ? rdp(comps + kCompsCC) : 0;
     if (!cc) return;
     const uintptr_t mc = rdp(cc + kCcMc);
-    if (mc) method = rdv<uint8_t>(mc + kMcMethod, 0xFF);
+    if (mc) method = rdv<uint8_t>(mc + addrs().mc_method, 0xFF);
     for (int i = 0; i < 2; ++i) {
         const uintptr_t layer = rdp(cc + (i ? kCcLayer1 : kCcLayer0));
         const uintptr_t cur = layer ? rdp(layer + kLayerCurrent) : 0;
@@ -397,7 +460,7 @@ RiderProbe probe_cc(uintptr_t cc, uintptr_t actor) noexcept {
     const uintptr_t mc = cc ? rdp(cc + kCcMc) : 0;
     if (!mc) return p;
     p.ok = true;
-    p.method = rdv<uint8_t>(mc + kMcMethod, 0xFF);
+    p.method = rdv<uint8_t>(mc + addrs().mc_method, 0xFF);
     for (int i = 0; i < 2; ++i) {
         if (const uintptr_t d = layer_def(cc, i)) {
             p.hash[i] = rdv<uint32_t>(d + kActionHash);
@@ -408,8 +471,8 @@ RiderProbe probe_cc(uintptr_t cc, uintptr_t actor) noexcept {
     p.busy = rdv<uint8_t>(cc + kCcPendingBusy, 0xFF);
     p.chart = rdv<uint8_t>(actor + kActorChartGate, 0xFF);
     if (p.method == msl::kMethodRideOff) {
-        const uintptr_t m7 = rdp(mc + kMcMethods + 8ull * msl::kMethodRideOff);
-        p.rideoff_key = m7 ? rdv<uint32_t>(m7 + kRideOffHorseKey) : 0;
+        const uintptr_t m7 = rdp(mc + addrs().mc_methods + 8ull * msl::kMethodRideOff);
+        p.rideoff_key = m7 ? rdv<uint32_t>(m7 + addrs().rideoff_key) : 0;
     }
     return p;
 }
@@ -455,8 +518,11 @@ msl::SeatState read_seat(uintptr_t rider, uintptr_t horse) noexcept {
     // P8 S22: the rider's vf178 and what it would answer (msl::seat_local_user): vf54's local action request.
     const uintptr_t vt = rider ? rdp(rider) : 0;
     s.vf178 = vt ? rva_of(rdp(vt + 0x178)) : 0;
+    // msl::seat_local_user speaks the 2976 addresses.
+    if (s.vf178 == addrs().vf178_actor) s.vf178 = msl::kVf178Actor;
+    else if (s.vf178 == addrs().vf178_user) s.vf178 = msl::kVf178User;
     s.rider_user = rider ? rdv<uint64_t>(rider + kActorUser) : 0;
-    const uintptr_t world = rdp(g_base + off::kWorldSystemSlot);
+    const uintptr_t world = rdp(world_slot());
     const uintptr_t mgr = world ? rdp(world + off::kWorldSystem_ActorManager) : 0;
     s.local_user = mgr ? rdv<uint64_t>(mgr + kMgrLocalUser) : 0;
     s.rider_c8 = rider ? rdv<uint8_t>(rider + kActorC8, 0xFF) : 0xFF;
@@ -470,7 +536,7 @@ void publish_phase(const msl::Txn* cur) noexcept {
     g_remote_horse.store(cur ? cur->horse : 0, std::memory_order_relaxed);
 }
 
-uint32_t rva_of(uintptr_t va) { return va >= g_base && va < g_base + 0x10000000 ? static_cast<uint32_t>(va - g_base) : 0; }
+uint32_t rva_of(uintptr_t va) { return va >= g_base && va < g_base + 0x13EB2000 ? static_cast<uint32_t>(va - g_base) : 0; }
 
 void diag(uint16_t kind, p8p::Event& e) noexcept {
     e.kind = kind;
@@ -831,7 +897,7 @@ __declspec(noinline) uintptr_t gate_network(uintptr_t cc, uintptr_t entries, uin
 uintptr_t __fastcall gate_detour(uintptr_t cc, uintptr_t entries, uint64_t r8, uint64_t r9) {
     // Review (9): every other caller (the local chart 0x232D4C1 of every actor, 0xA7A10E, .xtls) leaves at once,
     // untouched, before anything else (no freeze mark).
-    if (reinterpret_cast<uintptr_t>(_ReturnAddress()) != g_base + kGateNetRet || mode() != Mode::On ||
+    if (reinterpret_cast<uintptr_t>(_ReturnAddress()) != g_base + addrs().gate_ret || mode() != Mode::On ||
         g_gate_off.load(std::memory_order_relaxed)) {
         return g_h_gate.unsafe_call<uintptr_t>(cc, entries, r8, r9);
     }
@@ -1310,9 +1376,12 @@ void do_detach(const msl::Txn& t) noexcept {
 
 // ---------------------------------------------------------------- 0xB57720 StartActionAck 2991 handler (self, res, pkt)
 
+// The native payload layout: 3576's is 3527's (game::wire_build()).
+size_t ack_size() noexcept { return movement::payload_size(game::wire_build(), 2991); }
+
 bool guarded_rewrite(uintptr_t payload, rfl::Kind kind) noexcept {
     __try {
-        return rfl::rewrite(reinterpret_cast<uint8_t*>(payload), rfl::kAckSize, kind);
+        return rfl::rewrite(reinterpret_cast<uint8_t*>(payload), ack_size(), kind, game::wire_build());
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         return false;
     }
@@ -1480,15 +1549,16 @@ DispatchNote on_dispatch(uintptr_t pkt) noexcept {
     ctl_watch(now);
     geo_sample(now);
     const uintptr_t buf = rdp(pkt + kPktBuffer);
-    if (!buf || rdv<uint16_t>(buf + 3) != rfl::kAckSize) return dn;
+    const size_t ack_len = ack_size();
+    if (!buf || ack_len > 1024 || rdv<uint16_t>(buf + 3) != ack_len) return dn;
     const uintptr_t payload = buf + rfl::kHeader;
     const uint32_t key = rdv<uint32_t>(payload);
     const uint32_t remote = remote_key();
     // The remote rider's own action: read first, so that its on-foot / mounted state counts at THIS dispatch,
     // before its handler (an observed Detach is retired before the first on-foot action runs, review (4)).
-    uint8_t copy[rfl::kAckSize];
-    const bool mine = remote && key == remote && game::fast_read(payload, copy, sizeof copy);
-    const rfl::Ack ack = mine ? rfl::read_ack(copy, sizeof copy) : rfl::Ack{};
+    uint8_t copy[1024];
+    const bool mine = remote && key == remote && game::fast_read(payload, copy, ack_len);
+    const rfl::Ack ack = mine ? rfl::read_ack(copy, ack_len, game::wire_build()) : rfl::Ack{};
     const bool on_foot = ack.parent == ~0ull;
     if (mine) {
         const bool mounted = !on_foot && msl::is_b(static_cast<uint32_t>(ack.parent));
@@ -1691,6 +1761,7 @@ void after_dispatch(const DispatchNote& dn) noexcept {
 uintptr_t __fastcall h2991_detour(uintptr_t self, int32_t* res, uintptr_t pkt, uint64_t a4) {
     const FreezeMark mark(g_mark[8]);
     if (!g_main_tid.load(std::memory_order_relaxed)) g_main_tid.store(GetCurrentThreadId(), std::memory_order_relaxed);
+    focus_follow_on_dispatch();  // the client's main thread: the other player's character (focus_follow.h)
     DispatchNote dn;
     if (mode() != Mode::Off && g_code_ok.load(std::memory_order_acquire)) dn = on_dispatch(pkt);
     t_gate_unlocked = false;
@@ -1709,9 +1780,9 @@ bool bytes_at(uintptr_t rva, const uint8_t* bytes, size_t len) {
 
 bool install_one(std::span<const gad::Section> secs, const Point& pt, void* detour, SafetyHookInline& out,
                  std::atomic<bool>& on, uint16_t& mark) {
-    if (pt.rva < 0x1000 || pt.rva + pt.len > kCodeEnd ||
+    if (pt.rva < 0x1000 || pt.rva + pt.len > addrs().code_end ||
         !gad::in_real_code(secs, static_cast<uint32_t>(pt.rva), pt.len) || !bytes_at(pt.rva, pt.bytes, pt.len)) {
-        log::error("MountSync: {} (exe+0x{:X}, {} bytes) is not build 2976's .rsrc code; REFUSED, nothing written",
+        log::error("MountSync: {} (exe+0x{:X}, {} bytes) is not this build's .rsrc code; REFUSED, nothing written",
                    pt.what, pt.rva, pt.len);
         return false;
     }
@@ -2060,32 +2131,28 @@ void expire_tick() {
 
 DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
-    if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
-        !p8_exe_sections(g_base, secs)) {
+    if ((!game::legacy_layout() && game::current_build() != game::Build::v3576) || !p8_exe_sections(g_base, secs)) {
         log::error("MountSync: unsupported game build or unreadable sections; nothing installed");
         return 0;
     }
     for (int i = 0; i < 1200; ++i) {  // WorldSystem (up to 10 minutes), as the other P8 modules
         uintptr_t world = 0;
-        if (game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world) break;
+        if (game::safe_read(world_slot(), &world, sizeof world) && world) break;
         Sleep(500);
     }
-    g_vf53 = reinterpret_cast<Vf53Fn>(g_base + kCommonVf53);
-    g_rideoff = reinterpret_cast<RideOffFn>(g_base + kRideOffThunk);
+    g_vf53 = reinterpret_cast<Vf53Fn>(g_base + addrs().common_vf53);
+    g_rideoff = reinterpret_cast<RideOffFn>(g_base + addrs().rideoff_thunk);
     const Point pts[] = {
-        {kCommonVf53, 7, kEntry7, sizeof kEntry7, "CommonVehicle::vf53 0x2228260 (MountBegin/MountCommit)"},
-        {kClientVf53, 5, kThunkVf53, sizeof kThunkVf53, "the ClientVehicle vf53 thunk 0xA45740 (jmp 0x9DC90A0)"},
-        {kRideOffThunk, 5, kThunkRideOff, sizeof kThunkRideOff, "the CommonVehicle RideOff thunk 0x2228E40 (MountDetach)"},
-        {kClientVf54, 5, kVf54, sizeof kVf54, "ClientVehicle vf54 0xA45760"},
-        {kRideOnEnter, 7, kRideEnter, sizeof kRideEnter, "RideOn::Enter 0x681C80"},
-        {kRideOffEnter, 7, kRideEnter, sizeof kRideEnter, "RideOff::Enter 0x682C20"},
-        {kH2663, 5, kHandler, sizeof kHandler, "the 2663 InteractionPreemptionStepSuccessAck handler 0xBB4130"},
-        {kH2916, 5, kHandler, sizeof kHandler, "the 2916 InteractionDoStepSuccessAck handler 0xBB4AC0"},
-        {kH2991, 5, kHandler, sizeof kHandler, "the 2991 StartActionAck handler 0xB57720 (apply point)"},
+        {addrs().common_vf53, 7, kEntry7, sizeof kEntry7, "CommonVehicle::vf53 0x2228260 (MountBegin/MountCommit)"},
+        {addrs().client_vf53, 5, addrs().thunk_vf53, sizeof addrs().thunk_vf53, "the ClientVehicle vf53 thunk 0xA45740 (jmp 0x9DC90A0)"},
+        {addrs().rideoff_thunk, 5, addrs().thunk_rideoff, sizeof addrs().thunk_rideoff, "the CommonVehicle RideOff thunk 0x2228E40 (MountDetach)"},
+        {addrs().client_vf54, 5, kVf54, sizeof kVf54, "ClientVehicle vf54 0xA45760"},
+        {addrs().ride_on, 7, kRideEnter, sizeof kRideEnter, "RideOn::Enter 0x681C80"},
+        {addrs().ride_off, 7, kRideEnter, sizeof kRideEnter, "RideOff::Enter 0x682C20"},
+        {addrs().h2663, 5, kHandler, sizeof kHandler, "the 2663 InteractionPreemptionStepSuccessAck handler 0xBB4130"},
+        {addrs().h2916, 5, kHandler, sizeof kHandler, "the 2916 InteractionDoStepSuccessAck handler 0xBB4AC0"},
+        {addrs().h2991, 5, kHandler, sizeof kHandler, "the 2991 StartActionAck handler 0xB57720 (apply point)"},
     };
     void* detours[] = {reinterpret_cast<void*>(&common_detour),  reinterpret_cast<void*>(&thunk_detour),
                        reinterpret_cast<void*>(&rideoff_detour), reinterpret_cast<void*>(&vf54_detour),
@@ -2104,18 +2171,20 @@ DWORD WINAPI install_thread(LPVOID) {
             continue;
         }
         const bool ok = install_one(secs, pts[i], detours[i], *order[i], *ons[i], g_mark[i]);
-        summary += std::format("{}{} {}", summary.empty() ? "" : ", ", pts[i].what, ok ? "hooked" : "REFUSED");
+        // The names carry 2976's addresses; the address actually used is this build's (exe+...).
+        summary += std::format("{}{} [this build: exe+0x{:X}] {}", summary.empty() ? "" : ", ", pts[i].what, pts[i].rva,
+                               ok ? "hooked" : "REFUSED");
     }
     // P8 S18 fix B: only with mount_sync=1 and ride_dismount=native; the call site and the network mark verified too.
     std::string gate_text;
     if (mode() == Mode::On && ride_dismount_mode() == rfl::Dismount::Native) {
-        if (!bytes_at(kGateCallSite, kGateCallSiteBytes, sizeof kGateCallSiteBytes) ||
-            !bytes_at(kGateNetOr, kGateNetOrBytes, sizeof kGateNetOrBytes)) {
+        if (!bytes_at(addrs().gate_site, addrs().gate_site_bytes, sizeof addrs().gate_site_bytes) ||
+            !bytes_at(addrs().gate_or, kGateNetOrBytes, sizeof kGateNetOrBytes)) {
             log::error("MountSync: the 0x863880 call site (exe+0x8639C0) or the network mark (exe+0x1EC9C26) is not build "
                        "2976's; the gate detour (fix B) is REFUSED, nothing written");
             gate_text = "gate detour 0x2329A90 REFUSED (context bytes)";
         } else {
-            const Point gp{kGateThunk, 5, kThunkGate, sizeof kThunkGate,
+            const Point gp{addrs().gate, 5, addrs().gate_head, addrs().gate_head_len,
                            "the CC request gate thunk 0x2329A90 (jmp 0xEE58A40; fix B)"};
             const bool ok = install_one(secs, gp, reinterpret_cast<void*>(&gate_detour), g_h_gate, g_on_gate, g_mark[9]);
             gate_text = std::format("{} {}", gp.what, ok ? "hooked" : "REFUSED");
@@ -2127,7 +2196,7 @@ DWORD WINAPI install_thread(LPVOID) {
     summary += ", " + gate_text;
     // P8 S21 ride_hold_pos (probe or 1): the mode-2 movement update's entry, its bytes verified like every point.
     if (hold_mode() != Mode::Off) {
-        const Point hp{kHoldUpdate, 7, kHoldEntry, sizeof kHoldEntry,
+        const Point hp{addrs().hold, 7, kHoldEntry, sizeof kHoldEntry,
                        "the mode-2 movement update 0x88E6A0 (ride_hold_pos)"};
         const bool ok = install_one(secs, hp, reinterpret_cast<void*>(&hold_detour), g_h_hold, g_on_hold, g_mark[10]);
         summary += std::format(", {} {} ({})", hp.what, ok ? "hooked" : "REFUSED", msl::mode_name(hold_mode()));
@@ -2136,7 +2205,7 @@ DWORD WINAPI install_thread(LPVOID) {
     }
     // P8 S23 mount_seat=1 only: the riding action request's entry (14 verified bytes, 5 patched).
     if (seat_mode() == Mode::On) {
-        const Point ap{kActionReq, 5, kActionReqBytes, sizeof kActionReqBytes,
+        const Point ap{addrs().action_req, 5, kActionReqBytes, sizeof kActionReqBytes,
                        "the riding action request 0xA45AC0 (mount_seat: never for the other player's character)"};
         const bool ok = install_one(secs, ap, reinterpret_cast<void*>(&actreq_detour), g_h_actreq, g_on_actreq, g_mark[11]);
         summary += std::format(", {} {}", ap.what, ok ? "hooked" : "REFUSED");
@@ -2269,6 +2338,7 @@ void mount_sync_start(const std::string& raw, bool guest, const std::string& sea
 }
 
 bool mount_sync_active() { return mode() != Mode::Off; }
+uintptr_t mount_sync_find_actor(uint32_t key) noexcept { return find_actor(key); }
 bool mount_sync_live() { return mode() == Mode::On; }
 bool mount_sync_rides(uint32_t key) noexcept {
     if (!key || mode() == Mode::Off) return false;
@@ -2280,12 +2350,12 @@ bool mount_sync_rides(uint32_t key) noexcept {
 std::string mount_sync_hud_problem() {
     if (mode() == Mode::Off) return {};
     if (g_ctl_no_publish.load(std::memory_order_relaxed)) {
-        return "Monturas: este PC no publica las suyas (gancho 0x2228260 sin instalar): el otro jugador te verá "
-               "fuera de la silla";
+        return "Mounts: this PC does not publish its own (hook 0x2228260 not installed): the other player will see you "
+               "out of the saddle";
     }
     const uint64_t peer = g_peer_no_publish_ms.load(std::memory_order_relaxed);
     if (peer && now_ms() - peer < msl::kStatusShowMs) {
-        return "Monturas: el otro PC no publica las suyas: su jinete no se sentará en tu pantalla";
+        return "Mounts: the other PC does not publish its own: its rider will not sit on your screen";
     }
     return {};
 }

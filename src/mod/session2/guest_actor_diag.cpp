@@ -13,6 +13,7 @@
 #include <string_view>
 #include <vector>
 
+#include "mod/game/character_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
@@ -217,6 +218,7 @@ bool read_sections() {
         std::memcpy(s.name, h.Name, 8);
         s.va = h.VirtualAddress;
         s.size = h.Misc.VirtualSize;
+        s.flags = h.Characteristics;
         g_secs.push_back(s);
     }
     return !g_secs.empty();
@@ -224,12 +226,12 @@ bool read_sections() {
 
 std::string rsrc_text() {
     for (const gad::Section& s : g_secs) {
-        if (std::string_view(s.name) == ".rsrc") {
-            return std::format("hooked bytes checked inside .rsrc [exe+0x{:X}, exe+0x{:X})", s.va,
+        if (gad::is_real_code(s)) {
+            return std::format("hooked bytes checked inside {} [exe+0x{:X}, exe+0x{:X})", s.name, s.va,
                                static_cast<uint64_t>(s.va) + s.size);
         }
     }
-    return "no .rsrc section";
+    return "no real code section";
 }
 
 // The hook's patched bytes must be real code: .rsrc, never .xtls.
@@ -271,8 +273,24 @@ const Check kRestoreChecks[] = {{cmp::kRestoreSite, cmp::kRestoreSiteBytes},
                                 {cmp::kRestartCall, cmp::kRestartCallBytes},
                                 {cmp::kRestoreExit, cmp::kRestoreExitBytes}};
 const Check kWaitChecks[] = {{kStateSite, kStateSiteBytes}, {kWaitSite, kWaitSiteBytes}, {kFind, kFindBytes}};
-const Check kGuardChecks[] = {{g2976::kActionLayerAdvance, g2976::kActionLayerAdvanceHead},
-                              {g2976::kActionLayersAdvance, g2976::kActionLayersAdvanceHead}};
+bool guard_checks_match() {
+    return game::character_profile::matches(g_base, g2976::kActionLayerAdvance,
+                                            g2976::kActionLayerAdvanceHead) &&
+           game::character_profile::matches(g_base, g2976::kActionLayersAdvance,
+                                            g2976::kActionLayersAdvanceHead);
+}
+
+std::string guard_mismatch() {
+    if (!game::character_profile::matches(g_base, g2976::kActionLayerAdvance,
+                                          g2976::kActionLayerAdvanceHead)) {
+        return std::format("exe+0x{:X}", game::character_profile::rva(g2976::kActionLayerAdvance));
+    }
+    if (!game::character_profile::matches(g_base, g2976::kActionLayersAdvance,
+                                          g2976::kActionLayersAdvanceHead)) {
+        return std::format("exe+0x{:X}", game::character_profile::rva(g2976::kActionLayersAdvance));
+    }
+    return "none";
+}
 
 // ---------------------------------------------------------------- 1. FinishGroup's error
 
@@ -503,9 +521,21 @@ void on_guard_skip(uint32_t key, uint32_t control) noexcept {
 
 void refresh_local() noexcept {
     try {
-        const auto ws = game::read_ptr(g_base + g2976::kWorldSystemSlot);
+        // Build 1.0.0.3576 (static, 2026-11-06; not yet run): no reader profile yet; world slot 0x71C0100
+        // (core_globals_3576.json), ClientActorManager vtable 0x5946C40 (RTTI).
+        uintptr_t world_slot = 0, vt_mgr = 0;
+        if (game::current_build() == game::Build::v3576) {
+            world_slot = 0x71C0100;
+            vt_mgr = 0x5946C40;
+        } else if (const auto* profile = game::reader_profile()) {
+            world_slot = profile->world_system;
+            vt_mgr = profile->vt_actor_manager;
+        } else {
+            return;
+        }
+        const auto ws = game::read_ptr(g_base + world_slot);
         const auto mgr = ws ? game::read_ptr(*ws + g2976::kWorldSystem_ActorManager) : std::nullopt;
-        if (!mgr || !game::has_vtable(*mgr, g_base + g2976::kVtClientActorManager)) return;
+        if (!mgr || !game::has_vtable(*mgr, g_base + vt_mgr)) return;
         const auto ctrl = game::read_ptr(*mgr + g2976::kActorManager_ControlledActor);
         uint32_t key = 0;
         if (!ctrl || !peek(*ctrl + g2976::kActor_OwnerUser, key)) return;
@@ -729,36 +759,57 @@ void install_diag() {
 }
 
 void install_guard() {
-    const bool sections = code_section_ok(g2976::kActionLayerAdvance, sizeof g2976::kActionLayerAdvanceHead,
-                                          "ActionLayer AdvancePlayback 0x1F63F70") &&
-                          code_section_ok(g2976::kActionLayersAdvance, sizeof g2976::kActionLayersAdvanceHead,
-                                          "CharacterControl AdvanceActionLayers 0x2329700");
-    if (!sections || !all_match(kGuardChecks) || !net::puppet_install_layer_guards()) {
+    const uintptr_t layer = game::character_profile::rva(g2976::kActionLayerAdvance);
+    const uintptr_t layers = game::character_profile::rva(g2976::kActionLayersAdvance);
+    const auto layer_sig = game::character_profile::signature(g2976::kActionLayerAdvance,
+                                                               g2976::kActionLayerAdvanceHead);
+    const auto layers_sig = game::character_profile::signature(g2976::kActionLayersAdvance,
+                                                                g2976::kActionLayersAdvanceHead);
+    const bool sections = layer && layers && !layer_sig.empty() && !layers_sig.empty() &&
+                          code_section_ok(layer, static_cast<uint32_t>(layer_sig.size()),
+                                          "ActionLayer AdvancePlayback") &&
+                          code_section_ok(layers, static_cast<uint32_t>(layers_sig.size()),
+                                          "CharacterControl AdvanceActionLayers");
+    if (!sections || !guard_checks_match() || !net::puppet_install_layer_guards()) {
         log::error("GuestDiag: the action-layer guard could NOT be installed ({}); remote actors stay unguarded",
-                   !sections ? "outside .rsrc" : first_mismatch(kGuardChecks));
+                   !sections ? "outside .rsrc or no build profile" : guard_mismatch());
         return;
     }
     g_guard_on = true;
-    log::info("GuestDiag guard ON: 0x1F63F70 returns at once on any layer with no playback; 0x2329700 skips the "
+    log::info("GuestDiag guard ON: exe+0x{:X} returns at once on any layer with no playback; exe+0x{:X} skips the "
               "layer update of every actor whose +0x90 is not the local user key while a layer has a chart and no "
               "action. Armed when the local user key is known | {}",
-              rsrc_text());
+              layer, layers, rsrc_text());
     if (const uint32_t local = g_local.load()) net::puppet_guard_not_controlled_by(local, &on_guard_skip);
 }
 
-// S34 (s33-npc-implementacion.md, "Cierre de Shadow S34 paso 1, 0x88F832"): once the local user key is known (the
-// world and the guest's character exist), horse_diag's containment for every actor another user controls. Its two
-// hooks sit at function entries (0x85FBA0, 0x860D30), bytes checked by horse_diag; guest_s3 leaves 0x85FBA0 to it.
+// The complete build-specific guard set is required before remote admission.
+// Its ownership filtering activates separately when the local user is known.
+// All hooks sit at checked function entries; guest_s3 leaves Update to them.
 void install_remote_update_guard() {
     g_rug_tried = true;
     if (!net::horse_diag_install_remote()) {
-        log::error("RemoteUpdateGuard: CharacterControl::Update 0x85FBA0 / PostUpdate 0x860D30 could NOT be hooked; "
-                   "actors other users control stay uncontained there (guest_remote_update_guard=1)");
+        log::error("RemoteUpdateGuard: the complete requested character guard set could NOT be installed; "
+                   "remote admission remains closed (guest_remote_update_guard=1)");
         return;
     }
     const uint32_t local = g_local.load();
     net::horse_diag_contain_remote(local);
     g_rug_on = true;
+    if (game::current_build() == game::Build::v3576) {
+        log::info("RemoteUpdateGuard ON for 3576: Update, PostUpdate, movement phase and action query at "
+                  "character_profile's 3576 addresses; local user 0x{:08X}. Missing selected action/playback defers "
+                  "remote movement; native action restore remains active",
+                  local);
+        return;
+    }
+    if (game::current_build() == game::Build::v3527) {
+        log::info("RemoteUpdateGuard ON for 3527: Update exe+0x944E70, PostUpdate exe+0x946060, "
+                  "movement phase exe+0x94F7F0 and action query exe+0xB0B230; local user 0x{:08X}. "
+                  "Missing selected action/playback defers remote movement; native action restore remains active",
+                  local);
+        return;
+    }
     log::info("RemoteUpdateGuard ON (guest_remote_update_guard=1, S34): CharacterControl::Update 0x85FBA0 and "
               "PostUpdate 0x860D30 return at once for every actor whose controller (+0x90) is a user other than the "
               "local one 0x{:08X} while a layer has a chart and no current action or playback (Shadow's crash at "
@@ -769,12 +820,18 @@ void install_remote_update_guard() {
 
 DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    if (g_base != off::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    const game::Build build = game::current_build();
+    // Build 1.0.0.3576 (static, 2026-11-06): this module installs nothing of its own there (the probes stay off, as on
+    // 3527); the layer guard and the remote update guard go through character_profile / remote_puppet / horse_diag,
+    // which refuse 3576 until they are ported. Only the local user key is read (refresh_local).
+    if (build == game::Build::unsupported || !(game::legacy_layout() || build == game::Build::v3576)) {
         log::error("GuestDiag: unsupported game build; guest_actor_diag / guest_layer_guard stay off");
         return 0;
+    }
+    if ((build == game::Build::v3527 || build == game::Build::v3576) && g_diag.exchange(false)) {
+        log::warn("GuestDiag: optional guest_actor_diag probes are not ported to build {} and stay off; required "
+                  "guest guards remain enabled",
+                  build == game::Build::v3576 ? 3576 : 3527);
     }
     if (!read_sections()) {
         log::error("GuestDiag: the game's section table is unreadable; nothing is hooked");
@@ -783,18 +840,21 @@ DWORD WINAPI install_thread(LPVOID) {
     // As early as the game's code is there (2 minutes), like the guest's other hooks.
     for (int i = 0; i < 24000; ++i) {
         const bool diag = !g_diag || (all_match(kFinishChecks) && all_match(kRestoreChecks) && all_match(kWaitChecks));
-        const bool guard = !g_guard || all_match(kGuardChecks);
-        if (diag && guard) break;
+        const bool guard = !g_guard || guard_checks_match();
+        if (diag && guard && game::validate_native_catalog()) break;
         Sleep(5);
     }
     if (g_guard) install_guard();
     if (g_diag) install_diag();
+    // Install before remote admission. Ownership filtering remains disarmed
+    // at local key zero, then refresh_local arms it when the guest exists.
+    // Waiting for that key to install would make admission readiness circular.
+    if (g_rug.load() && !g_rug_tried) install_remote_update_guard();
     // The local user key, every second (the guard needs it as soon as the
     // guest's character exists; the host's NPCs come after it). The state's
     // transitions are written every 5 s (formatting never on the game's thread).
     for (uint64_t tick = 1;; ++tick) {
         refresh_local();
-        if (g_rug.load() && !g_rug_tried && g_local.load()) install_remote_update_guard();
         if (g_rug_on.load()) {
             try {
                 net::horse_diag_remote_report();
@@ -821,6 +881,9 @@ void guest_actor_diag_start(bool diag, bool layer_guard, bool remote_update_guar
     g_rug = remote_update_guard;
     CloseHandle(CreateThread(nullptr, 0, install_thread, nullptr, 0, nullptr));
 }
+
+bool guest_layer_guard_ready() noexcept { return g_guard_on.load(std::memory_order_acquire); }
+bool guest_remote_update_guard_ready() noexcept { return g_rug_on.load(std::memory_order_acquire); }
 
 void guest_actor_diag_tick() noexcept {
     if (!g_started.load()) return;

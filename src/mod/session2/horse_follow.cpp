@@ -1,4 +1,5 @@
 #include "mod/session2/horse_follow.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -98,7 +99,7 @@ void horse_follow_on_out(uint16_t opcode, std::span<const uint8_t> packet, Horse
     if (mode == Mode::Off || opcode != hfl::kOpMoveActorAck || packet.size() < hfl::kHeader) return;
     c_acks.fetch_add(1, std::memory_order_relaxed);
     const std::span<const uint8_t> payload = packet.subspan(hfl::kHeader);
-    const hfl::Move m = hfl::read_move(payload, hfl::kAckSize);
+    const hfl::Move m = hfl::read_move(payload, hfl::kAckSize, game::current_build());
     switch (m.shape) {
         case Shape::NotMove: c_bad_size.fetch_add(1, std::memory_order_relaxed); return;
         case Shape::OtherParent: c_other_parent.fetch_add(1, std::memory_order_relaxed); return;
@@ -129,7 +130,7 @@ void horse_follow_on_out(uint16_t opcode, std::span<const uint8_t> packet, Horse
     if (v != Verdict::Make || !push) return;
     try {  // the mod's heap (never the game's); a failed allocation must not end the game from noexcept
         std::vector<uint8_t> horse;
-        if (!hfl::make_horse_ack(packet, horse)) {
+        if (!hfl::make_horse_ack(packet, horse, game::current_build())) {
             c_build_failed.fetch_add(1, std::memory_order_relaxed);
             return;
         }
@@ -167,7 +168,7 @@ void guest_probe(const hfl::Move& m, std::span<const uint8_t> payload) {
     if (m.shape == Shape::Ridden) {
         try {
             std::vector<uint8_t> req;  // the mod's heap, freed at once: only to prove it can be built
-            const bool ok = hfl::make_horse_req(payload, req);
+            const bool ok = hfl::make_horse_req(payload, req, game::current_build());
             (ok ? c_gp_built : c_gp_build_failed).fetch_add(1, std::memory_order_relaxed);
         } catch (...) {
             c_gp_build_failed.fetch_add(1, std::memory_order_relaxed);
@@ -181,7 +182,7 @@ void guest_probe(const hfl::Move& m, std::span<const uint8_t> payload) {
         }
         slot->horse = m.parent;
         slot->ts = m.ts;
-        std::memcpy(slot->world, payload.data() + hfl::kWorldPos, 12);
+        std::memcpy(slot->world, payload.data() + movement::layout(game::current_build())->world_pos, 12);
         g_gp_last_synth_ts.store(m.ts, std::memory_order_relaxed);
         return;
     }
@@ -196,7 +197,7 @@ void guest_probe(const hfl::Move& m, std::span<const uint8_t> payload) {
         const uint64_t d = m.ts > r.ts ? m.ts - r.ts : r.ts - m.ts;
         if (d > 100) return;
         float own[3] = {};
-        std::memcpy(own, payload.data() + hfl::kPos, 12);
+        std::memcpy(own, payload.data() + movement::layout(game::current_build())->pos, 12);
         const float dx = own[0] - r.world[0], dy = own[1] - r.world[1], dz = own[2] - r.world[2];
         const float e = std::sqrt(dx * dx + dy * dy + dz * dz);
         if (!std::isfinite(e)) return;
@@ -248,7 +249,7 @@ bool horse_follow_guest_probe_active() { return g_guest_probe.load(std::memory_o
 void horse_follow_on_guest_req(uint16_t opcode, std::span<const uint8_t> payload) noexcept {
     const bool gp = g_guest_probe.load(std::memory_order_relaxed);
     if ((!horse_follow_active() && !gp) || opcode != hfl::kOpMoveActorReq) return;
-    const hfl::Move m = hfl::read_move(payload, hfl::kReqSize);
+    const hfl::Move m = hfl::read_move(payload, hfl::kReqSize, game::current_build());
     if (m.shape == Shape::NotMove) return;
     if (gp) guest_probe(m, payload);
     c_reqs.fetch_add(1, std::memory_order_relaxed);
@@ -333,30 +334,30 @@ size_t reverse(Mode mode, const hfl::Move& m, std::span<const uint8_t> copy, uin
         return 0;
     }
     if (v != hfl::Rev::Derive) return 0;
-    if (!hfl::make_horse_ack_into(copy, extra, cap)) {
+    if (!hfl::make_horse_ack_into(copy, extra, cap, game::current_build())) {
         c_rev_build_failed.fetch_add(1, std::memory_order_relaxed);
         return 0;
     }
     stream_note(g_rev_all, g_rev_real, iv_rev_all, iv_rev_real, m.parent, m.ts, true, c_rev_derived_stale);
     c_rev_handed.fetch_add(1, std::memory_order_relaxed);
-    return hfl::kHeader + hfl::kAckSize;
+    return hfl::kHeader + movement::payload_size(game::current_build(), 2697);
 }
 
 // The sniffer's recv-extra callback (the client's NetworkThread, inside OnRecvPacket): no allocation, no lock, no
 // log. Both PCs: the rider -> horse pairs for remote_interp_pair; the host: the reverse direction.
 size_t client_recv(const uint8_t* packet, uint16_t size, uint8_t* extra, size_t cap) noexcept {
-    constexpr size_t kWhole = hfl::kHeader + hfl::kAckSize;
+    const size_t kWhole = hfl::kHeader + movement::payload_size(game::current_build(), 2697);
     if (!packet || size != kWhole) return 0;
-    uint8_t copy[kWhole];
+    uint8_t copy[hfl::kHeader + movement::k3527.move_ack];
     if (!guarded_read(copy, packet, kWhole)) {
         c_rev_unreadable.fetch_add(1, std::memory_order_relaxed);
         return 0;
     }
     const uint16_t op = static_cast<uint16_t>(copy[0] | (copy[1] << 8));
     const uint16_t len = static_cast<uint16_t>(copy[3] | (copy[4] << 8));
-    if (op != hfl::kOpMoveActorAck || len != hfl::kAckSize) return 0;
+    if (op != hfl::kOpMoveActorAck || len != kWhole - hfl::kHeader) return 0;
     const std::span<const uint8_t> whole(copy, kWhole);
-    const hfl::Move m = hfl::read_move(whole.subspan(hfl::kHeader), hfl::kAckSize);
+    const hfl::Move m = hfl::read_move(whole.subspan(hfl::kHeader), hfl::kAckSize, game::current_build());
     if (m.shape == Shape::NotMove) return 0;
     if (g_pair_notes.load(std::memory_order_relaxed) && (m.key >> 28) == 0xA) {
         remote_interp_note_ride(m.key, m.shape == Shape::Ridden ? m.parent : 0);

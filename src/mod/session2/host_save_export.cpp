@@ -23,6 +23,8 @@
 namespace cdmp::session2 {
 namespace {
 
+std::string g_cfg_game_build, g_cfg_pe_timestamp;  // set by host_save_configure, then read only
+
 std::atomic<hsv::Mode> g_mode{hsv::Mode::Sandbox};
 std::wstring g_dir;  // written once by configure (before any other call)
 uint32_t g_keep = hsv::kDefaultKeep;
@@ -748,6 +750,8 @@ bool copy_journal(const Source& s, const std::wstring& partial, hsv::Manifest& m
 // ---------------------------------------------------------------- configuration
 
 void host_save_configure(const HostSaveConfig& cfg) {
+    g_cfg_game_build = cfg.game_build;
+    g_cfg_pe_timestamp = cfg.pe_timestamp;
     const hsv::ParsedMode p = hsv::parse_mode(cfg.mode);
     if (p.refused_real) {
         log::error("Session2 host save: host_save='{}' (publishing to the real save folder) is NOT implemented: the "
@@ -942,6 +946,8 @@ HostSaveArchive host_save_archive(const std::wstring& save_dir, const std::wstri
             return fail(std::format("cannot create '{}' (error {})", narrow(partial), GetLastError()));
         }
         hsv::Manifest m;
+        if (!g_cfg_game_build.empty()) m.game_build = g_cfg_game_build;
+        if (!g_cfg_pe_timestamp.empty()) m.pe_timestamp = g_cfg_pe_timestamp;
         m.mod_build = mod_build_text();
         m.generation = narrow(name);
         m.created = local_time_text();

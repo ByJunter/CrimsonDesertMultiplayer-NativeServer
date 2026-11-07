@@ -1,0 +1,170 @@
+{
+  "build": "3527",
+  "sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "reviewed_files": [
+    "src/mod/net/horse_diag.cpp",
+    "src/mod/game/character_phase_ready.h"
+  ],
+  "finding": "No actionable issue in the two narrow flag bypasses. Both preserve native per-layer processing, subsequent helper calls, unlocks, reference release and return.",
+  "captured_run8": {
+    "selected_layer": 0,
+    "selected_playback": 0,
+    "other_layer_playback_nonnull": true,
+    "actor": "0x3C2F6E64680",
+    "actor_vtable": "0x5912CD8",
+    "actor_C8": 0,
+    "applied_mask_address": "0x13FF930",
+    "applied_mask": [
+      0,
+      1
+    ]
+  },
+  "register_semantics": {
+    "primary": "Skip MOV RAX,[RCX+28] / MOVZX EDI,[RAX+7E], use RDI=0, resume25191FC. EDI write normally zeroes all RDI. RAX is dead: replaced by actor vtable at2519200.",
+    "secondary": "Skip MOV RAX,[RDX+28] / MOVZX EBP,[RAX+7E], use RBP=0, resume251A1B5. EBP write normally zeroes all RBP. Next instruction overwrites RAX. RCX remains CC; R14 is the provenance used by scope check."
+  },
+  "limits": [
+    "The capture proves mask[0]=0 while selected playback[0]=null, so later2510C60 and2511A60 skip that layer. Their independent mask-selected action consumers remain native and are not generically null-safe. No evidence from this capture requires skipping them.",
+    "The change repairs two preliminary flag readers, not arbitrary corrupt layers, null CC/selector, or absent actor components.",
+    "Captured actor C8=0 chooses ordinary blend loop; secondary hook covers the alternate native vf188(5) branch without suppressing it.",
+    "Live loading snapshot was taken before guest exit. It proves state11/+259=1 and all16 waitlist actors ready; it does not prove the BA2F70 deeper sequencer worklist predicate would yet pass once+259 becomes2."
+  ],
+  "assertions": [
+    {
+      "rva": "0x2519248",
+      "bytes": "48 83 79 18 00 74 35 3a d3 75 1e 40 84 ff 74 19",
+      "meaning": "Primary per-layer playback and selected-index gates before DIL",
+      "instructions": [
+        "2519248: cmp qword ptr [rcx + 0x18], 0",
+        "251924D: je 0x2519284",
+        "251924F: cmp dl, bl",
+        "2519251: jne 0x2519271",
+        "2519253: test dil, dil",
+        "2519256: je 0x2519271"
+      ]
+    },
+    {
+      "rva": "0x25192a6",
+      "bytes": "48 c7 c7 ff ff ff ff",
+      "meaning": "Primary flag register RDI overwritten before remaining callbacks/cleanup",
+      "instructions": [
+        "25192A6: mov rdi, 0xffffffffffffffff"
+      ]
+    },
+    {
+      "rva": "0x251a1f6",
+      "bytes": "48 83 7b 18 00 74 40",
+      "meaning": "Secondary loop skips missing playback",
+      "instructions": [
+        "251A1F6: cmp qword ptr [rbx + 0x18], 0",
+        "251A1FB: je 0x251a23d"
+      ]
+    },
+    {
+      "rva": "0x251a20d",
+      "bytes": "41 3a fc 75 19 40 84 ed 74 14",
+      "meaning": "Secondary flag BPL used only for selected layer",
+      "instructions": [
+        "251A20D: cmp dil, r12b",
+        "251A210: jne 0x251a22b",
+        "251A212: test bpl, bpl",
+        "251A215: je 0x251a22b"
+      ]
+    },
+    {
+      "rva": "0x5aeea0",
+      "bytes": "0f b6 81 c8 00 00 00 80 fa 05 75 06 84 c0 0f 95 c0 c3 3a c2 0f 94 c0 c3",
+      "meaning": "Actor vf188 type5 uses C8 nonzero",
+      "instructions": [
+        "5AEEA0: movzx eax, byte ptr [rcx + 0xc8]",
+        "5AEEA7: cmp dl, 5",
+        "5AEEAA: jne 0x5aeeb2",
+        "5AEEAC: test al, al",
+        "5AEEAE: setne al",
+        "5AEEB1: ret ",
+        "5AEEB2: cmp al, dl",
+        "5AEEB4: sete al",
+        "5AEEB7: ret "
+      ]
+    },
+    {
+      "rva": "0x2510e50",
+      "bytes": "80 3c 33 00 0f 84 f3 03 00 00",
+      "meaning": "Postapply helper skips layer when applied mask byte zero",
+      "instructions": [
+        "2510E50: cmp byte ptr [rbx + rsi], 0",
+        "2510E54: je 0x251124d"
+      ]
+    },
+    {
+      "rva": "0x2510ea8",
+      "bytes": "48 8b 40 18 48 8b 48 28 0f b7 41 66",
+      "meaning": "Postapply helper requires playback for mask-selected layer",
+      "instructions": [
+        "2510EA8: mov rax, qword ptr [rax + 0x18]",
+        "2510EAC: mov rcx, qword ptr [rax + 0x28]",
+        "2510EB0: movzx eax, word ptr [rcx + 0x66]"
+      ]
+    },
+    {
+      "rva": "0x2511b40",
+      "bytes": "8b c3 41 80 3c 07 00 0f 84 e1 00 00 00",
+      "meaning": "Second postapply helper also obeys per-layer mask",
+      "instructions": [
+        "2511B40: mov eax, ebx",
+        "2511B42: cmp byte ptr [r15 + rax], 0",
+        "2511B47: je 0x2511c2e"
+      ]
+    },
+    {
+      "rva": "0x2511b73",
+      "bytes": "48 8b 8c c6 88 00 00 00 c5 fb 10 49 10",
+      "meaning": "Second postapply helper reads current action only for mask-selected layer",
+      "instructions": [
+        "2511B73: mov rcx, qword ptr [rsi + rax*8 + 0x88]",
+        "2511B7B: vmovsd xmm1, qword ptr [rcx + 0x10]"
+      ]
+    },
+    {
+      "rva": "0xba2feb",
+      "bytes": "80 bf 59 02 00 00 02 0f 82 23 02 00 00 83 bf c0 01 00 00 00 0f 85 16 02 00 00 80 bf 14 03 00 00 00 74 16 c5 fa 10 05 12 50 57 06 c5 f8 2f 87 10 03 00 00 0f 87 f7 01 00 00",
+      "meaning": "Readiness predicate259 >=2, count1C0 zero, optional timer314/310",
+      "instructions": [
+        "BA2FEB: cmp byte ptr [rdi + 0x259], 2",
+        "BA2FF2: jb 0xba321b",
+        "BA2FF8: cmp dword ptr [rdi + 0x1c0], 0",
+        "BA2FFF: jne 0xba321b",
+        "BA3005: cmp byte ptr [rdi + 0x314], 0",
+        "BA300C: je 0xba3024",
+        "BA300E: vmovss xmm0, dword ptr [rip + 0x6575012]",
+        "BA3016: vcomiss xmm0, dword ptr [rdi + 0x310]",
+        "BA301E: ja 0xba321b"
+      ]
+    },
+    {
+      "rva": "0xba3024",
+      "bytes": "48 8b 9f c8 01 00 00 8b 87 d0 01 00 00 4c 8d 34 c3 49 3b de",
+      "meaning": "Sequencer pending objects pointer1C8/count1D0",
+      "instructions": [
+        "BA3024: mov rbx, qword ptr [rdi + 0x1c8]",
+        "BA302B: mov eax, dword ptr [rdi + 0x1d0]",
+        "BA3031: lea r14, [rbx + rax*8]",
+        "BA3035: cmp rbx, r14"
+      ]
+    },
+    {
+      "rva": "0xba30ef",
+      "bytes": "8b b7 e0 01 00 00 48 8b 9f d8 01 00 00",
+      "meaning": "Second worklist pointer1D8/count1E0",
+      "instructions": [
+        "BA30EF: mov esi, dword ptr [rdi + 0x1e0]",
+        "BA30F5: mov rbx, qword ptr [rdi + 0x1d8]"
+      ]
+    }
+  ],
+  "loading_predicate": {
+    "routine": "0xBA2F70",
+    "required": "First resolve sequencer parent with21570C0; readiness259>=2; count1C0==0; optional timer when314!=0; iterate1C8/1D0 objects (2C4 bypass,1C3AA90 predicate,state69!=5, type68/spatial bounds) then1D8/1E0 objects through1C3AA90 and6976A0. Returns true atBA3216 only after these conditions.",
+    "no_forced_completion": "Sending authentic2322 changes the native readiness byte. Native remaining checks and state transition remain responsible for completing loading."
+  }
+}

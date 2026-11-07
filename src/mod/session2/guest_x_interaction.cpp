@@ -11,12 +11,14 @@
 
 #include <safetyhook.hpp>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/offsets.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/guest.h"
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/guest_seq_route.h"
+#include "mod/session2/guest_shop_branch.h"
 #include "mod/session2/guest_x_interaction_logic.h"
 #include "mod/session2/guest_x_veto_logic.h"
 #include "mod/session2/p8_probe_logic.h"
@@ -39,6 +41,32 @@ constexpr uint32_t kMgr_Actor = 0x18, kActor_Key = 0x60, kActor_Comps = 0x68, kC
 // its +0x30 (the stage's sequencer key there): logged to cross-check with GuestXVeto's SetInteraction lines.
 constexpr uint32_t kInst_Data = 0x48, kData_Name = 0x1B8, kInst_Key = 0x30;
 constexpr size_t kMaxX = 4;
+
+// Where the three points are, per build (stage_lookup_logic.h). Chosen once in install_thread, before any hook.
+struct Points {
+    uintptr_t a, r, f, ctx_a, ctx_lookup;
+    uint32_t patch_a, patch_r, patch_f;
+    std::span<const uint8_t> bytes_a, bytes_r, bytes_f, ctx_a_bytes, ctx_lookup_bytes;
+    uint32_t rbp_mgr_used;
+    uintptr_t vt_field, vt_mgr;
+    isl::MgrLayout layout;
+    const char* names;  // the log's names of the points
+};
+const Points kPoints2976{isl::kPointA, isl::kPointR, isl::kPointF, isl::kCtxA, isl::kCtxLookup, isl::kPatchA,
+                         isl::kPatchR, isl::kPatchF, isl::kBytesA, isl::kBytesR, isl::kBytesF, isl::kCtxABytes,
+                         isl::kCtxLookupBytes, isl::kRbpMgrUsed, isl::kVtClientField, isl::kVtClientStageMgr,
+                         isl::kLayout2976, "A 0x2126A1F, R 0x2126AAB, F 0x2126D11 (build 2976)"};
+const Points kPoints3527{isl::kPointA3527, isl::kPointR3527, isl::kPointF3527, isl::kCtxA3527, isl::kCtxLookup3527,
+                         isl::kPatchA3527, isl::kPatchR3527, isl::kPatchF3527, isl::kBytesA3527, isl::kBytesR3527,
+                         isl::kBytesF3527, isl::kCtxABytes3527, isl::kCtxLookupBytes3527, isl::kRbpMgrUsed3527,
+                         isl::kVtClientField3527, isl::kVtClientStageMgr3527, isl::kLayout3527,
+                         "A 0x22ED729, R 0x22ED7B5, F 0x22EDA49 (builds 3527 / 3549)"};
+const Points kPoints3576{isl::kPointA3576, isl::kPointR3576, isl::kPointF3576, isl::kCtxA3576, isl::kCtxLookup3576,
+                         isl::kPatchA3527, isl::kPatchR3527, isl::kPatchF3527, isl::kBytesA3527, isl::kBytesR3527,
+                         isl::kBytesF3527, isl::kCtxABytes3527, isl::kCtxLookupBytes3576, isl::kRbpMgrUsed3527,
+                         isl::kVtClientField3576, isl::kVtClientStageMgr3576, isl::kLayout3527,
+                         "A 0x22EE3D9, R 0x22EE465, F 0x22EE6F9 (build 3576)"};
+const Points* g_pts = &kPoints2976;
 
 uintptr_t g_base = 0;
 std::atomic<bool> g_started{false}, g_a_on{false}, g_r_on{false}, g_f_on{false};
@@ -106,7 +134,7 @@ uint32_t key_of_mgr(uintptr_t mgr) noexcept {
 gxi::XCheck read_x(uintptr_t x) noexcept {
     gxi::XCheck c;
     c.x = x;
-    c.want_vt = g_base + isl::kVtClientStageMgr;
+    c.want_vt = g_base + g_pts->vt_mgr;
     c.vt = rdp(x);
     if (c.vt != c.want_vt) return c;
     const uintptr_t actor = rdp(x + kMgr_Actor);
@@ -138,21 +166,79 @@ size_t act_class(Act a, Verdict v) noexcept {
     return 2;
 }
 
+// guest_shop_branch=3: an entry carries the shop interaction 0x000F4321 in its first 0x40 bytes.
+constexpr uint32_t kShopKey = 0x000F4321;
+constexpr uint64_t kCopyTag = 0x1F000000ull;
+std::atomic<uint64_t> g_to_copy{0}, g_back_to_host{0}, g_shop_seen{0};
+bool entry_has_shop_key(uintptr_t entry) noexcept {
+    uint32_t w[16] = {};
+    if (!game::safe_read(entry, w, sizeof w)) return false;
+    for (const uint32_t v : w) {
+        if (v == kShopKey) return true;
+    }
+    return false;
+}
+bool wr_u64(uintptr_t a, uint64_t v) noexcept {
+    if (a < 0x10000) return false;
+    __try {
+        *reinterpret_cast<volatile uint64_t*>(a) = v;
+        return true;
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+// Point A, before the lookup reads [entry+0x20] (0x22ED766 on 3549): the entry names this client's running copy of a
+// shopkeeper's host scene instead of the host scene (then the native lookup finds it in M), or the host scene again
+// once the copy is gone; and a copy is asked for a shopkeeper's scene this client looks at.
+uint64_t shop_copy_at_a(uintptr_t entry, uint64_t id, uintptr_t m) noexcept {
+    if ((id & 0xFF000000ull) == kCopyTag) {
+        if (guest_shop_copy_alive(id)) return id;
+        const uint64_t host = guest_shop_host_of(id);
+        if (host && wr_u64(entry + isl::kEntry_StageId, host)) {
+            if (g_back_to_host.fetch_add(1, std::memory_order_relaxed) < 10) {
+                log::info("GuestXInter: entry 0x{:X}: its copy 0x{:X} is gone, the host scene 0x{:X} again", entry, id, host);
+            }
+            return host;
+        }
+        return id;
+    }
+    const uint64_t copy = guest_shop_ready_copy(id);
+    if (copy && m && isl::find_stage(SehReader{}, m, copy, g_pts->layout).found) {
+        if (wr_u64(entry + isl::kEntry_StageId, copy)) {
+            if (g_to_copy.fetch_add(1, std::memory_order_relaxed) < 20) {
+                log::info("GuestXInter: entry 0x{:X}: host scene 0x{:X} -> this client's copy 0x{:X} (looked up in M "
+                          "natively)",
+                          entry, id, copy);
+            }
+            return copy;
+        }
+        return id;
+    }
+    if (entry_has_shop_key(entry)) {
+        if (g_shop_seen.fetch_add(1, std::memory_order_relaxed) < 5) {
+            log::info("GuestXInter: entry 0x{:X} of host scene 0x{:X} carries the shop key 0x{:08X}", entry, id, kShopKey);
+        }
+        guest_shop_want_copy(id, "this client looks at a shopkeeper");
+    }
+    return id;
+}
+
 // A 0x2126A1F: RAX = the field's vf48 (M). See guest_x_interaction.h.
 void on_a(safetyhook::Context& ctx) noexcept {
     if (!g_a_on.load(std::memory_order_acquire)) return;
     g_calls.fetch_add(1, std::memory_order_relaxed);
     gxi::Facts f;
     const uintptr_t field = rdp(ctx.rsp + isl::kRspField);
-    f.client_field = field && rdp(field) == g_base + isl::kVtClientField;
+    f.client_field = field && rdp(field) == g_base + g_pts->vt_field;
     if (f.client_field) f.remote = guest_remote_live();
     f.m = ctx.rax;
     f.id = f.client_field && f.remote ? rdv<uint64_t>(ctx.r13 + isl::kEntry_StageId) : 0;
+    if (f.m && (f.id & 0x1FFFFFFFull) && guest_shop_proactive()) f.id = shop_copy_at_a(ctx.r13, f.id, f.m);
     uintptr_t x_inst = 0;
     uint32_t m_key = 0, x_key = 0;
     if (f.client_field && f.remote && f.m && (f.id & 0x1FFFFFFFull)) {
         const SehReader r;
-        const isl::Lookup lm = isl::find_stage(r, f.m, f.id);
+        const isl::Lookup lm = isl::find_stage(r, f.m, f.id, g_pts->layout);
         f.m_read = lm.read_ok;
         f.in_m = lm.found;
         if (f.m_read && !f.in_m) {
@@ -168,7 +254,7 @@ void on_a(safetyhook::Context& ctx) noexcept {
                 g_x_states[static_cast<size_t>(s)].fetch_add(1, std::memory_order_relaxed);
                 if (s != gxi::XState::Ok) continue;
                 ++f.x_valid;
-                const isl::Lookup lx = isl::find_stage(r, c.x, f.id);
+                const isl::Lookup lx = isl::find_stage(r, c.x, f.id, g_pts->layout);
                 if (lx.read_ok) f.x_read = true;
                 if (lx.found) {
                     f.x = c.x;
@@ -235,7 +321,7 @@ void on_r(safetyhook::Context& ctx) noexcept {
     if (!t_call.same(ctx.r13, ctx.rsp)) return;
     g_r_seen.fetch_add(1, std::memory_order_relaxed);
     t_r_found = ctx.rsi;
-    t_r_used = rdp(ctx.rbp + isl::kRbpMgrUsed);
+    t_r_used = rdp(ctx.rbp + g_pts->rbp_mgr_used);
     t_r_set = true;
     const size_t c = act_class(static_cast<Act>(t_call.act), static_cast<Verdict>(t_call.verdict));
     (ctx.rsi ? g_r_found[c] : g_r_missing[c]).fetch_add(1, std::memory_order_relaxed);
@@ -362,7 +448,8 @@ bool context_ok(std::span<const gad::Section> secs, uintptr_t rva, std::span<con
     if (gad::in_real_code(secs, static_cast<uint32_t>(rva), static_cast<uint32_t>(bytes.size())) && bytes_at(rva, bytes)) {
         return true;
     }
-    log::error("GuestXInter: {} (exe+0x{:X}, {} bytes) is not build 2976's .rsrc code; REFUSED", what, rva, bytes.size());
+    log::error("GuestXInter: {} (exe+0x{:X}, {} bytes) is not this build's expected code; REFUSED", what, rva,
+               bytes.size());
     return false;
 }
 
@@ -371,38 +458,51 @@ DWORD WINAPI install_thread(LPVOID) {
     IMAGE_DOS_HEADER dos{};
     IMAGE_NT_HEADERS64 nt{};
     std::vector<gad::Section> secs;
-    if (g_base != off::kImageBase || !game::safe_read(g_base, &dos, sizeof dos) ||
-        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || nt.FileHeader.TimeDateStamp != off::kPeTimestamp ||
-        !p8_exe_sections(g_base, secs)) {
+    const game::Build build = game::current_build();
+    if (build == game::Build::v3527) g_pts = &kPoints3527;
+    if (build == game::Build::v3576) g_pts = &kPoints3576;
+    if (g_base != off::kImageBase || !(game::legacy_layout() || build == game::Build::v3576) || !game::safe_read(g_base, &dos, sizeof dos) ||
+        !game::safe_read(g_base + dos.e_lfanew, &nt, sizeof nt) || !p8_exe_sections(g_base, secs)) {
         log::error("GuestXInter: unsupported game build or unreadable sections; nothing installed");
         return 0;
     }
+    const game::ReaderProfile* profile = game::reader_profile();
+    // 3576: 0x71C0100 (core_globals_3576.json; no reader profile for 3576 yet).
+    const uintptr_t world_slot = build == game::Build::v3576                ? uintptr_t{0x71C0100}
+                                 : build == game::Build::v3527 && profile ? profile->world_system
+                                                                          : off::kWorldSystemSlot;
     for (int i = 0; i < 1200; ++i) {  // WorldSystem (up to 10 minutes), as the other guest modules
         uintptr_t world = 0;
-        if (game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world) break;
+        if (game::safe_read(g_base + world_slot, &world, sizeof world) && world) break;
         Sleep(500);
     }
-    // R and F first (read only), then A (the decision): A's record is read by R and F.
-    if (context_ok(secs, isl::kCtxLookup, isl::kCtxLookupBytes, "the lookup call 0x2126A5C") &&
-        context_ok(secs, isl::kCtxA, isl::kCtxABytes, "the vf48 call 0x2126A14")) {
-        if (p8_install_mid(g_base, secs, isl::kPointR, isl::kPatchR, isl::kBytesR, on_r, g_r_hook, "GuestXInter",
-                           "R, after the lookup 0x2126AAB")) {
-            g_r_on.store(true, std::memory_order_release);
-        }
-        if (p8_install_mid(g_base, secs, isl::kPointF, isl::kPatchF, isl::kBytesF, on_f, g_f_hook, "GuestXInter",
-                           "F, the result 0x2126D11")) {
-            g_f_on.store(true, std::memory_order_release);
-        }
-        if (p8_install_mid(g_base, secs, isl::kPointA, isl::kPatchA, isl::kBytesA, on_a, g_a_hook, "GuestXInter",
-                           "A, the manager of the lookup 0x2126A1F")) {
+    const Points& pt = *g_pts;
+    // A (the decision) first. R and F only read (the lookup's result and the function's), so they go in only with
+    // probe: on 3549 the memory safetyhook needs within 2 GB of the exe is scarce on the guest (live 2026-11-06: with
+    // all three hooked early, RemoteInterp's hooks found none at world entry). Without R / F the record A leaves is
+    // simply overwritten by the next call.
+    if (context_ok(secs, pt.ctx_lookup, pt.ctx_lookup_bytes, "the lookup call") &&
+        context_ok(secs, pt.ctx_a, pt.ctx_a_bytes, "the vf48 call")) {
+        if (p8_install_mid(g_base, secs, pt.a, pt.patch_a, pt.bytes_a, on_a, g_a_hook, "GuestXInter",
+                           "A, the manager of the lookup")) {
             g_a_on.store(true, std::memory_order_release);
         }
+        if (static_cast<Mode>(g_mode.load()) == Mode::Probe) {
+            if (p8_install_mid(g_base, secs, pt.r, pt.patch_r, pt.bytes_r, on_r, g_r_hook, "GuestXInter",
+                               "R, after the lookup")) {
+                g_r_on.store(true, std::memory_order_release);
+            }
+            if (p8_install_mid(g_base, secs, pt.f, pt.patch_f, pt.bytes_f, on_f, g_f_hook, "GuestXInter",
+                               "F, the result")) {
+                g_f_on.store(true, std::memory_order_release);
+            }
+        }
     }
-    log::info("GuestXInter (guest_x_interaction_stage={}): A 0x2126A1F {}, R 0x2126AAB {}, F 0x2126D11 {} | an entry "
+    log::info("GuestXInter (guest_x_interaction_stage={}): {}: A {}, R {}, F {} | an entry "
               "whose stage id is not a live stage of M but is one of a known X (another character's "
               "ClientSequencerStageManager, vtable exe+0x{:X}): {}",
-              gxi::mode_name(static_cast<Mode>(g_mode.load())), g_a_on.load() ? "hooked" : "REFUSED",
-              g_r_on.load() ? "hooked" : "REFUSED", g_f_on.load() ? "hooked" : "REFUSED", isl::kVtClientStageMgr,
+              gxi::mode_name(static_cast<Mode>(g_mode.load())), pt.names, g_a_on.load() ? "hooked" : "REFUSED",
+              g_r_on.load() ? "hooked" : "REFUSED", g_f_on.load() ? "hooked" : "REFUSED", pt.vt_mgr,
               static_cast<Mode>(g_mode.load()) == Mode::On ? "RAX := X (the prompt check looks it up in X)"
                                                            : "decided and counted only (probe)");
     return 0;

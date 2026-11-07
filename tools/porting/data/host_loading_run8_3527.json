@@ -1,0 +1,28 @@
+{
+  "pid": 5068,
+  "captured_utc": "2026-11-04T20:55:40.777751+00:00",
+  "access": "PROCESS_VM_READ only",
+  "identity": {
+    "pid": 5068,
+    "base": "0x140000000",
+    "timestamp": "0x6AEA07A6",
+    "image_size": "0x13EB2000",
+    "disk_exe": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+    "disk_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841"
+  },
+  "loading": {
+    "state": "0x18",
+    "idle": true,
+    "field": "0x26303C99680",
+    "owner": "0x90100000",
+    "local_controller": "0x90100000",
+    "local_actor": "0xA0100001",
+    "owner_matches_local": true,
+    "sequencer_manager": "0x26361542680",
+    "preload_marker": 1,
+    "pending_preload": 0,
+    "wait_count": 0,
+    "wait_entries": [],
+    "wait_blockers": []
+  }
+}

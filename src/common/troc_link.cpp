@@ -3,6 +3,17 @@
 #include <format>
 
 namespace cdmp::troc {
+namespace {
+constexpr uint16_t kIdentityOpcode = 3;
+constexpr uint8_t kIdentityVersion = 1;
+constexpr uint32_t kIdentityRetryMs = 1000;
+
+uint64_t read_le(std::span<const uint8_t> bytes) {
+    uint64_t value = 0;
+    for (size_t i = 0; i < bytes.size(); ++i) value |= uint64_t{bytes[i]} << (8 * i);
+    return value;
+}
+}
 
 TrocLink::TrocLink(ClientSession& session, Dir out, Dir in, PacketFn on_packet)
     : session_(session),
@@ -21,11 +32,43 @@ TrocLink::TrocLink(ClientSession& session, Dir out, Dir in, PacketFn on_packet)
       epoch_(session.epoch()) {
     session_.set_game_handlers({}, [this](const ReliableChannel::Message& msg, uint32_t now_ms) {
         if (msg.kind != proto::RelKind::TrocFrame) return;
+        now_ = now_ms;
+        // A Welcome and reliable identity may be drained before the first tick.
+        // Establish the connection epoch before counting or exposing its packets.
+        sync_epoch();
         if (broken_) {
             ++dropped_;
             return;
         }
         for (auto& p : receiver_.on_message(msg.bytes)) {
+            const auto view = parse(p);
+            if (view && view->opcode == kIdentityOpcode) {
+                const auto body = view->payload;
+                if (!identity_required_ || view->slot != -1 || body.size() != 14 ||
+                    body[0] != kIdentityVersion || body[1] > 1 || read_le(body.subspan(2, 4)) != game_build_ ||
+                    read_le(body.subspan(6, 8)) != mapping_fingerprint_) {
+                    identity_failed_epoch_ = session_.epoch();
+                    peer_identity_epoch_ = 0;
+                    broken_ = true;
+                    ++dropped_;
+                    return;
+                }
+                peer_identity_epoch_ = session_.epoch();
+                // Reply to requests even after verification: the first declaration
+                // may have been ACKed before the peer attached its TrocLink.
+                // Responses never trigger another response.
+                if (body[1] == 0 && !send_identity(true)) {
+                    broken_ = true;
+                    return;
+                }
+                continue;
+            }
+            if (identity_required_ && peer_identity_epoch_ != session_.epoch()) {
+                identity_failed_epoch_ = session_.epoch();
+                broken_ = true;
+                ++dropped_;
+                return;
+            }
             // The other end's capabilities: the link's own business, never its owner's.
             if (const auto v = caps_in_dir_ ? parse(p) : std::optional<PacketView>{}; v && v->opcode == kCapsOpcode) {
                 peer_caps_ = v->payload.empty() ? 0 : v->payload[0];
@@ -40,11 +83,48 @@ TrocLink::TrocLink(ClientSession& session, Dir out, Dir in, PacketFn on_packet)
 
 TrocLink::~TrocLink() { session_.set_game_handlers({}, {}); }
 
+void TrocLink::require_identity(uint32_t game_build, uint64_t mapping_fingerprint) {
+    // Changing representation after traffic began would mix native payload ABIs.
+    if (sender_.packets_sent() || receiver_.packets_received() || sender_.backlog_bytes()) {
+        broken_ = true;
+        identity_failed_epoch_ = session_.epoch();
+        return;
+    }
+    identity_required_ = true;
+    game_build_ = game_build;
+    mapping_fingerprint_ = mapping_fingerprint;
+    peer_identity_epoch_ = identity_announced_epoch_ = 0;
+    if (!game_build || !mapping_fingerprint) {
+        broken_ = true;
+        identity_failed_epoch_ = session_.epoch();
+    }
+}
+
+bool TrocLink::send_identity(bool response) {
+    uint8_t body[14] = {kIdentityVersion, static_cast<uint8_t>(response ? 1 : 0)};
+    for (size_t i = 0; i < 4; ++i) body[2 + i] = static_cast<uint8_t>(game_build_ >> (8 * i));
+    for (size_t i = 0; i < 8; ++i) body[6 + i] = static_cast<uint8_t>(mapping_fingerprint_ >> (8 * i));
+    if (!sender_.push(make(kIdentityOpcode, -1, body))) return false;
+    identity_announced_epoch_ = session_.epoch();
+    identity_last_sent_ms_ = now_;
+    return true;
+}
+
+bool TrocLink::announce_identity() {
+    if (!identity_required_) return true;
+    if (!game_build_ || !mapping_fingerprint_) return false;
+    if (session_.state() != ClientSession::State::Connected) return false;
+    if (identity_announced_epoch_ == session_.epoch() &&
+        (peer_identity_epoch_ == session_.epoch() || now_ - identity_last_sent_ms_ < kIdentityRetryMs)) return true;
+    return send_identity(false);
+}
+
 bool TrocLink::push(std::span<const uint8_t> packet) {
     if (broken_) {
         ++dropped_;
         return false;
     }
+    if (!announce_identity()) return false;
     // Our capabilities go once per connection, right before the first packet
     // of ours on it: never on their own, so a link that has said nothing yet
     // stays one that said nothing (TrocLink::tick's reconnection rule).
@@ -67,21 +147,32 @@ uint8_t TrocLink::peer_caps() const {
 
 bool TrocLink::peer_decodes_compressed() const { return (peer_caps() & kCapsCompressed) != 0; }
 
-void TrocLink::tick(uint32_t now_ms) {
-    now_ = now_ms;
+void TrocLink::sync_epoch() {
     if (session_.epoch() != epoch_) {
         // A new connection: the other side's server/client state is gone.
         if (epoch_ != 0 || sender_.packets_sent() > 0 || receiver_.packets_received() > 0) broken_ = true;
         epoch_ = session_.epoch();
         sender_.reset();
+        identity_announced_epoch_ = 0;
+        peer_identity_epoch_ = 0;
     }
+}
+
+void TrocLink::tick(uint32_t now_ms) {
+    now_ = now_ms;
+    sync_epoch();
     sender_.set_compress(compressing());
-    if (!broken_ && connected()) sender_.flush();
+    // Identity is sent without waiting for application traffic: the host waits
+    // for connected() before sending READY, and the guest waits for READY.
+    if (!broken_ && session_.state() == ClientSession::State::Connected) {
+        if (announce_identity()) sender_.flush();
+    }
 }
 
 void TrocLink::reset() {
     sender_.reset();
-    broken_ = false;
+    identity_announced_epoch_ = 0;
+    broken_ = identity_failed_epoch_ != 0 && identity_failed_epoch_ == session_.epoch();
     epoch_ = session_.epoch();
     // The capabilities belong to the connection, not to the conversation:
     // they stay (a C4 epoch on the same connection keeps them).
@@ -103,6 +194,11 @@ std::string TrocLink::describe() const {
     }
     if (caps_ || receiver_.compressed_received() || caps_in_) {
         s += std::format(" | in compressed batches {}", receiver_.compressed_received());
+    }
+    if (identity_required_) {
+        s += std::format(" | native build {} map {:016X}: {}", game_build_, mapping_fingerprint_,
+                         identity_failed_epoch_ != 0 && identity_failed_epoch_ == session_.epoch() ? "MISMATCH" :
+                         peer_identity_epoch_ != 0 && peer_identity_epoch_ == session_.epoch() ? "verified" : "waiting for peer");
     }
     return s;
 }

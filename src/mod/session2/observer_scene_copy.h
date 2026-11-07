@@ -35,6 +35,8 @@ bool observer_scene_copy_configure(bool on);
 bool observer_scene_copy_wanted();
 bool observer_scene_copy_active();  // wanted, code verified, not disabled
 // observer_stage's thread, before its hooks go in: the code the copy relies on (build 2976).
+// Build 3527: the same check against its own code (nothing is hooked here).
+bool observer_scene_copy_verify_current(uintptr_t base);
 bool observer_scene_copy_verify(uintptr_t base, std::span<const gad::Section> secs);
 void observer_scene_copy_disable(const char* why);
 // This thread is inside our own copy's call of 0x2A4E4C0 (P8 review M6: observer_stage's 2810 hook sees

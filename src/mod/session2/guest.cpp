@@ -1,4 +1,6 @@
 #include "mod/session2/guest.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -22,6 +24,8 @@
 #include "mod/session2/attach_follow.h"
 #include "mod/session2/clock_push.h"
 #include "mod/session2/docked_gimmicks.h"
+#include "mod/session2/guest_shop_branch.h"
+#include "mod/session2/docking_dedupe_logic.h"
 #include "mod/session2/guest_actor_diag.h"
 #include "mod/session2/guest_reload_wait.h"
 #include "mod/session2/guest_bodyanim_diag.h"
@@ -44,16 +48,21 @@
 #include "mod/session2/guest_x_veto.h"
 #include "mod/session2/guest_x_veto_logic.h"
 #include "mod/session2/load_trip.h"
+#include "mod/session2/focus_follow.h"
+#include "mod/session2/focus_follow_logic.h"
 #include "mod/session2/mount_sync.h"
 #include "mod/session2/mount_sync_logic.h"
 #include "mod/config.h"
 #include "mod/session2/offsets_s2.h"
+#include "mod/session2/profile_s2.h"
 #include "mod/session2/npc_probe_client.h"
 #include "mod/session2/door_trace.h"
 #include "mod/session2/p8_probes.h"
+#include "mod/session2/preload_release_logic.h"
 #include "mod/session2/reannounce_logic.h"
 #include "mod/session2/rejoin_logic.h"
 #include "mod/session2/remote_interp.h"
+#include "mod/session2/remote_visible.h"
 #include "mod/session2/ride_filter.h"
 #include "mod/session2/report_guard.h"
 #include "mod/session2/slot_refresh.h"
@@ -64,6 +73,8 @@
 
 namespace cdmp::session2 {
 namespace {
+
+inline uintptr_t addr(uintptr_t legacy_rva) noexcept { return profile::rva(legacy_rva); }
 
 using OnRecvFn = void(__fastcall*)(void* net, void* session, uint64_t unused, const uint8_t* pkt, uint16_t size);
 using PushFn = void(__fastcall*)(void* queue, void** item);
@@ -82,10 +93,28 @@ constexpr uint16_t kOpReserveShutDownServerReq = 2790;
 // g_ServerFrameworkMode (opcion-d-d0.md §1.1): the u32 the host's server writes
 // into its 2002 (0x1051F1E0); the client uses it as PostPacket's index (§1.3).
 constexpr uintptr_t kServerFrameworkMode = 0x6A65564;
+inline uintptr_t server_framework_mode_rva() noexcept {
+    // ServerUserActor::vf58 -> its 2002 writer loads this scalar. In 3527 the
+    // writer is 0xE552AB0 and the RIP operand resolves to 0x6EAB858; live = 4.
+    // 3576 (static, 2026-11-06; not yet run): 0x6EAD858 (the Troc block's +0x2000). The 2002 writer is protected code
+    // again; plain code reads it as the same index: ServerNet::OnRecvPacket 0x29AC4EE `mov r8d,[0x6EAD858]` between
+    // the Troc registry 0x161ED50 and Troc::Find 0x161EDB0 (op, index), and the server set-up's switch 0x29FCAB8.
+    if (game::current_build() == game::Build::v2976) return kServerFrameworkMode;
+    if (game::current_build() == game::Build::v3527) return 0x6EAB858;
+    if (game::current_build() == game::Build::v3576) return 0x6EAD858;
+    return 0;
+}
 constexpr uint64_t kMaxDecisionLogged = 32, kMaxInternalLogged = 16, kMaxLoginLogged = 8;
 
 uintptr_t g_base = 0;
 bool g_remote_allowed = false;  // guest_mode: observe (default) or remote
+// The transport hooks and the two crash guards install on separate threads.
+// A remote decision is fail-closed until every requested pre-login guard has
+// actually installed its hook. The remote-update guard is intentionally not
+// included: it needs the local user key, which exists only after login.
+std::atomic<bool> g_layer_guard_requested{false};
+std::atomic<bool> g_update_guard_requested{false};
+std::atomic<bool> g_remote_guard_requested{false};
 OnRecvFn g_on_recv = nullptr;
 PushFn g_push = nullptr;
 SafetyHookInline g_send_hook;
@@ -131,7 +160,8 @@ constexpr uint64_t kRjLines = 40;
 // (no event overtakes another, no Req overtakes its Begin) and keeps a refused event to offer it again first.
 msl::OutboundDrain g_mount_drain;
 std::atomic<uint64_t> g_mount_drain_logged{0};  // failures already logged (the mod's network thread)
-bool pop_mount_event(std::vector<uint8_t>& f) { return mount_sync_pop_outbound(f); }
+// focus_follow's state goes the same way: one frame at most, its order against the rest does not matter.
+bool pop_mount_event(std::vector<uint8_t>& f) { return mount_sync_pop_outbound(f) || focus_follow_pop_outbound(f); }
 bool push_to_host(const std::vector<uint8_t>& f) { return g_to_host.push(f); }
 void flush_mount_events() noexcept {
     try {
@@ -359,7 +389,10 @@ void end_remote(const char* why) noexcept {
 // modules whose state lives on other threads compare guest_conversation_id() there and start again themselves.
 // Review of c4367f8, 6: the first remote conversation (and so rejoin=0) only counts it; everything else is for a
 // re-entry conversation.
+void preload_release_reset() noexcept;
+
 void guest_conversation_begin(uint64_t epoch) noexcept {
+    preload_release_reset();
     uint32_t conv = 0;
     uint32_t granted = 0;
     try {
@@ -495,6 +528,27 @@ std::string rejoin_describe() {
 // on a connection that is not broken (end_remote leaves g_mode Remote until the client connects again).
 bool remote_live_for_keys() noexcept { return g_mode.load() == Mode::Remote && !g_broken.load(); }
 
+// docking_dedupe (docking_dedupe_logic.h): the same equipment-docking request at most once per 2 s to the host.
+std::atomic<bool> g_dock_on{true};
+std::mutex g_dock_mu;
+ddd::Dedupe g_dock;
+std::atomic<uint64_t> c_dock_dropped{0}, c_dock_passed{0};
+bool docking_withhold(const uint8_t* p, size_t n) noexcept {
+    if (!g_dock_on.load(std::memory_order_relaxed) || !p || n < 5) return false;
+    // The client's packets are decoded to the logical numbering when they are taken (native_opcode::decode_packet),
+    // so this compares the logical opcode (live 2026-11-06: the native 2288 never matched here).
+    if (static_cast<uint16_t>(p[0] | (p[1] << 8)) != ddd::kLogicalOpcode) return false;
+    bool drop = false;
+    try {
+        const std::lock_guard lock(g_dock_mu);
+        drop = g_dock.drop(ddd::fingerprint(std::span<const uint8_t>(p, n)), GetTickCount64());
+    } catch (...) {
+        return false;
+    }
+    (drop ? c_dock_dropped : c_dock_passed).fetch_add(1, std::memory_order_relaxed);
+    return drop;
+}
+
 // The packet of a C->S buffer (ClientNet::PostPacket's layout, D0 §4), or
 // empty if the buffer is not what we expect.
 std::vector<uint8_t> frame_packet(uintptr_t self, uintptr_t pb) noexcept {
@@ -514,7 +568,7 @@ std::vector<uint8_t> frame_packet(uintptr_t self, uintptr_t pb) noexcept {
         std::vector<uint8_t> p(flen - off::kFrameOverhead);
         // C4: also the client's 3-byte native goodbye 2001 (salida.md §1.1).
         if (!guarded_copy(p.data(), pb + off::kFrameHeader, p.size()) ||
-            !troc::parse_wire(p, troc::Dir::ToHostServer)) {
+            !native_opcode::decode_packet(game::current_build(), p, troc::Dir::ToHostServer)) {
             return {};
         }
         return p;
@@ -550,6 +604,12 @@ Mode decide(uint16_t first_op, uint64_t epoch) {
         why = "guest_mode=observe";
     } else if (had && !rv.remote) {
         why = rv.why.c_str();
+    } else if (g_layer_guard_requested.load(std::memory_order_acquire) && !guest_layer_guard_ready()) {
+        why = "the requested guest_layer_guard is not installed yet (or its verified hook was refused)";
+    } else if (g_update_guard_requested.load(std::memory_order_acquire) && !guest_update_guard_ready()) {
+        why = "the requested guest_update_guard is not installed yet (or its verified hook was refused)";
+    } else if (g_remote_guard_requested.load(std::memory_order_acquire) && !guest_remote_update_guard_ready()) {
+        why = "the complete remote character guard set is not installed yet (or a verified hook was refused)";
     } else if (first_op != kOpConnectCryptogramToServerReq) {
         why = "its first packet is not ConnectCryptogramToServerReq 2319 (part of it may already be local)";
     } else if (!tunnel) {
@@ -567,7 +627,7 @@ Mode decide(uint16_t first_op, uint64_t epoch) {
     if (!why) {
         uintptr_t net = 0, q3 = 0;
         // Q3 is where the buffers go back: checked once, with VirtualQuery, before relying on it.
-        if (!game::safe_read(g_base + off::kClientNetSlot, &net, sizeof net) || !net ||
+        if (!game::safe_read(g_base + addr(off::kClientNetSlot), &net, sizeof net) || !net ||
             !game::safe_read(net + off::kClientNet_FreeC2S, &q3, sizeof q3) || !q3 ||
             !game::safe_read(q3, &net, sizeof net)) {
             why = "ClientNet's Q3 is unreadable";
@@ -652,13 +712,14 @@ void note_in(std::span<const uint8_t> p, uint16_t op) {
         g_n.in_2002.fetch_add(1, std::memory_order_relaxed);
         uint32_t index = 0, mode = 0;
         std::memcpy(&index, p.data() + troc::kInternalHeaderSize, sizeof index);
-        const bool own = g_base && game::safe_read(g_base + kServerFrameworkMode, &mode, sizeof mode);
+        const auto mode_rva = server_framework_mode_rva();
+        const bool own = g_base && mode_rva && game::safe_read(g_base + mode_rva, &mode, sizeof mode);
         g_n.last_2002_index.store(index);
         g_n.own_mode.store(own ? mode : 0);
         g_n.index_match.store(own ? (mode == index ? 1 : 0) : -1);
         note(g_n.internal_logged, kMaxInternalLogged,
              "Session2 guest: in LogoutSessionToServerAck 2002: {} | index {} vs own [exe+0x{:X}] {} -> {}",
-             hex_bytes(p), index, kServerFrameworkMode, own ? std::format("{}", mode) : std::string("unreadable"),
+             hex_bytes(p), index, mode_rva, own ? std::format("{}", mode) : std::string("unreadable"),
              !own ? "cannot compare" : mode == index ? "equal" : "DIFFERENT (logged only, not rewritten)");
     } else if (op == troc::kOpLogoutUserAck && p.size() == troc::kLogoutAckSize) {
         g_n.in_2003.fetch_add(1, std::memory_order_relaxed);
@@ -719,7 +780,7 @@ int guarded_busy(uintptr_t g, bool take) {
 DWORD guarded_refresh_slots(uintptr_t g) {
     DWORD code = 0;
     __try {
-        reinterpret_cast<SaveMgrFn>(g_base + off::kSaveMgrRefreshSlots)(reinterpret_cast<void*>(g));
+        reinterpret_cast<SaveMgrFn>(g_base + addr(off::kSaveMgrRefreshSlots))(reinterpret_cast<void*>(g));
     } __except (code = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
         return code ? code : 1;
     }
@@ -741,20 +802,26 @@ bool refresh_code_ok(std::string& why) {
         {off::kWindowsLockVf2, off::kWindowsLockVf2Head, "WindowsLock vf2 (unlock)"},
     };
     for (const auto& c : checks) {
-        std::vector<uint8_t> actual(c.bytes.size());
-        if (!game::safe_read(g_base + c.rva, actual.data(), actual.size())) {
-            why = std::format("{} (exe+0x{:X}) is unreadable", c.what, c.rva);
+        const auto resolved = addr(c.rva);
+        const auto sig = profile::signature(c.rva, c.bytes);
+        if (!resolved || sig.empty()) {
+            why = std::format("{} has no verified address/signature for this build", c.what);
             return false;
         }
-        if (const int at = sr::first_mismatch(actual, c.bytes); at >= 0) {
-            why = std::format("{} (exe+0x{:X}) differs at +{}: {}", c.what, c.rva, at, hex_bytes(actual, 24));
+        std::vector<uint8_t> actual(sig.size());
+        if (!game::safe_read(g_base + resolved, actual.data(), actual.size())) {
+            why = std::format("{} (exe+0x{:X}) is unreadable", c.what, resolved);
+            return false;
+        }
+        if (const int at = sr::first_mismatch(actual, sig); at >= 0) {
+            why = std::format("{} (exe+0x{:X}) differs at +{}: {}", c.what, resolved, at, hex_bytes(actual, 24));
             return false;
         }
     }
     uintptr_t vf1 = 0, vf2 = 0;
-    if (!game::safe_read(g_base + off::kWindowsLock3Vtable + 8, &vf1, sizeof vf1) ||
-        !game::safe_read(g_base + off::kWindowsLock3Vtable + 16, &vf2, sizeof vf2) ||
-        vf1 != g_base + off::kWindowsLockVf1 || vf2 != g_base + off::kWindowsLockVf2) {
+    if (!game::safe_read(g_base + addr(off::kWindowsLock3Vtable) + 8, &vf1, sizeof vf1) ||
+        !game::safe_read(g_base + addr(off::kWindowsLock3Vtable) + 16, &vf2, sizeof vf2) ||
+        vf1 != g_base + addr(off::kWindowsLockVf1) || vf2 != g_base + addr(off::kWindowsLockVf2)) {
         why = std::format("WindowsLock<3>'s vtable (exe+0x{:X}) has vf1 0x{:X} vf2 0x{:X}", off::kWindowsLock3Vtable,
                           vf1, vf2);
         return false;
@@ -773,9 +840,21 @@ std::vector<sr::Entry> read_slot_table(uintptr_t g, uint32_t& count) {
         return {};
     }
     const uint32_t n = count < sr::kMaxEntriesRead ? count : sr::kMaxEntriesRead;
-    std::vector<uint8_t> raw(static_cast<size_t>(n) * sr::kEntrySize);
+    const uint32_t stride = profile::save_slot_entry_size();
+    if (stride < 16 || stride > 0x100) return {};
+    std::vector<uint8_t> raw(static_cast<size_t>(n) * stride);
     if (n && !game::safe_read(data, raw.data(), raw.size())) return {};
-    return sr::parse_entries(raw, n);
+    if (stride == sr::kEntrySize) return sr::parse_entries(raw, n);
+    std::vector<sr::Entry> entries;
+    entries.reserve(n);
+    for (uint32_t i = 0; i < n; ++i) {
+        const size_t at = static_cast<size_t>(i) * stride;
+        sr::Entry e;
+        std::memcpy(&e.slot, raw.data() + at, sizeof e.slot);
+        std::memcpy(&e.time, raw.data() + at + 8, sizeof e.time);
+        entries.push_back(e);
+    }
+    return entries;
 }
 
 // One try of the native refresh (SaveDataSlotRefreshReq 0x2A22380 without its
@@ -786,7 +865,7 @@ sr::Attempt try_refresh([[maybe_unused]] uintptr_t net, bool test, std::string& 
         if (why.empty()) why = "the game's code is not the expected one";
         return sr::Attempt::Refused;
     }
-    const auto ws = game::read_ptr(g_base + off::kWorldSystemSlot);
+    const auto ws = game::read_ptr(g_base + addr(off::kWorldSystemSlot));
     const auto g = ws ? game::read_ptr(*ws + off::kWorldSystem_SaveManager) : std::nullopt;
     if (!g) {
         why = ws ? "no save manager at [WorldSystem+0x88] yet" : "no WorldSystem yet";
@@ -798,13 +877,13 @@ sr::Attempt try_refresh([[maybe_unused]] uintptr_t net, bool test, std::string& 
         why = std::format("the save manager 0x{:X} has no {} yet", *g, storage ? "lock" : "storage");
         return sr::Attempt::NotReady;
     }
-    if (*lock != *g + off::kSaveMgr_LockObj || !game::has_vtable(*lock, g_base + off::kWindowsLock3Vtable)) {
+    if (*lock != *g + off::kSaveMgr_LockObj || !game::has_vtable(*lock, g_base + addr(off::kWindowsLock3Vtable))) {
         why = std::format("the save manager 0x{:X}'s lock 0x{:X} is not its own WindowsLock<3>", *g, *lock);
         return sr::Attempt::Refused;
     }
     // The server's pointer to the manager (what 0x2A22380 uses): the same
     // object, or not set yet. Anything else contradicts the analysis.
-    const auto lookup = game::read_ptr(g_base + off::kServerActorLookupSlot);
+    const auto lookup = game::read_ptr(g_base + addr(off::kServerActorLookupSlot));
     const auto server_g = lookup ? game::read_ptr(*lookup + off::kServerActorLookup_SaveManager) : std::nullopt;
     if (server_g && *server_g != *g) {
         why = std::format("the title's save manager 0x{:X} is not the server's 0x{:X}", *g, *server_g);
@@ -940,7 +1019,7 @@ void check_send_thread() noexcept {
         log::warn("Session2 guest: NwVirtualSyncSession::Send ran on thread {}, NOT the client NetworkThread {} that "
                   "turns at exe+0x{:X} (the static analysis says it cannot); its buffer still goes back to Q3 as "
                   "always. Counted in the status line (Send off the NetworkThread)",
-                  tid, g_net_owner.owner(), off::kNetLoopPump);
+                  tid, g_net_owner.owner(), addr(off::kNetLoopPump));
     } catch (...) {
     }
 }
@@ -974,6 +1053,7 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
     if (g_mode.load() == Mode::Undecided) {
         uint16_t op = 0;
         if (pb) peek(pb + off::kFrameHeader, op);
+        op = native_opcode::decode(game::current_build(), op).value_or(0);
         const Mode m = decide(op, epoch);
         if (m == Mode::Remote) {
             g_had_remote.store(true);
@@ -989,6 +1069,7 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
     if (g_mode.load() != Mode::Remote) {
         g_n.observed.fetch_add(1, std::memory_order_relaxed);
         if (uint16_t op = 0; pb && peek(pb + off::kFrameHeader, op)) {
+            op = native_opcode::decode(game::current_build(), op).value_or(0);
             if (op == kOpLoginUserToFieldServerReq) g_local_login_out.store(true);
             // P8 re-entry: a save loaded on this PC's own server after a remote conversation ends the re-entry.
             if (op == gxv::kOpLoginCharacterToFieldServerReq && g_had_remote.load()) {
@@ -1057,7 +1138,9 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
                     // gimmick this client drives only for its own screen is WITHHELD the same way (the host stays
                     // its controller); probe counts it.
                     const bool withheld = mount_sync_guest_outgoing(p.data(), p.size()) ||
-                                          docked_gimmicks_guest_withhold(p.data(), p.size());
+                                          docked_gimmicks_guest_withhold(p.data(), p.size()) ||
+                                          docking_withhold(p.data(), p.size()) ||
+                                          guest_shop_withhold(p.data(), p.size());
                     // P8 S25 phase B (guest_save_guest.h, guest_own_save=1): the 3093 waits for the host's SAVE_ACK
                     // and the goodbye behind one SaveToFileCurrentPlayerReq 2910 (gs.before); a held packet (and every one after
                     // it) goes later, in order, from guest_pump. Probe or off: nothing changes.
@@ -1106,6 +1189,113 @@ int* __fastcall guest_send(void* self, int* res, void* pbv) {
 
 // ---------------------------------------------------------------- in: the NetworkThread pump
 
+// ---------------------------------------------------------------- the 2322 written back (preload_release_logic.h)
+
+// NetworkThread only, like everything that hands packets to the client.
+prl::Release g_preload_release;
+uint64_t g_preload_next_ms = 0;
+uint8_t g_preload_last_state = 0xFF, g_preload_last_marker = 0xFF;
+constexpr uint64_t kPreloadTickMs = 100;
+constexpr uintptr_t kVtClientSequencerStageManager3527 = 0x59572E0;
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): pa::ClientSequencerStageManager by RTTI
+// (vtable_map_3549_3576.json), and the world slot 0x71C0100 (core_globals_3576.json; reader_profile() is null on
+// 3576). The chain is 3527's: ClientField::vf48 0xAAABB0 (0xAAA7A0 +0x410, slot +0x48 of ClientField 0x594DB40) reads
+// field+0x180 and actor +0x68 -> +0xA8 -> +0x18; the loading state machine 0x855C50 writes its state at +0x15C and
+// compares the manager's marker +0x259 with 2 (0x8562EF), and 0x85741E sets that marker to 1.
+constexpr uintptr_t kVtClientSequencerStageManager3576 = 0x5959438;
+constexpr uintptr_t kWorldSystem3576 = 0x71C0100;
+
+void preload_release_reset() noexcept {
+    g_preload_release.reset();
+    g_preload_next_ms = 0;
+    g_preload_last_state = g_preload_last_marker = 0xFF;
+}
+
+// The chain of the loading state 0x856090 and of its manager lookup 0xAAA7A0.
+// Builds 3527 and 3576 only; a null anywhere means "not there yet" (readable stays false).
+prl::Facts read_preload_facts() noexcept {
+    prl::Facts f;
+    f.now_ms = GetTickCount64();
+    const bool v3576 = game::current_build() == game::Build::v3576;
+    const auto* profile = game::reader_profile();
+    if (!v3576 && !profile) return f;
+    const uintptr_t world_slot = v3576 ? kWorldSystem3576 : profile->world_system;
+    const uintptr_t vt_sequencer = v3576 ? kVtClientSequencerStageManager3576 : kVtClientSequencerStageManager3527;
+    uintptr_t world = 0, controller_object = 0, field_holder = 0, field = 0, manager = 0, actor = 0, components = 0,
+              component = 0, sequencer = 0, vt = 0;
+    uint32_t owner = 0, local_user = 0;
+    if (!peek(g_base + world_slot, world) || !world) return f;
+    if (!peek(world + 0x60, controller_object) || !controller_object) return f;
+    if (!peek(controller_object + 0x15C, f.state)) return f;
+    if (!peek(controller_object + 0xC0, field_holder) || !field_holder) return f;
+    if (!peek(field_holder, field) || !field || !peek(field + 0x180, owner)) return f;
+    if (!peek(world + 0x30, manager) || !manager) return f;
+    if (!peek(manager + 0x50, actor) || !actor) return f;
+    if (!peek(actor + 0x60, f.own_key) || !peek(actor + 0x90, local_user)) return f;
+    if (!peek(actor + 0x68, components) || !components) return f;
+    if (!peek(components + 0xA8, component) || !component) return f;
+    if (!peek(component + 0x18, sequencer) || !sequencer) return f;
+    if (!peek(sequencer, vt) || vt != g_base + vt_sequencer) return f;
+    if (!peek(sequencer + 0x259, f.marker)) return f;
+    f.field_is_own = owner != 0 && owner == local_user;
+    f.readable = true;
+    return f;
+}
+
+void preload_release_tick(uintptr_t net) noexcept {
+    if (game::current_build() != game::Build::v3527 && game::current_build() != game::Build::v3576) return;
+    const uint64_t now = GetTickCount64();
+    if (now < g_preload_next_ms) return;
+    g_preload_next_ms = now + kPreloadTickMs;
+    try {
+        const prl::Facts f = read_preload_facts();
+        if (f.readable && (f.state != g_preload_last_state || f.marker != g_preload_last_marker)) {
+            g_preload_last_state = f.state;
+            g_preload_last_marker = f.marker;
+            log::info("Session2 guest load: state 0x{:X} marker {} (own 0x{:X}, field is own {})", f.state, f.marker,
+                      f.own_key, f.field_is_own);
+        }
+        const prl::Action action = g_preload_release.decide(f);
+        if (action == prl::Action::None) return;
+        uintptr_t session = 0;
+        uint64_t epoch = 0;
+        if (!peek(net + off::kClientNet_Session, session) || !session) return;
+        if (!peek(session + off::kSyncSession_Epoch, epoch) || epoch != g_epoch.load()) return;
+        // The whole message: op, slot -1, u16 size, the character's key.
+        const uint8_t logical[] = {static_cast<uint8_t>(prl::kOpPlayAllPreLoad & 0xFF),
+                                   static_cast<uint8_t>(prl::kOpPlayAllPreLoad >> 8),
+                                   0xFF,
+                                   4,
+                                   0,
+                                   static_cast<uint8_t>(f.own_key),
+                                   static_cast<uint8_t>(f.own_key >> 8),
+                                   static_cast<uint8_t>(f.own_key >> 16),
+                                   static_cast<uint8_t>(f.own_key >> 24)};
+        const auto native = native_opcode::encode_copy(game::current_build(), logical, troc::Dir::ToGuestClient);
+        if (!native) return;
+        g_preload_release.on_sent(now);
+        const bool ok = guarded_on_recv(net, session, native->data(), static_cast<uint16_t>(native->size()));
+        log::warn("Session2 guest load: state 0x{:X} with marker {}: PlayAllPreLoadSequencerAck {} for 0x{:X}{} (#{} in this wait)",
+                  f.state, f.marker, action == prl::Action::Repeat ? "repeated" : "synthesized, none came on this trip,",
+                  f.own_key, ok ? "" : " FAULTED", g_preload_release.sent_this_wait());
+        if (!ok) end_remote("the repeated 2322 faulted in ClientNet::OnRecvPacket");
+    } catch (...) {
+    }
+}
+
+// What the release needs to know of a packet the client just got.
+void preload_release_on_delivered(std::span<const uint8_t> p) noexcept {
+    if (p.size() < troc::kHeaderSize) return;
+    const uint16_t op = static_cast<uint16_t>(p[0] | p[1] << 8);
+    if (op == prl::kOpMoveFieldAck) {
+        g_preload_release.on_trip();
+    } else if (op == prl::kOpPlayAllPreLoad && p.size() >= troc::kHeaderSize + 4) {
+        uint32_t key = 0;
+        std::memcpy(&key, p.data() + troc::kHeaderSize, sizeof key);
+        g_preload_release.on_delivered_2322(key);
+    }
+}
+
 // NetworkThread only (guest_pump): the oldest packets of the host, at most
 // gin::kMaxPerTurn, into ClientNet::OnRecvPacket - where the game itself calls
 // it (0x35BB53), so its copy of each packet uses this thread's own heap. The
@@ -1142,7 +1332,13 @@ void deliver_all(uintptr_t net) noexcept {
             // P8 guest_schedule_load: the schedule files this 2005 / 2335 / 2874 names, before the game handles it.
             guest_sched_load_before_deliver(p);
             const uint64_t handed_us = now_us();
-            if (guarded_on_recv(net, session, p.data(), static_cast<uint16_t>(p.size()))) {
+            const auto native = native_opcode::encode_copy(game::current_build(), p, troc::Dir::ToGuestClient);
+            if (!native) {
+                g_n.deliver_errors.fetch_add(1, std::memory_order_relaxed);
+                end_remote("host packet cannot be encoded for this game build");
+                break;
+            }
+            if (guarded_on_recv(net, session, native->data(), static_cast<uint16_t>(native->size()))) {
                 npc_probe_client_delivered(p, epoch, item.queued_us);  // S33: entregado, no prueba de aplicacion.
                 door_trace_packet(DoorTraceStage::GuestDeliver, p, handed_us);
                 turn.on_delivered(item.queued_us, handed_us);
@@ -1151,9 +1347,24 @@ void deliver_all(uintptr_t net) noexcept {
                     count_delivered(p);  // G3: counts only
                 } catch (...) {
                 }
+                preload_release_on_delivered(p);
                 load_trip_on_delivered(p);  // P8 S2 (load_diag): 2322 / 2762 handed to OnRecvPacket
                 clock_probe_on_delivered(p);  // P8 session 25 (clock_probe): the 2816 / 2762 handed (counts only)
                 guest_scene_diag_on_delivered(p);  // P8 S1 (guest_scene_diag): NPC 2005 / scene packets, a fixed record
+                // guest_shop_branch: after this client's own shop 2916, the scene's Acks (this client only); and the
+                // answers to its own branch requests for that scene.
+                static std::vector<std::vector<uint8_t>> extra;
+                extra.clear();
+                guest_shop_after_deliver(p, extra);
+                guest_shop_drain(extra);
+                for (const auto& x : extra) {
+                    const auto xn = native_opcode::encode_copy(game::current_build(), x, troc::Dir::ToGuestClient);
+                    if (!xn || !guarded_on_recv(net, session, xn->data(), static_cast<uint16_t>(xn->size()))) {
+                        g_n.deliver_errors.fetch_add(1, std::memory_order_relaxed);
+                        end_remote("a local shop Ack faulted in ClientNet::OnRecvPacket");
+                        break;
+                    }
+                }
             } else {
                 // A fault inside the game's packet code: never call it again for
                 // this connection (a lock may be held).
@@ -1178,11 +1389,13 @@ void answer_goodbye(uintptr_t net) noexcept {
         uint32_t mode = 0;
         if (!peek(net + off::kClientNet_Session, session) || !session) return;
         if (!peek(session + off::kSyncSession_Epoch, epoch) || epoch != g_epoch.load()) return;
-        if (!game::safe_read(g_base + kServerFrameworkMode, &mode, sizeof mode)) return;
+        const auto mode_rva = server_framework_mode_rva();
+        if (!mode_rva || !game::safe_read(g_base + mode_rva, &mode, sizeof mode)) return;
         g_goodbye_answered.store(true);
         for (const uint16_t op : {troc::kOpLogoutUserAck, troc::kOpLogoutSessionAck}) {
             uint8_t ack[troc::kLogoutAckSize] = {static_cast<uint8_t>(op & 0xFF), static_cast<uint8_t>(op >> 8), 0xFF};
             std::memcpy(ack + troc::kInternalHeaderSize, &mode, sizeof mode);
+            if (!native_opcode::encode_packet(game::current_build(), ack, troc::Dir::ToGuestClient)) break;
             const bool ok = guarded_on_recv(net, session, ack, sizeof ack);
             log::warn("Session2 guest: the host cannot answer the client's goodbye ({}); answered locally with {} {}{}",
                       g_broken.load() ? "connection broken" : "no answer in 5 s", op, hex_bytes(ack),
@@ -1207,7 +1420,7 @@ void end_without_host(const goodbye::State& s) noexcept {
         // [[[exe+0x6D69190]+0x60]+0xC0]) and its state byte [P+0x15C].
         uintptr_t world = 0, p = 0, q = 0;
         uint8_t state = 0;
-        const bool have_p = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
+        const bool have_p = game::safe_read(g_base + addr(off::kWorldSystemSlot), &world, sizeof world) && world &&
                             game::safe_read(world + 0x60, &p, sizeof p) && p;
         const bool have_q = have_p && game::safe_read(p + 0xC0, &q, sizeof q);
         const bool have_state = have_p && game::safe_read(p + 0x15C, &state, sizeof state);
@@ -1274,12 +1487,12 @@ void note_pump_thread() noexcept {
                       "ms): only it hands the host's packets to ClientNet::OnRecvPacket (exe+0x{:X}, at most {} per "
                       "turn, oldest first) and returns the client's buffers to Q3 (exe+0x{:X}); the mod's network "
                       "thread only queues them (at most {} packets / {} MB)",
-                      g_net_owner.owner(), off::kNetLoopPump, off::kClientOnRecvPacket, gin::kMaxPerTurn,
-                      off::kQueuePush, gin::kLimits.max_packets, gin::kLimits.max_bytes >> 20);
+                      g_net_owner.owner(), addr(off::kNetLoopPump), addr(off::kClientOnRecvPacket), gin::kMaxPerTurn,
+                      addr(off::kQueuePush), gin::kLimits.max_packets, gin::kLimits.max_bytes >> 20);
         } else if (seen == gin::ThreadOwner::Seen::FirstForeign) {
             log::warn("Session2 guest: exe+0x{:X} turned on thread {}, not on {} (two client NetworkThreads?); "
                       "counted in the status line",
-                      off::kNetLoopPump, GetCurrentThreadId(), g_net_owner.owner());
+                      addr(off::kNetLoopPump), GetCurrentThreadId(), g_net_owner.owner());
         }
     } catch (...) {
     }
@@ -1347,13 +1560,18 @@ void guest_pump(safetyhook::Context& ctx) {
     }
     if (g_broken.load(std::memory_order_relaxed)) return;
     deliver_all(ctx.r15);  // r15 = ClientNet at this point of the loop
+    if (!g_broken.load(std::memory_order_relaxed)) preload_release_tick(ctx.r15);
 }
 
 // ---------------------------------------------------------------- install
 
 bool head_matches(uintptr_t rva, const uint8_t* expected, size_t n) {
-    std::vector<uint8_t> actual(n);
-    return game::safe_read(g_base + rva, actual.data(), n) && std::memcmp(actual.data(), expected, n) == 0;
+    const auto resolved = addr(rva);
+    const auto sig = profile::signature(rva, {expected, n});
+    if (!resolved || sig.empty()) return false;
+    std::vector<uint8_t> actual(sig.size());
+    return game::safe_read(g_base + resolved, actual.data(), actual.size()) &&
+           std::memcmp(actual.data(), sig.data(), sig.size()) == 0;
 }
 
 bool client_connected(uintptr_t net) {
@@ -1369,22 +1587,25 @@ uint64_t session_epoch(uintptr_t net) {
 
 DWORD WINAPI install_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
-    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    if (!profile::supported_build()) {
         log::error("Session2 guest: unsupported game build; P8 off");
         return 0;
     }
-    // As early as the game allows: ClientNet exists and the code is the one we know.
+    // As early as the game allows: the native singleton catalogue has run its
+    // static initialization, ClientNet exists, and the code is the one we
+    // know. The ASI worker can start before the catalogue constructors, so a
+    // failed catalogue check here is readiness, not an unsupported build.
     uintptr_t net = 0;
-    bool heads = false;
+    bool catalog = false, heads = false;
     for (int i = 0; i < 24000; ++i) {  // 2 minutes
-        heads = head_matches(off::kSyncSessionSend, off::kSyncSessionSendHead, sizeof off::kSyncSessionSendHead) &&
+        catalog = game::validate_native_catalog();
+        heads = catalog &&
+                head_matches(off::kSyncSessionSend, off::kSyncSessionSendHead, sizeof off::kSyncSessionSendHead) &&
                 head_matches(off::kNetLoopPump, off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob) &&
                 head_matches(off::kClientOnRecvPacket, off::kClientOnRecvPacketHead,
                              sizeof off::kClientOnRecvPacketHead) &&
                 head_matches(off::kQueuePush, off::kQueuePushHead, sizeof off::kQueuePushHead);
-        auto n = game::read_ptr(g_base + off::kClientNetSlot);
+        auto n = game::read_ptr(g_base + addr(off::kClientNetSlot));
         if (heads && n) {
             net = *n;
             break;
@@ -1393,7 +1614,8 @@ DWORD WINAPI install_thread(LPVOID) {
     }
     if (!net) {
         log::error("Session2 guest: {} after 2 minutes; P8 off",
-                   heads ? "no ClientNet" : "the client's network functions are not the expected ones");
+                   !catalog ? "the native singleton catalogue was not initialized or did not validate"
+                            : heads ? "no ClientNet" : "the client's network functions are not the expected ones");
         return 0;
     }
     const auto too_late = [&] {
@@ -1404,8 +1626,8 @@ DWORD WINAPI install_thread(LPVOID) {
         too_late();
         return 0;
     }
-    g_on_recv = reinterpret_cast<OnRecvFn>(g_base + off::kClientOnRecvPacket);
-    g_push = reinterpret_cast<PushFn>(g_base + off::kQueuePush);
+    g_on_recv = reinterpret_cast<OnRecvFn>(g_base + addr(off::kClientOnRecvPacket));
+    g_push = reinterpret_cast<PushFn>(g_base + addr(off::kQueuePush));
     // The connection that exists now (none) stays local: only a new epoch is decided.
     g_epoch.store(session_epoch(net));
     g_mode.store(Mode::Local);
@@ -1414,12 +1636,12 @@ DWORD WINAPI install_thread(LPVOID) {
     // every P8 point (.rsrc only, the 39 verified bytes, exactly the 7-byte first
     // instruction relocated). The Send hook is prepared first: nothing is written
     // to the game unless both can go in.
-    g_send_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + off::kSyncSessionSend),
+    g_send_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + addr(off::kSyncSessionSend)),
                                             reinterpret_cast<void*>(&guest_send), SafetyHookInline::StartDisabled);
     std::vector<gad::Section> secs;
     const bool pump_ok =
         g_send_hook && p8_exe_sections(g_base, secs) &&
-        p8_install_mid(g_base, secs, off::kNetLoopPump, off::kNetLoopPumpPatch,
+        p8_install_mid(g_base, secs, addr(off::kNetLoopPump), off::kNetLoopPumpPatch,
                        std::span<const uint8_t>(off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob), guest_pump,
                        g_pump_hook, "Session2 guest", "the client NetworkThread's turn");
     if (!pump_ok || !g_send_hook.enable()) {
@@ -1431,6 +1653,8 @@ DWORD WINAPI install_thread(LPVOID) {
     // The client may have connected while the hooks went in: that connection
     // was (partly) local. The first-packet rule keeps it local; say so.
     if (client_connected(net)) too_late();
+    // Before the host's character can arrive (remote_visible_logic.h); a failure leaves it unseen, and is logged.
+    (void)remote_visible_install();
     g_active.store(true);
     // P8-T (opcion-d-pruebas.md): the title's refresh once, now, on one PC
     // (observe: the client's own login still runs later and must not be "busy").
@@ -1449,7 +1673,7 @@ DWORD WINAPI install_thread(LPVOID) {
         }
     }
     log::info("Session2 guest (P8): hooked NwVirtualSyncSession::Send (exe+0x{:X}) and the NetworkThread "
-              "(exe+0x{:X}); mode {}", off::kSyncSessionSend, off::kNetLoopPump,
+              "(exe+0x{:X}); mode {}", addr(off::kSyncSessionSend), addr(off::kNetLoopPump),
               g_remote_allowed ? "REMOTE: the next connection goes to the host if it is ready"
                                : "observe (guest_mode=observe: everything stays local, only counted)");
     // The counters once a minute, also without [net] (the network loop is what
@@ -1470,10 +1694,11 @@ namespace {
 // code is there (it is retried every 5 ms for 2 minutes) and whatever P8 does
 // afterwards (observe or remote, installed or not). Once on, it stays on.
 DWORD WINAPI report_guard_thread(LPVOID) {
-    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    if (base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    // Use the same exact PE/image validation as the transport. The reporter
+    // is independent of the native singleton catalogue (whose constructors
+    // may not have run yet); report_guard_try_install() selects and checks the
+    // build-specific reporter entry before creating the hook.
+    if (!profile::supported_build()) {
         log::error("Session2 guest: unsupported game build; the report guard (K1) is NOT on: move "
                    "crashpad_handler.exe out (K2) before playing");
         return 0;
@@ -1498,6 +1723,12 @@ DWORD WINAPI report_guard_thread(LPVOID) {
 void guest_start(bool remote, bool slot_refresh_test, bool actor_diag, bool layer_guard, bool s3_diag, bool crash_dump,
                  bool update_guard) {
     g_remote_allowed = remote;
+    // Publish the requirements before any install/network thread can decide a
+    // connection. Readiness itself comes from the guard modules' hook atomics.
+    g_layer_guard_requested.store(layer_guard, std::memory_order_release);
+    g_update_guard_requested.store(update_guard, std::memory_order_release);
+    const bool remote_update_guard = loaded_config().s2_guest_remote_update_guard;
+    g_remote_guard_requested.store(remote_update_guard, std::memory_order_release);
     g_slot_test = slot_refresh_test;
     g_goodbye_end_on.store(loaded_config().s2_guest_goodbye_end);
     {
@@ -1550,8 +1781,8 @@ void guest_start(bool remote, bool slot_refresh_test, bool actor_diag, bool laye
     CloseHandle(CreateThread(nullptr, 0, install_thread, nullptr, 0, nullptr));
     // P8 actors of the host's field (pendientes/p8-actores-anfitrion.md §4.4,
     // §4.1(i)): its own thread too; nothing when the three keys are 0. S34: guest_remote_update_guard rides on that
-    // thread (it needs the local user key) and owns 0x85FBA0, so guest_s3 does not hook its first-Update point.
-    const bool remote_update_guard = loaded_config().s2_guest_remote_update_guard;
+    // thread. Hooks install before remote admission; the local key arms their
+    // ownership filter later. It owns Update, so guest_s3 leaves that site alone.
     guest_actor_diag_start(actor_diag, layer_guard, remote_update_guard);
     // S3 (pendientes/p8-impl-s3.md): its own thread; nothing when the three keys are 0.
     guest_s3_start(s3_diag, crash_dump, update_guard, actor_diag, /*update_site_taken=*/remote_update_guard);
@@ -1633,7 +1864,7 @@ void guest_local_load_watch() noexcept {
         if (!g_ll_watch.armed()) return;
         uintptr_t world = 0, p = 0;
         uint8_t state = 0;
-        const bool ok = game::safe_read(g_base + off::kWorldSystemSlot, &world, sizeof world) && world &&
+        const bool ok = game::safe_read(g_base + addr(off::kWorldSystemSlot), &world, sizeof world) && world &&
                         game::safe_read(world + 0x60, &p, sizeof p) && p &&
                         game::safe_read(p + 0x15C, &state, sizeof state);
         if (g_ll_watch.sample(now, state, ok)) end_local_after_remote(g_ll_epoch.load(), now - g_ll_watch.since_ms(), state);
@@ -1696,6 +1927,11 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
             if (remote_live_for_keys()) (void)tree_bend_on_frame(packet, g_epoch.load());
             return;
         }
+        // Which character the host plays (focus_follow.h, state 16), never the game's. Only while playing on the host.
+        if (ffl::is_frame(packet)) {
+            if (remote_live_for_keys()) (void)focus_follow_on_frame(packet, g_epoch.load());
+            return;
+        }
         // P8 S25 weather (weather_sync.h): the host's weather sample, state 12 (its exact 277-byte form), never the game's.
         if (weather_sync_guest_on_control(packet)) return;
         const uint8_t state = v->payload.empty() ? 0 : v->payload[0];
@@ -1744,6 +1980,7 @@ void guest_deliver(std::vector<uint8_t>&& packet) {
     if (v && v->opcode == 2756 && v->payload.size() >= 4) {
         mount_sync_set_local_key(msl::get32(v->payload.data()));
     }
+    if (v) focus_follow_count_in(v->opcode, v->payload);
     // P8 mounts (mode 1): held in order while a Begin of the host's character waits for its Commit.
     if (!g_ms_held.empty() || mount_sync_guest_holding()) {
         ms_release();
@@ -1988,6 +2225,8 @@ std::string guest_rejoin_hud() {
 bool guest_active() { return g_active.load(); }
 bool guest_remote() { return g_mode.load() == Mode::Remote; }
 bool guest_local_after_remote() { return g_had_remote.load() && g_mode.load() != Mode::Remote; }
+bool guest_host_ready() { return host_ready(); }
+
 bool guest_remote_live() noexcept {
     return uip::guest_live(g_mode.load() == Mode::Remote, g_tunnel_up.load(), g_broken.load());
 }
@@ -2042,6 +2281,13 @@ std::string actor_create_failures_text() {
 
 }  // namespace
 
+void guest_set_docking_dedupe(bool on) {
+    g_dock_on.store(on);
+    log::info("Session2 guest: docking_dedupe={}{}", on ? 1 : 0,
+              on ? ": the same equipment-docking request (OnDemandEquipDockingGimmickSpawnReq) at most once per 2 s"
+                 : "");
+}
+
 std::string guest_describe() {
     const Mode m = g_mode.load();
     const char* mode = m == Mode::Remote ? "REMOTE (host's server)" : m == Mode::Undecided ? "deciding" : "local";
@@ -2053,6 +2299,8 @@ std::string guest_describe() {
                        g_n.local.load(), g_n.first_op.load(), g_n.sent.load(), g_n.bad_frames.load(),
                        g_n.dropped.load(), g_n.delivered.load(), g_n.deliver_errors.load(), g_n.observed.load()) +
            guest_describe_g2() + guest_describe_threads() +
+           std::format(" | docking dedupe {}: dropped {} of {}", g_dock_on.load() ? "on" : "off", c_dock_dropped.load(),
+                       c_dock_dropped.load() + c_dock_passed.load()) +
            std::format(" | report guard (K1) {} (not sent {}, Sentry on for {})",
                        report_guard_active() ? "on" : "OFF", report_guard_dropped(), report_guard_dropped_live()) +
            (guest_actor_diag_wanted() ? guest_actor_diag_describe() : std::string()) + guest_s3_describe() +

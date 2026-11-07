@@ -1,0 +1,199 @@
+{
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "dump": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp_crash.guest_20261105-004850_64156_1.dmp",
+  "captured": {
+    "cc": "0x3c2f653d980",
+    "actor": "0x3c2f6e64680",
+    "key": "0xb0100881",
+    "controller": "0x90100000",
+    "actor_c8": 0,
+    "applied_layer_mask": [
+      0,
+      1
+    ],
+    "selected_register": 0,
+    "selected_memory": null,
+    "layers": [
+      {
+        "index": 0,
+        "address": 4135896506112,
+        "current": 0,
+        "playback": 0
+      },
+      {
+        "index": 1,
+        "address": 4135896489472,
+        "current": 4135049913895,
+        "playback": 4135738210112
+      }
+    ],
+    "rcx": "0x0",
+    "rsp": "0x13fed20",
+    "caller_return": "0x140946495"
+  },
+  "assertions": [
+    {
+      "rva": "0x2517ae2",
+      "bytes": "4c8bf9",
+      "instruction": "mov r15, rcx"
+    },
+    {
+      "rva": "0x25191e0",
+      "bytes": "498b4730",
+      "instruction": "mov rax, qword ptr [r15 + 0x30]"
+    },
+    {
+      "rva": "0x25191e4",
+      "bytes": "0fb6581b",
+      "instruction": "movzx ebx, byte ptr [rax + 0x1b]"
+    },
+    {
+      "rva": "0x25191e8",
+      "bytes": "498b84df88000000",
+      "instruction": "mov rax, qword ptr [r15 + rbx*8 + 0x88]"
+    },
+    {
+      "rva": "0x25191f0",
+      "bytes": "488b4818",
+      "instruction": "mov rcx, qword ptr [rax + 0x18]"
+    },
+    {
+      "rva": "0x25191f4",
+      "bytes": "488b4128",
+      "instruction": "mov rax, qword ptr [rcx + 0x28]"
+    },
+    {
+      "rva": "0x25191f8",
+      "bytes": "0fb6787e",
+      "instruction": "movzx edi, byte ptr [rax + 0x7e]"
+    },
+    {
+      "rva": "0x25191fc",
+      "bytes": "498b4f08",
+      "instruction": "mov rcx, qword ptr [r15 + 8]"
+    },
+    {
+      "rva": "0x251923a",
+      "bytes": "4885c0",
+      "instruction": "test rax, rax"
+    },
+    {
+      "rva": "0x2519248",
+      "bytes": "4883791800",
+      "instruction": "cmp qword ptr [rcx + 0x18], 0"
+    },
+    {
+      "rva": "0x251924d",
+      "bytes": "7435",
+      "instruction": "je 0x2519284"
+    },
+    {
+      "rva": "0x251924f",
+      "bytes": "3ad3",
+      "instruction": "cmp dl, bl"
+    },
+    {
+      "rva": "0x2519251",
+      "bytes": "751e",
+      "instruction": "jne 0x2519271"
+    },
+    {
+      "rva": "0x2519253",
+      "bytes": "4084ff",
+      "instruction": "test dil, dil"
+    },
+    {
+      "rva": "0x2519256",
+      "bytes": "7419",
+      "instruction": "je 0x2519271"
+    },
+    {
+      "rva": "0x251928e",
+      "bytes": "80fa02",
+      "instruction": "cmp dl, 2"
+    },
+    {
+      "rva": "0x2519291",
+      "bytes": "7293",
+      "instruction": "jb 0x2519226"
+    },
+    {
+      "rva": "0x2519293",
+      "bytes": "488b9c2490000000",
+      "instruction": "mov rbx, qword ptr [rsp + 0x90]"
+    },
+    {
+      "rva": "0x25192a3",
+      "bytes": "ff5020",
+      "instruction": "call qword ptr [rax + 0x20]"
+    },
+    {
+      "rva": "0x251a199",
+      "bytes": "4c8bf1",
+      "instruction": "mov r14, rcx"
+    },
+    {
+      "rva": "0x251a19c",
+      "bytes": "440fb6601b",
+      "instruction": "movzx r12d, byte ptr [rax + 0x1b]"
+    },
+    {
+      "rva": "0x251a1a9",
+      "bytes": "488b5018",
+      "instruction": "mov rdx, qword ptr [rax + 0x18]"
+    },
+    {
+      "rva": "0x251a1ad",
+      "bytes": "488b4228",
+      "instruction": "mov rax, qword ptr [rdx + 0x28]"
+    },
+    {
+      "rva": "0x251a1b1",
+      "bytes": "0fb6687e",
+      "instruction": "movzx ebp, byte ptr [rax + 0x7e]"
+    },
+    {
+      "rva": "0x251a1b5",
+      "bytes": "488b4108",
+      "instruction": "mov rax, qword ptr [rcx + 8]"
+    },
+    {
+      "rva": "0x251a1f6",
+      "bytes": "48837b1800",
+      "instruction": "cmp qword ptr [rbx + 0x18], 0"
+    },
+    {
+      "rva": "0x251a1fb",
+      "bytes": "7440",
+      "instruction": "je 0x251a23d"
+    },
+    {
+      "rva": "0x251a20d",
+      "bytes": "413afc",
+      "instruction": "cmp dil, r12b"
+    },
+    {
+      "rva": "0x251a210",
+      "bytes": "7519",
+      "instruction": "jne 0x251a22b"
+    },
+    {
+      "rva": "0x251a212",
+      "bytes": "4084ed",
+      "instruction": "test bpl, bpl"
+    },
+    {
+      "rva": "0x251a215",
+      "bytes": "7414",
+      "instruction": "je 0x251a22b"
+    }
+  ],
+  "hook_rva": "0x25191F4",
+  "hook_bytes": 8,
+  "resume": "0x25191FC",
+  "secondary_hook_rva": "0x251A1AD",
+  "secondary_resume": "0x251A1B5",
+  "internal_branches_into_hook": [],
+  "reasoning": "DIL is tested only after the per-layer playback check and only for the selected index. With null selected playback its value is unused. Clearing EDI and skipping only the two reads retains other-layer blend work and the native unlock/cleanup after2519293.",
+  "scope": "Remote user copies only. Native pending/restore execution is never returned from early."
+}

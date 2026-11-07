@@ -1,0 +1,1629 @@
+{
+  "dump": "C:\\Users\\Admin\\AppData\\Local\\CrashDumps\\CrimsonDesert.exe.59848.dmp",
+  "bytes": 241208015,
+  "architecture": "AMD64",
+  "module_count": 146,
+  "thread_count": 60,
+  "stack_scan_note": "Candidates only: not an unwound call stack; data can resemble code pointers.",
+  "exceptions": [
+    {
+      "thread_id": 37972,
+      "code": "0xC0000409",
+      "code_name": "EXCEPTION_UNKNOWN",
+      "flags": "0x1",
+      "exception_address": {
+        "address": "0x7FFEAB9FA71F",
+        "module": "sl.pcl.dll",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.pcl.dll",
+        "module_base": "0x7FFEAB9C0000",
+        "rva": "0x3A71F",
+        "location": "sl.pcl.dll+0x3A71F"
+      },
+      "information": [
+        "0x5"
+      ],
+      "registers": {
+        "Rax": "0x7FFEABA06F62",
+        "Rbx": "0x0",
+        "Rcx": "0x5",
+        "Rdx": "0x10200",
+        "Rsi": "0x39203F28",
+        "Rdi": "0x2C330630",
+        "Rbp": "0xE05F9E0",
+        "Rsp": "0xE05F850",
+        "R8": "0x7FFFFFFFFFFFFFFC",
+        "R9": "0x0",
+        "R10": "0x1400000",
+        "R11": "0x21",
+        "R12": "0x39219148",
+        "R13": "0x8B47470",
+        "R14": "0x38FB02A0",
+        "R15": "0x7FFEB4740648",
+        "Rip": "0x7FFEAB9FA71F",
+        "EFlags": "0x202"
+      },
+      "rip": {
+        "address": "0x7FFEAB9FA71F",
+        "module": "sl.pcl.dll",
+        "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.pcl.dll",
+        "module_base": "0x7FFEAB9C0000",
+        "rva": "0x3A71F",
+        "location": "sl.pcl.dll+0x3A71F"
+      },
+      "context_source": "exception stream",
+      "code_at_rip": {
+        "captured_bytes": "cd 29 48 8d 05 d8 09 00 00 48 89 1d a1 59 01 00 4c 8d 0d 8a 59 01 00 48 89 05 8b 59 01 00 4c 8d 05 5c 59 01 00 48 8d 15 b5 68 fc ff 48 8d 4c 24 30 ff 15 aa 58 00 00 85 c0 75 1b 4c 8b 05 47 59 01 00 8d 50 02 48 8b 0d 55 59 01 00 45 0f b7 08 ff 15 93 58 00 00 83 3d 24 59 01 00 05 76 0c 48",
+        "instructions": [
+          {
+            "address": "0x7FFEAB9FA71F",
+            "bytes": "cd 29",
+            "mnemonic": "int",
+            "operands": "0x29"
+          },
+          {
+            "address": "0x7FFEAB9FA721",
+            "bytes": "48 8d 05 d8 09 00 00",
+            "mnemonic": "lea",
+            "operands": "rax, [rip + 0x9d8]"
+          },
+          {
+            "address": "0x7FFEAB9FA728",
+            "bytes": "48 89 1d a1 59 01 00",
+            "mnemonic": "mov",
+            "operands": "qword ptr [rip + 0x159a1], rbx"
+          },
+          {
+            "address": "0x7FFEAB9FA72F",
+            "bytes": "4c 8d 0d 8a 59 01 00",
+            "mnemonic": "lea",
+            "operands": "r9, [rip + 0x1598a]"
+          },
+          {
+            "address": "0x7FFEAB9FA736",
+            "bytes": "48 89 05 8b 59 01 00",
+            "mnemonic": "mov",
+            "operands": "qword ptr [rip + 0x1598b], rax"
+          },
+          {
+            "address": "0x7FFEAB9FA73D",
+            "bytes": "4c 8d 05 5c 59 01 00",
+            "mnemonic": "lea",
+            "operands": "r8, [rip + 0x1595c]"
+          },
+          {
+            "address": "0x7FFEAB9FA744",
+            "bytes": "48 8d 15 b5 68 fc ff",
+            "mnemonic": "lea",
+            "operands": "rdx, [rip - 0x3974b]"
+          },
+          {
+            "address": "0x7FFEAB9FA74B",
+            "bytes": "48 8d 4c 24 30",
+            "mnemonic": "lea",
+            "operands": "rcx, [rsp + 0x30]"
+          },
+          {
+            "address": "0x7FFEAB9FA750",
+            "bytes": "ff 15 aa 58 00 00",
+            "mnemonic": "call",
+            "operands": "qword ptr [rip + 0x58aa]"
+          },
+          {
+            "address": "0x7FFEAB9FA756",
+            "bytes": "85 c0",
+            "mnemonic": "test",
+            "operands": "eax, eax"
+          },
+          {
+            "address": "0x7FFEAB9FA758",
+            "bytes": "75 1b",
+            "mnemonic": "jne",
+            "operands": "0x7ffeab9fa775"
+          },
+          {
+            "address": "0x7FFEAB9FA75A",
+            "bytes": "4c 8b 05 47 59 01 00",
+            "mnemonic": "mov",
+            "operands": "r8, qword ptr [rip + 0x15947]"
+          }
+        ],
+        "source": "captured dump memory only"
+      },
+      "stack": {
+        "rsp": "0xE05F850",
+        "requested_bytes": 8192,
+        "captured_bytes": 1968,
+        "first_qwords": [
+          {
+            "offset": "0x0",
+            "value": "0xDE757790"
+          },
+          {
+            "offset": "0x8",
+            "value": "0xE05F790"
+          },
+          {
+            "offset": "0x10",
+            "value": "0x2BF69BB0"
+          },
+          {
+            "offset": "0x18",
+            "value": "0x7FFEB472D820"
+          },
+          {
+            "offset": "0x20",
+            "value": "0x89DB600"
+          },
+          {
+            "offset": "0x28",
+            "value": "0x73BF740"
+          },
+          {
+            "offset": "0x30",
+            "value": "0x4D4982A60D216F06"
+          },
+          {
+            "offset": "0x38",
+            "value": "0xABEF56AE388F4FBC"
+          },
+          {
+            "offset": "0x40",
+            "value": "0xF77BBA495331"
+          },
+          {
+            "offset": "0x48",
+            "value": "0xCCA7476704DE"
+          },
+          {
+            "offset": "0x50",
+            "value": "0x8B47478"
+          },
+          {
+            "offset": "0x58",
+            "value": "0x7FFEAB9FB8DB"
+          },
+          {
+            "offset": "0x60",
+            "value": "0x3920DD40"
+          },
+          {
+            "offset": "0x68",
+            "value": "0x0"
+          },
+          {
+            "offset": "0x70",
+            "value": "0x2C330630"
+          },
+          {
+            "offset": "0x78",
+            "value": "0x0"
+          }
+        ],
+        "candidates": [
+          {
+            "stack_address": "0xE05F868",
+            "stack_offset": "0x18",
+            "address": "0x7FFEB472D820",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x6D820",
+            "location": "sl.interposer.dll+0x6D820",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05F8A8",
+            "stack_offset": "0x58",
+            "address": "0x7FFEAB9FB8DB",
+            "module": "sl.pcl.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.pcl.dll",
+            "module_base": "0x7FFEAB9C0000",
+            "rva": "0x3B8DB",
+            "location": "sl.pcl.dll+0x3B8DB",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05F8D8",
+            "stack_offset": "0x88",
+            "address": "0x7FFEB472539C",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x6539C",
+            "location": "sl.interposer.dll+0x6539C",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05F908",
+            "stack_offset": "0xB8",
+            "address": "0x7FFEB4740648",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x80648",
+            "location": "sl.interposer.dll+0x80648",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05F920",
+            "stack_offset": "0xD0",
+            "address": "0x7FFEB47407C8",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x807C8",
+            "location": "sl.interposer.dll+0x807C8",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05F958",
+            "stack_offset": "0x108",
+            "address": "0x7FFF6D882D7B",
+            "module": "ucrtbase.dll",
+            "module_path": "C:\\Windows\\System32\\ucrtbase.dll",
+            "module_base": "0x7FFF6D870000",
+            "rva": "0x12D7B",
+            "location": "ucrtbase.dll+0x12D7B",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05F988",
+            "stack_offset": "0x138",
+            "address": "0x7FFEB46CE200",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0xE200",
+            "location": "sl.interposer.dll+0xE200",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FAD8",
+            "stack_offset": "0x288",
+            "address": "0x7FFE0B1EDBF4",
+            "module": "D3D12Core.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\d3d12\\D3D12Core.dll",
+            "module_base": "0x7FFE0B1B0000",
+            "rva": "0x3DBF4",
+            "location": "D3D12Core.dll+0x3DBF4",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FAE8",
+            "stack_offset": "0x298",
+            "address": "0x7FFE0B794526",
+            "module": "dxgi.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\dxgi.dll",
+            "module_base": "0x7FFE0B660000",
+            "rva": "0x134526",
+            "location": "dxgi.dll+0x134526",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FB48",
+            "stack_offset": "0x2F8",
+            "address": "0x7FFEB4726A3F",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x66A3F",
+            "location": "sl.interposer.dll+0x66A3F",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FB70",
+            "stack_offset": "0x320",
+            "address": "0x7FFE0B478610",
+            "module": "D3D12Core.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\d3d12\\D3D12Core.dll",
+            "module_base": "0x7FFE0B1B0000",
+            "rva": "0x2C8610",
+            "location": "D3D12Core.dll+0x2C8610",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FB88",
+            "stack_offset": "0x338",
+            "address": "0x7FFE0BA96F38",
+            "module": "dxgi.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\dxgi.dll",
+            "module_base": "0x7FFE0B660000",
+            "rva": "0x436F38",
+            "location": "dxgi.dll+0x436F38",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FBA8",
+            "stack_offset": "0x358",
+            "address": "0x7FFEB46E6BED",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x26BED",
+            "location": "sl.interposer.dll+0x26BED",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FBE8",
+            "stack_offset": "0x398",
+            "address": "0x7FFE0BA97008",
+            "module": "dxgi.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\dxgi.dll",
+            "module_base": "0x7FFE0B660000",
+            "rva": "0x437008",
+            "location": "dxgi.dll+0x437008",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FC48",
+            "stack_offset": "0x3F8",
+            "address": "0x7FFE00000001",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x2B0001",
+            "location": "cdmp.asi+0x2B0001",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FCB8",
+            "stack_offset": "0x468",
+            "address": "0x140000000",
+            "module": "CrimsonDesert.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+            "module_base": "0x140000000",
+            "rva": "0x0",
+            "location": "CrimsonDesert.exe+0x0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FCC8",
+            "stack_offset": "0x478",
+            "address": "0x7FFE01099E48",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x1349E48",
+            "location": "cdmp.asi+0x1349E48",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FCD8",
+            "stack_offset": "0x488",
+            "address": "0x7FFEB46E6A70",
+            "module": "sl.interposer.dll",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+            "module_base": "0x7FFEB46C0000",
+            "rva": "0x26A70",
+            "location": "sl.interposer.dll+0x26A70",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FCF8",
+            "stack_offset": "0x4A8",
+            "address": "0x7FFDFFEF526B",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x1A526B",
+            "location": "cdmp.asi+0x1A526B",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FD10",
+            "stack_offset": "0x4C0",
+            "address": "0x7FFE008718B8",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0xB218B8",
+            "location": "cdmp.asi+0xB218B8",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FD50",
+            "stack_offset": "0x500",
+            "address": "0x140000000",
+            "module": "CrimsonDesert.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+            "module_base": "0x140000000",
+            "rva": "0x0",
+            "location": "CrimsonDesert.exe+0x0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FD98",
+            "stack_offset": "0x548",
+            "address": "0x7FFF6FF96090",
+            "module": "ntdll.dll",
+            "module_path": "C:\\Windows\\System32\\ntdll.dll",
+            "module_base": "0x7FFF6FE30000",
+            "rva": "0x166090",
+            "location": "ntdll.dll+0x166090",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FDA8",
+            "stack_offset": "0x558",
+            "address": "0x140000000",
+            "module": "CrimsonDesert.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+            "module_base": "0x140000000",
+            "rva": "0x0",
+            "location": "CrimsonDesert.exe+0x0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FDD0",
+            "stack_offset": "0x580",
+            "address": "0x7FFE00871CA0",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0xB21CA0",
+            "location": "cdmp.asi+0xB21CA0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FE28",
+            "stack_offset": "0x5D8",
+            "address": "0x7FFF6D00427F",
+            "module": "KERNELBASE.dll",
+            "module_path": "C:\\Windows\\System32\\KERNELBASE.dll",
+            "module_base": "0x7FFF6CFF0000",
+            "rva": "0x1427F",
+            "location": "KERNELBASE.dll+0x1427F",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FE68",
+            "stack_offset": "0x618",
+            "address": "0x7FFDFFEF6750",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x1A6750",
+            "location": "cdmp.asi+0x1A6750",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FE78",
+            "stack_offset": "0x628",
+            "address": "0x7FFDFFD59FCA",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x9FCA",
+            "location": "cdmp.asi+0x9FCA",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FE80",
+            "stack_offset": "0x630",
+            "address": "0x7FFDFFD59FCA",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x9FCA",
+            "location": "cdmp.asi+0x9FCA",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FEB0",
+            "stack_offset": "0x660",
+            "address": "0x140000000",
+            "module": "CrimsonDesert.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+            "module_base": "0x140000000",
+            "rva": "0x0",
+            "location": "CrimsonDesert.exe+0x0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FEB8",
+            "stack_offset": "0x668",
+            "address": "0x7FFDFFDDC05B",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0x8C05B",
+            "location": "cdmp.asi+0x8C05B",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FEC8",
+            "stack_offset": "0x678",
+            "address": "0x7FFDFFDFEAE3",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0xAEAE3",
+            "location": "cdmp.asi+0xAEAE3",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FEF8",
+            "stack_offset": "0x6A8",
+            "address": "0x7FFDFFDF7026",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0xA7026",
+            "location": "cdmp.asi+0xA7026",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FF18",
+            "stack_offset": "0x6C8",
+            "address": "0x140000000",
+            "module": "CrimsonDesert.exe",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+            "module_base": "0x140000000",
+            "rva": "0x0",
+            "location": "CrimsonDesert.exe+0x0",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FF30",
+            "stack_offset": "0x6E0",
+            "address": "0x7FFE00863BD8",
+            "module": "cdmp.asi",
+            "module_path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+            "module_base": "0x7FFDFFD50000",
+            "rva": "0xB13BD8",
+            "location": "cdmp.asi+0xB13BD8",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FF58",
+            "stack_offset": "0x708",
+            "address": "0x7FFF6E9EDDA7",
+            "module": "kernel32.dll",
+            "module_path": "C:\\Windows\\System32\\kernel32.dll",
+            "module_base": "0x7FFF6E9C0000",
+            "rva": "0x2DDA7",
+            "location": "kernel32.dll+0x2DDA7",
+            "possible_preceding_calls": []
+          },
+          {
+            "stack_address": "0xE05FF88",
+            "stack_offset": "0x738",
+            "address": "0x7FFF6FEF9C5C",
+            "module": "ntdll.dll",
+            "module_path": "C:\\Windows\\System32\\ntdll.dll",
+            "module_base": "0x7FFF6FE30000",
+            "rva": "0xC9C5C",
+            "location": "ntdll.dll+0xC9C5C",
+            "possible_preceding_calls": []
+          }
+        ],
+        "thread_descriptor_start": "0xE05F850",
+        "thread_descriptor_bytes": 1968
+      }
+    }
+  ],
+  "modules": [
+    {
+      "name": "CrimsonDesert.exe",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\CrimsonDesert.exe",
+      "base": "0x140000000",
+      "size": "0x13EB2000",
+      "timestamp": "0x6AEA07A6"
+    },
+    {
+      "name": "ntdll.dll",
+      "path": "C:\\Windows\\System32\\ntdll.dll",
+      "base": "0x7FFF6FE30000",
+      "size": "0x26C000",
+      "timestamp": "0x67156ED3"
+    },
+    {
+      "name": "kernel32.dll",
+      "path": "C:\\Windows\\System32\\kernel32.dll",
+      "base": "0x7FFF6E9C0000",
+      "size": "0xCB000",
+      "timestamp": "0x7046C443"
+    },
+    {
+      "name": "KERNELBASE.dll",
+      "path": "C:\\Windows\\System32\\KERNELBASE.dll",
+      "base": "0x7FFF6CFF0000",
+      "size": "0x409000",
+      "timestamp": "0x9F91EE4"
+    },
+    {
+      "name": "user32.dll",
+      "path": "C:\\Windows\\System32\\user32.dll",
+      "base": "0x7FFF6DB10000",
+      "size": "0x1DE000",
+      "timestamp": "0x1BFB6B85"
+    },
+    {
+      "name": "win32u.dll",
+      "path": "C:\\Windows\\System32\\win32u.dll",
+      "base": "0x7FFF6D400000",
+      "size": "0x27000",
+      "timestamp": "0x8CEF36FF"
+    },
+    {
+      "name": "gdi32.dll",
+      "path": "C:\\Windows\\System32\\gdi32.dll",
+      "base": "0x7FFF6FB40000",
+      "size": "0x2B000",
+      "timestamp": "0x5CD2417B"
+    },
+    {
+      "name": "gdi32full.dll",
+      "path": "C:\\Windows\\System32\\gdi32full.dll",
+      "base": "0x7FFF6D680000",
+      "size": "0x129000",
+      "timestamp": "0xDC8A443A"
+    },
+    {
+      "name": "msvcp_win.dll",
+      "path": "C:\\Windows\\System32\\msvcp_win.dll",
+      "base": "0x7FFF6DA60000",
+      "size": "0xA3000",
+      "timestamp": "0xEC24E540"
+    },
+    {
+      "name": "ucrtbase.dll",
+      "path": "C:\\Windows\\System32\\ucrtbase.dll",
+      "base": "0x7FFF6D870000",
+      "size": "0x14C000",
+      "timestamp": "0x3F426C5B"
+    },
+    {
+      "name": "advapi32.dll",
+      "path": "C:\\Windows\\System32\\advapi32.dll",
+      "base": "0x7FFF6EC80000",
+      "size": "0xBB000",
+      "timestamp": "0x30611D85"
+    },
+    {
+      "name": "msvcrt.dll",
+      "path": "C:\\Windows\\System32\\msvcrt.dll",
+      "base": "0x7FFF6E000000",
+      "size": "0xA9000",
+      "timestamp": "0x715E0874"
+    },
+    {
+      "name": "sechost.dll",
+      "path": "C:\\Windows\\System32\\sechost.dll",
+      "base": "0x7FFF6E7E0000",
+      "size": "0xA8000",
+      "timestamp": "0x2163173"
+    },
+    {
+      "name": "rpcrt4.dll",
+      "path": "C:\\Windows\\System32\\rpcrt4.dll",
+      "base": "0x7FFF6E460000",
+      "size": "0x118000",
+      "timestamp": "0x4DD745B4"
+    },
+    {
+      "name": "shell32.dll",
+      "path": "C:\\Windows\\System32\\shell32.dll",
+      "base": "0x7FFF6F380000",
+      "size": "0x7B0000",
+      "timestamp": "0x1C8E555F"
+    },
+    {
+      "name": "ole32.dll",
+      "path": "C:\\Windows\\System32\\ole32.dll",
+      "base": "0x7FFF6FC50000",
+      "size": "0x199000",
+      "timestamp": "0x10E6CAFC"
+    },
+    {
+      "name": "combase.dll",
+      "path": "C:\\Windows\\System32\\combase.dll",
+      "base": "0x7FFF6E0B0000",
+      "size": "0x3A5000",
+      "timestamp": "0xBB9366F0"
+    },
+    {
+      "name": "oleaut32.dll",
+      "path": "C:\\Windows\\System32\\oleaut32.dll",
+      "base": "0x7FFF6FB70000",
+      "size": "0xD9000",
+      "timestamp": "0xE6DCAEA3"
+    },
+    {
+      "name": "ws2_32.dll",
+      "path": "C:\\Windows\\System32\\ws2_32.dll",
+      "base": "0x7FFF6E8A0000",
+      "size": "0x80000",
+      "timestamp": "0x6707829B"
+    },
+    {
+      "name": "shlwapi.dll",
+      "path": "C:\\Windows\\System32\\shlwapi.dll",
+      "base": "0x7FFF6E770000",
+      "size": "0x68000",
+      "timestamp": "0x72000BE5"
+    },
+    {
+      "name": "msvcp140.dll",
+      "path": "C:\\Windows\\System32\\msvcp140.dll",
+      "base": "0x7FFF4EE40000",
+      "size": "0x9D000",
+      "timestamp": "0x38EB906F"
+    },
+    {
+      "name": "imm32.dll",
+      "path": "C:\\Windows\\System32\\imm32.dll",
+      "base": "0x7FFF6DFC0000",
+      "size": "0x31000",
+      "timestamp": "0xC2C39F16"
+    },
+    {
+      "name": "winmm.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\winmm.dll",
+      "base": "0x7FFE6AA60000",
+      "size": "0x12B000",
+      "timestamp": "0x6A81A5CA"
+    },
+    {
+      "name": "VCRUNTIME140_1.dll",
+      "path": "C:\\Windows\\System32\\VCRUNTIME140_1.dll",
+      "base": "0x7FFF4EE00000",
+      "size": "0xC000",
+      "timestamp": "0xDC08A728"
+    },
+    {
+      "name": "VCRUNTIME140.dll",
+      "path": "C:\\Windows\\System32\\VCRUNTIME140.dll",
+      "base": "0x7FFF4EE10000",
+      "size": "0x2C000",
+      "timestamp": "0xC35DDC74"
+    },
+    {
+      "name": "setupapi.dll",
+      "path": "C:\\Windows\\System32\\setupapi.dll",
+      "base": "0x7FFF6EED0000",
+      "size": "0x487000",
+      "timestamp": "0x7788EE8A"
+    },
+    {
+      "name": "XINPUT1_4.dll",
+      "path": "C:\\Windows\\System32\\XINPUT1_4.dll",
+      "base": "0x7FFF5AB60000",
+      "size": "0x1C000",
+      "timestamp": "0x9ADAADE1"
+    },
+    {
+      "name": "D3D12.dll",
+      "path": "C:\\Windows\\System32\\D3D12.dll",
+      "base": "0x7FFF5AC00000",
+      "size": "0x23000",
+      "timestamp": "0xCCA9C8B8"
+    },
+    {
+      "name": "amd_ags_x64.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\amd_ags_x64.dll",
+      "base": "0x7FFF333E0000",
+      "size": "0x2D000",
+      "timestamp": "0x6826F320"
+    },
+    {
+      "name": "libpng18.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\libpng18.dll",
+      "base": "0x7FFF16A40000",
+      "size": "0x4F000",
+      "timestamp": "0x6A013A12"
+    },
+    {
+      "name": "dxgi.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\dxgi.dll",
+      "base": "0x7FFE0B660000",
+      "size": "0x59A000",
+      "timestamp": "0x6A6F6BB3"
+    },
+    {
+      "name": "winhttp.dll",
+      "path": "C:\\Windows\\System32\\winhttp.dll",
+      "base": "0x7FFF645A0000",
+      "size": "0x123000",
+      "timestamp": "0x979ED440"
+    },
+    {
+      "name": "amd_fidelityfx_loader_dx12.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\amd_fidelityfx_loader_dx12.dll",
+      "base": "0x7FFF43340000",
+      "size": "0x8000",
+      "timestamp": "0x6A2AB44A"
+    },
+    {
+      "name": "libxell.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\libxell.dll",
+      "base": "0x7FFEDBB90000",
+      "size": "0x69000",
+      "timestamp": "0x69A6C659"
+    },
+    {
+      "name": "libxess_fg.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\libxess_fg.dll",
+      "base": "0x7FFE07890000",
+      "size": "0x15ED000",
+      "timestamp": "0x69A70834"
+    },
+    {
+      "name": "sentry.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sentry.dll",
+      "base": "0x7FFEEEC70000",
+      "size": "0x57000",
+      "timestamp": "0x69AFDFD0"
+    },
+    {
+      "name": "d3d11.dll",
+      "path": "C:\\Windows\\System32\\d3d11.dll",
+      "base": "0x7FFF6A0C0000",
+      "size": "0x25F000",
+      "timestamp": "0xB1BA5099"
+    },
+    {
+      "name": "mfplat.dll",
+      "path": "C:\\Windows\\System32\\mfplat.dll",
+      "base": "0x7FFF64E40000",
+      "size": "0x227000",
+      "timestamp": "0x8784AC41"
+    },
+    {
+      "name": "GdiPlus.dll",
+      "path": "C:\\Windows\\WinSxS\\amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.26100.9818_none_6ef20bfa3dc815ab\\GdiPlus.dll",
+      "base": "0x7FFF41020000",
+      "size": "0x1E7000",
+      "timestamp": "0x86698242"
+    },
+    {
+      "name": "bcrypt.dll",
+      "path": "C:\\Windows\\System32\\bcrypt.dll",
+      "base": "0x7FFF6CED0000",
+      "size": "0x2A000",
+      "timestamp": "0xC676D882"
+    },
+    {
+      "name": "libxess.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\libxess.dll",
+      "base": "0x7FFE02E50000",
+      "size": "0x4A3B000",
+      "timestamp": "0x68F24FFC"
+    },
+    {
+      "name": "pdh.dll",
+      "path": "C:\\Windows\\System32\\pdh.dll",
+      "base": "0x7FFF4ED90000",
+      "size": "0x58000",
+      "timestamp": "0xEC3C590D"
+    },
+    {
+      "name": "IPHLPAPI.DLL",
+      "path": "C:\\Windows\\System32\\IPHLPAPI.DLL",
+      "base": "0x7FFF6B0F0000",
+      "size": "0x33000",
+      "timestamp": "0xD62039F0"
+    },
+    {
+      "name": "hid.dll",
+      "path": "C:\\Windows\\System32\\hid.dll",
+      "base": "0x7FFF6AFD0000",
+      "size": "0xF000",
+      "timestamp": "0x42C434D0"
+    },
+    {
+      "name": "steam_api64.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\steam_api64.dll",
+      "base": "0x7FFEFBF60000",
+      "size": "0x50000",
+      "timestamp": "0x672A8EF7"
+    },
+    {
+      "name": "cfgmgr32.dll",
+      "path": "C:\\Windows\\System32\\cfgmgr32.dll",
+      "base": "0x7FFF6CB70000",
+      "size": "0x52000",
+      "timestamp": "0x2D16883D"
+    },
+    {
+      "name": "tbs.dll",
+      "path": "C:\\Windows\\System32\\tbs.dll",
+      "base": "0x7FFF570E0000",
+      "size": "0x1A000",
+      "timestamp": "0xBAD801B3"
+    },
+    {
+      "name": "devobj.dll",
+      "path": "C:\\Windows\\System32\\devobj.dll",
+      "base": "0x7FFF6CBD0000",
+      "size": "0x2F000",
+      "timestamp": "0x95261262"
+    },
+    {
+      "name": "wininet.dll",
+      "path": "C:\\Windows\\System32\\wininet.dll",
+      "base": "0x7FFF4E180000",
+      "size": "0x293000",
+      "timestamp": "0x3D93F346"
+    },
+    {
+      "name": "sl.interposer.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.interposer.dll",
+      "base": "0x7FFEB46C0000",
+      "size": "0xA2000",
+      "timestamp": "0x6A9AFD22"
+    },
+    {
+      "name": "version.dll",
+      "path": "C:\\Windows\\System32\\version.dll",
+      "base": "0x7FFF65420000",
+      "size": "0xB000",
+      "timestamp": "0x879CD5A0"
+    },
+    {
+      "name": "dbghelp.dll",
+      "path": "C:\\Windows\\System32\\dbghelp.dll",
+      "base": "0x7FFF69CE0000",
+      "size": "0x24C000",
+      "timestamp": "0x74B6B8A9"
+    },
+    {
+      "name": "dbgcore.dll",
+      "path": "C:\\Windows\\System32\\dbgcore.dll",
+      "base": "0x7FFF4B050000",
+      "size": "0x3B000",
+      "timestamp": "0x7E56F2A5"
+    },
+    {
+      "name": "CRYPTBASE.DLL",
+      "path": "C:\\Windows\\System32\\CRYPTBASE.DLL",
+      "base": "0x7FFF6BF40000",
+      "size": "0xC000",
+      "timestamp": "0x95B538FC"
+    },
+    {
+      "name": "comctl32.dll",
+      "path": "C:\\Windows\\WinSxS\\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9818_none_3e071914e3359bdd\\comctl32.dll",
+      "base": "0x7FFF4EA60000",
+      "size": "0x291000",
+      "timestamp": "0x59BA9E34"
+    },
+    {
+      "name": "windows.storage.dll",
+      "path": "C:\\Windows\\System32\\windows.storage.dll",
+      "base": "0x7FFF6A4A0000",
+      "size": "0x8C0000",
+      "timestamp": "0x6C64A3C9"
+    },
+    {
+      "name": "SHCore.dll",
+      "path": "C:\\Windows\\System32\\SHCore.dll",
+      "base": "0x7FFF6EB20000",
+      "size": "0xF8000",
+      "timestamp": "0xE1C55761"
+    },
+    {
+      "name": "winmm.dll",
+      "path": "C:\\Windows\\System32\\winmm.dll",
+      "base": "0x7FFF59FE0000",
+      "size": "0x36000",
+      "timestamp": "0x4CA1616E"
+    },
+    {
+      "name": "bcryptPrimitives.dll",
+      "path": "C:\\Windows\\System32\\bcryptPrimitives.dll",
+      "base": "0x7FFF6D7B0000",
+      "size": "0xAC000",
+      "timestamp": "0x4F216148"
+    },
+    {
+      "name": "RTWorkQ.dll",
+      "path": "C:\\Windows\\System32\\RTWorkQ.dll",
+      "base": "0x7FFF65430000",
+      "size": "0x3B000",
+      "timestamp": "0xE6050FEF"
+    },
+    {
+      "name": "cdmp.asi",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\cdmp.asi",
+      "base": "0x7FFDFFD50000",
+      "size": "0x30F3000",
+      "timestamp": "0x6AEB7131"
+    },
+    {
+      "name": "D3DCOMPILER_47.dll",
+      "path": "C:\\Windows\\System32\\D3DCOMPILER_47.dll",
+      "base": "0x7FFF67920000",
+      "size": "0x47F000",
+      "timestamp": "0x1C163F0B"
+    },
+    {
+      "name": "cryptsp.dll",
+      "path": "C:\\Windows\\System32\\cryptsp.dll",
+      "base": "0x7FFF6C0E0000",
+      "size": "0x1B000",
+      "timestamp": "0xB40460A5"
+    },
+    {
+      "name": "gameoverlayrenderer64.dll",
+      "path": "C:\\Program Files (x86)\\Steam\\gameoverlayrenderer64.dll",
+      "base": "0x7FFE0E480000",
+      "size": "0x1D0000",
+      "timestamp": "0x6AD92A21"
+    },
+    {
+      "name": "psapi.dll",
+      "path": "C:\\Windows\\System32\\psapi.dll",
+      "base": "0x7FFF6E600000",
+      "size": "0x8000",
+      "timestamp": "0x227EB1E9"
+    },
+    {
+      "name": "inputhost.dll",
+      "path": "C:\\Windows\\System32\\inputhost.dll",
+      "base": "0x7FFF44D40000",
+      "size": "0x1EA000",
+      "timestamp": "0x160C0B1D"
+    },
+    {
+      "name": "CoreMessaging.dll",
+      "path": "C:\\Windows\\System32\\CoreMessaging.dll",
+      "base": "0x7FFF68570000",
+      "size": "0x12D000",
+      "timestamp": "0x76C3801A"
+    },
+    {
+      "name": "mswsock.dll",
+      "path": "C:\\Windows\\System32\\mswsock.dll",
+      "base": "0x7FFF6BCE0000",
+      "size": "0x6B000",
+      "timestamp": "0xE0427DDA"
+    },
+    {
+      "name": "kernel.appcore.dll",
+      "path": "C:\\Windows\\System32\\kernel.appcore.dll",
+      "base": "0x7FFF6B740000",
+      "size": "0x1B000",
+      "timestamp": "0xF83A9E5C"
+    },
+    {
+      "name": "sspicli.dll",
+      "path": "C:\\Windows\\System32\\sspicli.dll",
+      "base": "0x7FFF6BA00000",
+      "size": "0x4A000",
+      "timestamp": "0x1774B0F6"
+    },
+    {
+      "name": "rsaenh.dll",
+      "path": "C:\\Windows\\System32\\rsaenh.dll",
+      "base": "0x7FFF6B6A0000",
+      "size": "0x39000",
+      "timestamp": "0x67F6D4E8"
+    },
+    {
+      "name": "userenv.dll",
+      "path": "C:\\Windows\\System32\\userenv.dll",
+      "base": "0x7FFF6BD80000",
+      "size": "0x34000",
+      "timestamp": "0xBB5F97EB"
+    },
+    {
+      "name": "profapi.dll",
+      "path": "C:\\Windows\\System32\\profapi.dll",
+      "base": "0x7FFF6CF00000",
+      "size": "0x29000",
+      "timestamp": "0x4C473F31"
+    },
+    {
+      "name": "wintrust.dll",
+      "path": "C:\\Windows\\System32\\wintrust.dll",
+      "base": "0xE6B0000",
+      "size": "0x83000",
+      "timestamp": "0xCB4E627F"
+    },
+    {
+      "name": "crypt32.dll",
+      "path": "C:\\Windows\\System32\\crypt32.dll",
+      "base": "0x7FFF6D4F0000",
+      "size": "0x17E000",
+      "timestamp": "0xDAA36F26"
+    },
+    {
+      "name": "msasn1.dll",
+      "path": "C:\\Windows\\System32\\msasn1.dll",
+      "base": "0x7FFF6C350000",
+      "size": "0x13000",
+      "timestamp": "0x32126D03"
+    },
+    {
+      "name": "imagehlp.dll",
+      "path": "C:\\Windows\\System32\\imagehlp.dll",
+      "base": "0x7FFF6EAA0000",
+      "size": "0x20000",
+      "timestamp": "0x808AA18A"
+    },
+    {
+      "name": "gpapi.dll",
+      "path": "C:\\Windows\\System32\\gpapi.dll",
+      "base": "0x7FFF6BD50000",
+      "size": "0x25000",
+      "timestamp": "0x2EC1414E"
+    },
+    {
+      "name": "cryptnet.dll",
+      "path": "C:\\Windows\\System32\\cryptnet.dll",
+      "base": "0x7FFF640E0000",
+      "size": "0x3B000",
+      "timestamp": "0xD6B8DAC1"
+    },
+    {
+      "name": "winnsi.dll",
+      "path": "C:\\Windows\\System32\\winnsi.dll",
+      "base": "0x7FFF68920000",
+      "size": "0xE000",
+      "timestamp": "0x57723540"
+    },
+    {
+      "name": "nsi.dll",
+      "path": "C:\\Windows\\System32\\nsi.dll",
+      "base": "0x7FFF6DDC0000",
+      "size": "0xA000",
+      "timestamp": "0x9DDFC948"
+    },
+    {
+      "name": "steamclient64.dll",
+      "path": "C:\\Program Files (x86)\\Steam\\steamclient64.dll",
+      "base": "0x7FFE14850000",
+      "size": "0x19B4000",
+      "timestamp": "0x6AD92AA7"
+    },
+    {
+      "name": "vstdlib_s64.dll",
+      "path": "C:\\Program Files (x86)\\Steam\\vstdlib_s64.dll",
+      "base": "0x7FFF17ED0000",
+      "size": "0xC3000",
+      "timestamp": "0x6AD92A3E"
+    },
+    {
+      "name": "tier0_s64.dll",
+      "path": "C:\\Program Files (x86)\\Steam\\tier0_s64.dll",
+      "base": "0x7FFE31BB0000",
+      "size": "0x30B000",
+      "timestamp": "0x6AD92A24"
+    },
+    {
+      "name": "secur32.dll",
+      "path": "C:\\Windows\\System32\\secur32.dll",
+      "base": "0x7FFF68B00000",
+      "size": "0xD000",
+      "timestamp": "0xB7644D3B"
+    },
+    {
+      "name": "iertutil.dll",
+      "path": "C:\\Windows\\System32\\iertutil.dll",
+      "base": "0x7FFF4C780000",
+      "size": "0x2C5000",
+      "timestamp": "0xD1C8D1E9"
+    },
+    {
+      "name": "srvcli.dll",
+      "path": "C:\\Windows\\System32\\srvcli.dll",
+      "base": "0x7FFF4D4D0000",
+      "size": "0x29000",
+      "timestamp": "0xE4CEB6F"
+    },
+    {
+      "name": "netutils.dll",
+      "path": "C:\\Windows\\System32\\netutils.dll",
+      "base": "0x7FFF6B0D0000",
+      "size": "0xD000",
+      "timestamp": "0x339BBF08"
+    },
+    {
+      "name": "ondemandconnroutehelper.dll",
+      "path": "C:\\Windows\\System32\\ondemandconnroutehelper.dll",
+      "base": "0x7FFF3FBF0000",
+      "size": "0x1E000",
+      "timestamp": "0xB702E27A"
+    },
+    {
+      "name": "urlmon.dll",
+      "path": "C:\\Windows\\System32\\urlmon.dll",
+      "base": "0x7FFF4BD80000",
+      "size": "0x1E0000",
+      "timestamp": "0xB5F2EF58"
+    },
+    {
+      "name": "dnsapi.dll",
+      "path": "C:\\Windows\\System32\\dnsapi.dll",
+      "base": "0x7FFF6B130000",
+      "size": "0x14C000",
+      "timestamp": "0x8BFC75DE"
+    },
+    {
+      "name": "dsparse.dll",
+      "path": "C:\\Windows\\System32\\dsparse.dll",
+      "base": "0x7FFF6BAE0000",
+      "size": "0xD000",
+      "timestamp": "0xE14AC9FC"
+    },
+    {
+      "name": "rasadhlp.dll",
+      "path": "C:\\Windows\\System32\\rasadhlp.dll",
+      "base": "0x7FFF63C70000",
+      "size": "0xB000",
+      "timestamp": "0xFBD56BB7"
+    },
+    {
+      "name": "FWPUCLNT.DLL",
+      "path": "C:\\Windows\\System32\\FWPUCLNT.DLL",
+      "base": "0x7FFF63310000",
+      "size": "0x86000",
+      "timestamp": "0x1002FC8F"
+    },
+    {
+      "name": "schannel.dll",
+      "path": "C:\\Windows\\System32\\schannel.dll",
+      "base": "0x7FFF6B570000",
+      "size": "0xCB000",
+      "timestamp": "0x64C17672"
+    },
+    {
+      "name": "dpapi.dll",
+      "path": "C:\\Windows\\System32\\dpapi.dll",
+      "base": "0x7FFF6CC30000",
+      "size": "0xA000",
+      "timestamp": "0xEAA3CE6F"
+    },
+    {
+      "name": "ncrypt.dll",
+      "path": "C:\\Windows\\System32\\ncrypt.dll",
+      "base": "0x7FFF6C310000",
+      "size": "0x30000",
+      "timestamp": "0x621879FB"
+    },
+    {
+      "name": "ntasn1.dll",
+      "path": "C:\\Windows\\System32\\ntasn1.dll",
+      "base": "0x7FFF6C2C0000",
+      "size": "0x3F000",
+      "timestamp": "0x9F05A157"
+    },
+    {
+      "name": "ncryptsslp.dll",
+      "path": "C:\\Windows\\System32\\ncryptsslp.dll",
+      "base": "0x7FFF3E890000",
+      "size": "0x48000",
+      "timestamp": "0x98ED19E9"
+    },
+    {
+      "name": "dhcpcsvc.dll",
+      "path": "C:\\Windows\\System32\\dhcpcsvc.dll",
+      "base": "0x7FFF63F00000",
+      "size": "0x25000",
+      "timestamp": "0xBCDBBCC2"
+    },
+    {
+      "name": "dhcpcsvc6.DLL",
+      "path": "C:\\Windows\\System32\\dhcpcsvc6.DLL",
+      "base": "0x7FFF640B0000",
+      "size": "0x1E000",
+      "timestamp": "0x99F685F5"
+    },
+    {
+      "name": "ntmarta.dll",
+      "path": "C:\\Windows\\System32\\ntmarta.dll",
+      "base": "0x7FFF6B870000",
+      "size": "0x36000",
+      "timestamp": "0xD67CDA44"
+    },
+    {
+      "name": "webio.dll",
+      "path": "C:\\Windows\\System32\\webio.dll",
+      "base": "0x7FFF40B80000",
+      "size": "0xD6000",
+      "timestamp": "0xD5D7999F"
+    },
+    {
+      "name": "uxtheme.dll",
+      "path": "C:\\Windows\\System32\\uxtheme.dll",
+      "base": "0x7FFF68BF0000",
+      "size": "0xAA000",
+      "timestamp": "0x83C98C4F"
+    },
+    {
+      "name": "msctf.dll",
+      "path": "C:\\Windows\\System32\\msctf.dll",
+      "base": "0x7FFF6E610000",
+      "size": "0x15B000",
+      "timestamp": "0x797C4B05"
+    },
+    {
+      "name": "WindowsCodecs.dll",
+      "path": "C:\\Windows\\System32\\WindowsCodecs.dll",
+      "base": "0x7FFF676D0000",
+      "size": "0x23D000",
+      "timestamp": "0x7B1A24C3"
+    },
+    {
+      "name": "textinputframework.dll",
+      "path": "C:\\Windows\\System32\\textinputframework.dll",
+      "base": "0x7FFF42AF0000",
+      "size": "0x146000",
+      "timestamp": "0xE1153782"
+    },
+    {
+      "name": "CoreUIComponents.dll",
+      "path": "C:\\Windows\\System32\\CoreUIComponents.dll",
+      "base": "0x7FFF65BC0000",
+      "size": "0x2ED000",
+      "timestamp": "0x43EF8341"
+    },
+    {
+      "name": "WinTypes.dll",
+      "path": "C:\\Windows\\System32\\WinTypes.dll",
+      "base": "0x7FFF66690000",
+      "size": "0x16A000",
+      "timestamp": "0xEE0D20A2"
+    },
+    {
+      "name": "oleacc.dll",
+      "path": "C:\\Windows\\System32\\oleacc.dll",
+      "base": "0x7FFF41210000",
+      "size": "0x75000",
+      "timestamp": "0xBC18632E"
+    },
+    {
+      "name": "DWrite.dll",
+      "path": "C:\\Windows\\System32\\DWrite.dll",
+      "base": "0x7FFF69290000",
+      "size": "0x26B000",
+      "timestamp": "0xA38D6C0A"
+    },
+    {
+      "name": "D3D12Core.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\d3d12\\D3D12Core.dll",
+      "base": "0x7FFE0B1B0000",
+      "size": "0x4A7000",
+      "timestamp": "0x68EFD634"
+    },
+    {
+      "name": "dxgi.dll",
+      "path": "C:\\Windows\\System32\\dxgi.dll",
+      "base": "0x7FFF6A330000",
+      "size": "0x143000",
+      "timestamp": "0xA95B76FB"
+    },
+    {
+      "name": "powrprof.dll",
+      "path": "C:\\Windows\\System32\\powrprof.dll",
+      "base": "0x352E0000",
+      "size": "0x5E000",
+      "timestamp": "0xAA6357B3"
+    },
+    {
+      "name": "umpdc.dll",
+      "path": "C:\\Windows\\System32\\umpdc.dll",
+      "base": "0x7FFF6CD70000",
+      "size": "0x15000",
+      "timestamp": "0x57D4E485"
+    },
+    {
+      "name": "DXCore.dll",
+      "path": "C:\\Windows\\System32\\DXCore.dll",
+      "base": "0x7FFF69240000",
+      "size": "0x4A000",
+      "timestamp": "0x52287FBB"
+    },
+    {
+      "name": "directxdatabasehelper.dll",
+      "path": "C:\\Windows\\System32\\directxdatabasehelper.dll",
+      "base": "0x7FFF66480000",
+      "size": "0x5F000",
+      "timestamp": "0x5B5CE8D"
+    },
+    {
+      "name": "wldp.dll",
+      "path": "C:\\Windows\\System32\\wldp.dll",
+      "base": "0x7FFF6C000000",
+      "size": "0x70000",
+      "timestamp": "0x3F33C539"
+    },
+    {
+      "name": "drvstore.dll",
+      "path": "C:\\Windows\\System32\\drvstore.dll",
+      "base": "0x7FFF63F30000",
+      "size": "0x17B000",
+      "timestamp": "0xE621BC30"
+    },
+    {
+      "name": "nvspcap64.dll",
+      "path": "C:\\Windows\\System32\\nvspcap64.dll",
+      "base": "0x7FFF29700000",
+      "size": "0x164000",
+      "timestamp": "0x6A30192E"
+    },
+    {
+      "name": "nvapi64.dll",
+      "path": "C:\\Windows\\System32\\nvapi64.dll",
+      "base": "0x7FFF575A0000",
+      "size": "0x89000",
+      "timestamp": "0x6A870BF6"
+    },
+    {
+      "name": "nvapi64_impl.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvapi64_impl.dll",
+      "base": "0x7FFF50640000",
+      "size": "0x591000",
+      "timestamp": "0x6A870CCD"
+    },
+    {
+      "name": "sl.common.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.common.dll",
+      "base": "0x7FFE0B0C0000",
+      "size": "0xE2000",
+      "timestamp": "0x6A9AFD45"
+    },
+    {
+      "name": "sl.dlss.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.dlss.dll",
+      "base": "0x7FFEAE580000",
+      "size": "0x69000",
+      "timestamp": "0x6A9AFD66"
+    },
+    {
+      "name": "_nvngx.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\_nvngx.dll",
+      "base": "0x7FFE0AF40000",
+      "size": "0x173000",
+      "timestamp": "0x6A870BCD"
+    },
+    {
+      "name": "nvngx_dlss.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\nvngx_dlss.dll",
+      "base": "0x7FFDFC4F0000",
+      "size": "0x3855000",
+      "timestamp": "0x6A9860BE"
+    },
+    {
+      "name": "nvngx_dlssg.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\nvngx_dlssg.dll",
+      "base": "0x7FFE0A3A0000",
+      "size": "0x737000",
+      "timestamp": "0x6A986031"
+    },
+    {
+      "name": "nvngx_deepdvc.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\nvngx_deepdvc.dll",
+      "base": "0x7FFE0A090000",
+      "size": "0x310000",
+      "timestamp": "0x6A986010"
+    },
+    {
+      "name": "nvngx_dlssd.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\nvngx_dlssd.dll",
+      "base": "0x7FFDF96B0000",
+      "size": "0x2E36000",
+      "timestamp": "0x6A98622B"
+    },
+    {
+      "name": "sl.dlss_d.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.dlss_d.dll",
+      "base": "0x7FFEBE540000",
+      "size": "0x6D000",
+      "timestamp": "0x6A9AFD62"
+    },
+    {
+      "name": "sl.dlss_g.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.dlss_g.dll",
+      "base": "0x7FFE8D630000",
+      "size": "0x9C000",
+      "timestamp": "0x6A9AFD6B"
+    },
+    {
+      "name": "sl.pcl.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.pcl.dll",
+      "base": "0x7FFEAB9C0000",
+      "size": "0x58000",
+      "timestamp": "0x6A9AFD1E"
+    },
+    {
+      "name": "sl.reflex.dll",
+      "path": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\bin64\\sl.reflex.dll",
+      "base": "0x7FFE687E0000",
+      "size": "0x5F000",
+      "timestamp": "0x6A9AFD1E"
+    },
+    {
+      "name": "nvldumdx.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvldumdx.dll",
+      "base": "0x7FFF648E0000",
+      "size": "0xCE000",
+      "timestamp": "0x6A870D7D"
+    },
+    {
+      "name": "nvgpucomp64.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvgpucomp64.dll",
+      "base": "0x7FFF5C920000",
+      "size": "0x69A7000",
+      "timestamp": "0x6A870E05"
+    },
+    {
+      "name": "NvMessageBus.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\Display.NvContainer\\NvMessageBus.dll",
+      "base": "0x7FFF4FD90000",
+      "size": "0x364000",
+      "timestamp": "0x696F57F3"
+    },
+    {
+      "name": "NvMemMapStoragex.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\NvMemMapStoragex.dll",
+      "base": "0x7FFF5A020000",
+      "size": "0x15B000",
+      "timestamp": "0x6A870EEF"
+    },
+    {
+      "name": "nvwgf2umx.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvwgf2umx.dll",
+      "base": "0x7FFF519D0000",
+      "size": "0x5606000",
+      "timestamp": "0x6A870EB1"
+    },
+    {
+      "name": "nvppex.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvppex.dll",
+      "base": "0x7FFF27610000",
+      "size": "0x727000",
+      "timestamp": "0x6A870CDE"
+    },
+    {
+      "name": "D3DSCache.dll",
+      "path": "C:\\Windows\\System32\\D3DSCache.dll",
+      "base": "0x7FFEFBFB0000",
+      "size": "0xDF000",
+      "timestamp": "0x4E6D4393"
+    },
+    {
+      "name": "NvTelemetryAPI64.dll",
+      "path": "C:\\Program Files\\NVIDIA Corporation\\NvTelemetry\\NvTelemetryAPI64.dll",
+      "base": "0x7FFF38EC0000",
+      "size": "0x4AB000",
+      "timestamp": "0x69E6AB20"
+    },
+    {
+      "name": "nvcuda64.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvcuda64.dll",
+      "base": "0x7FFECCB20000",
+      "size": "0xB47000",
+      "timestamp": "0x6A871790"
+    },
+    {
+      "name": "nvdxgdmal64.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvdxgdmal64.dll",
+      "base": "0x7FFF41590000",
+      "size": "0xAF000",
+      "timestamp": "0x6A870CA9"
+    },
+    {
+      "name": "nvdiagclt64.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvdiagclt64.dll",
+      "base": "0x7FFF33FE0000",
+      "size": "0xD4000",
+      "timestamp": "0x6A870C75"
+    },
+    {
+      "name": "nvobjectloader64.dll",
+      "path": "C:\\Windows\\System32\\DriverStore\\FileRepository\\nv_dispi.inf_amd64_a3944b54ff18b284\\nvobjectloader64.dll",
+      "base": "0x7FFECBCC0000",
+      "size": "0xE5B000",
+      "timestamp": "0x6A870F1B"
+    },
+    {
+      "name": "NvTelemetryBridge64.dll",
+      "path": "C:\\Program Files\\NVIDIA Corporation\\NvTelemetry\\NvTelemetryBridge64.dll",
+      "base": "0x7FFF38E50000",
+      "size": "0x6B000",
+      "timestamp": "0x69E6AB1E"
+    }
+  ]
+}

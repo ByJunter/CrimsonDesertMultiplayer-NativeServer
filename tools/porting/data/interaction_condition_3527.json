@@ -1,0 +1,321 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "timestamp": "0x6aea07a6",
+  "evidence": [
+    {
+      "rva": "0x22E2604",
+      "bytes": "8b8198000000",
+      "meaning": "Component serializer reads vector count at +98"
+    },
+    {
+      "rva": "0x22E2628",
+      "bytes": "488bbe900000008b8698000000486be838",
+      "meaning": "Component vector +90, count +98, stride38"
+    },
+    {
+      "rva": "0x22E2650",
+      "bytes": "488b4f08488bd3e8d41b1b00",
+      "meaning": "Unchecked entry+8 holder in RCX, archive in RDX, call2494230"
+    },
+    {
+      "rva": "0x22E2705",
+      "bytes": "4883c738",
+      "meaning": "Serializer advances every entry by38"
+    },
+    {
+      "rva": "0x22EB0A4",
+      "bytes": "4533e4",
+      "meaning": "Zero R12 before constructing derived interaction entries"
+    },
+    {
+      "rva": "0x22EAEB0",
+      "bytes": "410fb7f8",
+      "meaning": "Parent index is the incoming InteractionInfo index R8W, saved in DI"
+    },
+    {
+      "rva": "0x22EB162",
+      "bytes": "4c8965d7",
+      "meaning": "Derived stack entry+8 is null, relative to entry at RBP-31"
+    },
+    {
+      "rva": "0x22EB183",
+      "bytes": "4c8965ef4883e90175f6",
+      "meaning": "Derived stack entry+20 stage id is initialized to zero"
+    },
+    {
+      "rva": "0x22EB1A3",
+      "bytes": "668945df488d55cf488bcee89d550000",
+      "meaning": "Set derived index+10 and append stack entry to component vector"
+    },
+    {
+      "rva": "0x22EB1D1",
+      "bytes": "418b8798000000ffc8486bc838488b0666897c012e",
+      "meaning": "Set derived entry+2E to its parent InteractionInfo index"
+    },
+    {
+      "rva": "0xCB4879C",
+      "bytes": "488b47084889420848894f08",
+      "meaning": "Native append moves holder verbatim and zeros the source holder"
+    },
+    {
+      "rva": "0xCB487F0",
+      "bytes": "ff4308",
+      "meaning": "Native append publishes entry by incrementing count"
+    },
+    {
+      "rva": "0x22ECF8B",
+      "bytes": "33db48895908",
+      "meaning": "Native entry copy constructor initializes destination holder to null"
+    },
+    {
+      "rva": "0x22ECFC3",
+      "bytes": "488b06488b084885c90f849e00000038190f8496000000",
+      "meaning": "Copy skips condition allocation if condition string data is null or empty"
+    },
+    {
+      "rva": "0x22ED059",
+      "bytes": "48897e08",
+      "meaning": "Copy installs allocated wrapper only on nonempty-string path"
+    },
+    {
+      "rva": "0x22ED06B",
+      "bytes": "e820761a00",
+      "meaning": "Copy parses condition text through2494690"
+    },
+    {
+      "rva": "0x22ED0E7",
+      "bytes": "488b452048894620",
+      "meaning": "Copy preserves stage id even if empty text left the holder null"
+    },
+    {
+      "rva": "0x2494230",
+      "bytes": "48895c2418574883ec2048833900",
+      "meaning": "Serializer prologue and first dereference of RCX at249423A"
+    },
+    {
+      "rva": "0x2494247",
+      "bytes": "41b801000000488d542430488bcb0f95442430ff5008807c243000746f",
+      "meaning": "Write one-byte pointee presence; empty wrapper skips body and flags"
+    },
+    {
+      "rva": "0x24942FA",
+      "bytes": "488b0241b801000000488d542438488bcfff502884c00f84d0000000",
+      "meaning": "Inverse reader reads one byte through archive vf28"
+    },
+    {
+      "rva": "0x2494316",
+      "bytes": "807c2438000f84b3000000",
+      "meaning": "Zero presence branches to success without parsing contents"
+    },
+    {
+      "rva": "0x24943D4",
+      "bytes": "b001",
+      "meaning": "Empty wrapper encoding is accepted successfully"
+    },
+    {
+      "rva": "0x22ED427",
+      "bytes": "48891f66895f08885f0aeb03",
+      "meaning": "Entry reader initializes allocated16-byte wrapper to empty"
+    },
+    {
+      "rva": "0x22ED448",
+      "bytes": "48897d08488bcf488bd6e8896e1a00",
+      "meaning": "Reader installs wrapper then invokes24942E0"
+    },
+    {
+      "rva": "0x22ED4FF",
+      "bytes": "488b44244048894520",
+      "meaning": "Reader stores transmitted stage id without changing it"
+    },
+    {
+      "rva": "0x22ED5E4",
+      "bytes": "84c07421b001eb1f",
+      "meaning": "Reader succeeds after final byte; no empty-wrapper normalization"
+    },
+    {
+      "rva": "0x22ED64D",
+      "bytes": "f74120ffffff1f7507b002e9fe030000",
+      "meaning": "Interaction condition evaluation returns2 early for stage id low29bits zero"
+    },
+    {
+      "rva": "0x22ED888",
+      "bytes": "4d8b55084d85d20f8425010000",
+      "meaning": "Stage-linked evaluation explicitly tests holder pointer and branches if null"
+    },
+    {
+      "rva": "0x22ED8FC",
+      "bytes": "498b0a488b01",
+      "meaning": "Stage-linked evaluation assumes a nonnull holder contains a nonnull function"
+    },
+    {
+      "rva": "0x22ED9BA",
+      "bytes": "32db",
+      "meaning": "Null holder returns condition result0 on stage-linked path"
+    },
+    {
+      "rva": "0x22E28BC",
+      "bytes": "66448964244e",
+      "meaning": "Entry reader initializes derived-parent index toFFFF"
+    },
+    {
+      "rva": "0x22EA1C7",
+      "bytes": "6644397b2e7527",
+      "meaning": "Native enumeration excludes derived entries unless requested"
+    },
+    {
+      "rva": "0xCB2B5D3",
+      "bytes": "4531c0b201e873eb7bf5",
+      "meaning": "Refresh gathers primary entries via22EA150 with include-derived=false"
+    },
+    {
+      "rva": "0xCB2B5DD",
+      "bytes": "66c787400100000000",
+      "meaning": "Refresh resets component summary flags; it does not allocate derived wrappers"
+    },
+    {
+      "rva": "0xCB2A0E3",
+      "bytes": "420fb7543610e8224b8bf3395808",
+      "meaning": "Native erase resolves entry+10 through InteractionInfo getter"
+    },
+    {
+      "rva": "0xCB2A0F3",
+      "bytes": "420fb754362ee8124b8bf3",
+      "meaning": "Native erase resolves entry+2E through the same getter, proving it is not a vector index"
+    },
+    {
+      "rva": "0x1603A1A",
+      "bytes": "8bf9",
+      "meaning": "Native shared-string allocator saves incoming u32 length"
+    },
+    {
+      "rva": "0x1603A7B",
+      "bytes": "488d431848c74308ffffffff488903",
+      "meaning": "String char pointer is stored at object+0"
+    },
+    {
+      "rva": "0x1603A8D",
+      "bytes": "c7431001000000c6431400897b08",
+      "meaning": "String object refcount+10 and u32 length+8"
+    },
+    {
+      "rva": "0x521753",
+      "bytes": "488d15c625980648890b483bca740b",
+      "meaning": "String copy treats exe+6EA3D20 as empty singleton"
+    },
+    {
+      "rva": "0x6EA3D20",
+      "bytes": "3e9e0d470100000000000000ffffffffffffffff00000000",
+      "meaning": "Pinned empty shared-string object: char pointer, length0, immortal refcount"
+    }
+  ],
+  "rtti_slots": [
+    {
+      "name": "pa::ClientInteractionActorComponent",
+      "vtable": "0x594c600",
+      "slot": "0xC8",
+      "target": "0x22E25F0"
+    },
+    {
+      "name": "pa::CommonInteractionActorComponent",
+      "vtable": "0x5cc98a8",
+      "slot": "0xC8",
+      "target": "0x22E25F0"
+    },
+    {
+      "name": "pa::ServerInteractionActorComponent",
+      "vtable": "0x5ef21d0",
+      "slot": "0xC8",
+      "target": "0x22E25F0"
+    }
+  ],
+  "layout": {
+    "vector": "0x90",
+    "count": "0x98",
+    "stride": "0x38",
+    "holder": "0x08",
+    "condition_string": "0x00",
+    "stage_id": "0x20",
+    "parent_interaction_index": "0x2E"
+  },
+  "shared_string": {
+    "entry_pointer_offset": "0x00",
+    "chars_offset": "0x00",
+    "u32_length_offset": "0x08",
+    "refcount_offset": "0x10",
+    "empty_singleton_rva": "0x6EA3D20",
+    "safe_empty_check": "Read object=[entry], u32[object+8]==0, chars=[object] nonnull, byte[chars]==0. The native copy checks char data, not the object as direct text.",
+    "parent_index": "Static InteractionInfo index; do not bound it by component vector count."
+  },
+  "confirmed_native_null_paths": [
+    "22EAE90 appends associated InteractionInfo entries with holder0, stage0 and parent index+2E.",
+    "22ECF60 reconstructs a copied entry's condition only when its condition text is nonempty; otherwise holder0 remains.",
+    "22EB3E0->CB2B580 only gathers primary copies and refreshes summary flags, not derived wrappers."
+  ],
+  "encoding": {
+    "empty": "00",
+    "explanation": "2494230 writes exactly one zero byte for a valid wrapper whose first qword is0; 24942E0 accepts this byte.",
+    "reader": "22ED3B0 allocates a wrapper before reading, so00 becomes nonnull wrapper with null contents.",
+    "forbidden_shortcut": "Skipping the serializer without writing00 shifts all following fields."
+  },
+  "evaluation_caveat": "Null and nonnull-empty holders are not globally equivalent. Stage0 returns2 before examining holder. Stage-linked null returns0, whereas a nonnull-empty holder would be dereferenced twice. Do not claim unrestricted gameplay equivalence.",
+  "additional_wire_caveat": "22E25F0/22ED3B0 do not transfer entry+2E. Reader initializes it toFFFF. Derived-entry lifetime/parent association is not preserved by this existing native format.",
+  "candidate_hook": {
+    "site": "0x22e2657",
+    "length": 5,
+    "bytes": "e8d41b1b00",
+    "signature_before_and_at": "488b4f08488bd3e8d41b1b00",
+    "function": {
+      "begin": 36578800,
+      "end": 36579297,
+      "unwind": 105488592,
+      "offset": 103
+    },
+    "registers": {
+      "RCX": "holder, already loaded from [RDI+8]",
+      "RDX": "archive, copied from RBX",
+      "RDI": "entry",
+      "RSI": "interaction component"
+    },
+    "direct_incoming": [],
+    "interior_incoming": [],
+    "abi": "A midhook replacing only null RCX with an aligned immutable16-byte zero object lets the relocated native call emit00. No ownership transfer or mutation occurs on the empty serializer branch. Keep RDX and all unrelated context unchanged; no allocation/game call/log formatting in callback.",
+    "scope": "Captured return address22E265C proves this caller. Initially constrain to native derived entry with stage low29bits0, parent index!=FFFF and empty condition text, or gather evidence for other cases. Nonnull RCX passes unchanged. Scope does not include all possible stage-linked null entries.",
+    "install": "Build/SHA profile and live byte guards required. Installation must succeed before enabling build3527 shared-field behavior; no unsupported-build fallback.",
+    "limitation": "No runtime hook or process changes made. This report establishes byte encoding and patch boundaries, not full gameplay correctness."
+  },
+  "mod_review": "Enabled core hooks do not directly write interaction entries. The legacy whole-entry shop swap is disabled by host configuration. Child/character hold neither repairs condition wrappers nor covers owner-directed/direct serialization.",
+  "runtime_caller_confirmed": true,
+  "runtime_evidence": {
+    "source": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\tools\\porting\\data\\host_fault_62480_native.json",
+    "source_sha256": "2b6f9384c25cf286829b513bc97e6375042af5dacbfa1c04636b4f1c85325257",
+    "dump": "D:\\SteamLibrary\\steamapps\\common\\Crimson Desert\\multi\\backups\\native-debug-3527-20261105-0008\\cdmp_debug.62480.20261105-000950-507.1.first.dmp",
+    "caller_return": "0x22E265C",
+    "component": "pa::ServerInteractionActorComponent",
+    "count": 21,
+    "null_count": 18,
+    "null_indices": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20
+    ],
+    "null_stage": 0,
+    "null_parent_interaction_index": 9,
+    "condition_string": "Native empty singleton at exe+6EA3D20"
+  }
+}

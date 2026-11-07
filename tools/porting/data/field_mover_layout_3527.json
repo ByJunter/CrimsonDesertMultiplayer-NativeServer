@@ -1,0 +1,369 @@
+{
+  "build": "1.0.0.3527",
+  "exe_sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "assertions": [
+    {
+      "rva": "0x2e604ff",
+      "bytes": "c7 41 08 00 00 03 00",
+      "mnemonic": "mov",
+      "operands": "dword ptr [rcx + 8], 0x30000",
+      "meaning": "FieldMover reset field key"
+    },
+    {
+      "rva": "0x2e60508",
+      "bytes": "48 89 71 10",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rcx + 0x10], rsi",
+      "meaning": "FieldMover reset field pointer"
+    },
+    {
+      "rva": "0x2e6050c",
+      "bytes": "48 89 71 40",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rcx + 0x40], rsi",
+      "meaning": "FieldMover reset sector pointer"
+    },
+    {
+      "rva": "0x2e60510",
+      "bytes": "66 89 71 4a",
+      "mnemonic": "mov",
+      "operands": "word ptr [rcx + 0x4a], si",
+      "meaning": "Reset access counter"
+    },
+    {
+      "rva": "0x2e60514",
+      "bytes": "40 88 71 48",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rcx + 0x48], sil",
+      "meaning": "Reset move state"
+    },
+    {
+      "rva": "0x2e61188",
+      "bytes": "48 8b f1",
+      "mnemonic": "mov",
+      "operands": "rsi, rcx",
+      "meaning": "GetField preserves the FieldMover in RSI"
+    },
+    {
+      "rva": "0x2e611b6",
+      "bytes": "44 38 7e 48",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rsi + 0x48], r15b",
+      "meaning": "GetField refuses a nonzero move state"
+    },
+    {
+      "rva": "0x2e6125f",
+      "bytes": "66 ff 46 4a",
+      "mnemonic": "inc",
+      "operands": "word ptr [rsi + 0x4a]",
+      "meaning": "Successful GetField increments active accesses"
+    },
+    {
+      "rva": "0x2e61263",
+      "bytes": "48 8b 6e 10",
+      "mnemonic": "mov",
+      "operands": "rbp, qword ptr [rsi + 0x10]",
+      "meaning": "The same object supplies its ServerField"
+    },
+    {
+      "rva": "0x2e61267",
+      "bytes": "4c 8b 76 40",
+      "mnemonic": "mov",
+      "operands": "r14, qword ptr [rsi + 0x40]",
+      "meaning": "The same object supplies its sector"
+    },
+    {
+      "rva": "0x2e60f82",
+      "bytes": "48 8b f9",
+      "mnemonic": "mov",
+      "operands": "rdi, rcx",
+      "meaning": "Release preserves the FieldMover in RDI"
+    },
+    {
+      "rva": "0x2e60fae",
+      "bytes": "66 ff 4f 4a",
+      "mnemonic": "dec",
+      "operands": "word ptr [rdi + 0x4a]",
+      "meaning": "Release decrements active accesses"
+    },
+    {
+      "rva": "0x2e60fb2",
+      "bytes": "66 44 39 77 4a",
+      "mnemonic": "cmp",
+      "operands": "word ptr [rdi + 0x4a], r14w",
+      "meaning": "Release checks remaining active accesses"
+    },
+    {
+      "rva": "0x2e6100f",
+      "bytes": "80 7f 48 01",
+      "mnemonic": "cmp",
+      "operands": "byte ptr [rdi + 0x48], 1",
+      "meaning": "Pending move state checked after final release"
+    },
+    {
+      "rva": "0x2e61015",
+      "bytes": "c6 47 48 02",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rdi + 0x48], 2",
+      "meaning": "Pending move advances after final release"
+    },
+    {
+      "rva": "0x2e619b0",
+      "bytes": "4c 8b f9",
+      "mnemonic": "mov",
+      "operands": "r15, rcx",
+      "meaning": "MoveField preserves its FieldMover in R15"
+    },
+    {
+      "rva": "0x2e619f7",
+      "bytes": "8b 41 50",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [rcx + 0x50]",
+      "meaning": "Current destination FieldInfoKey"
+    },
+    {
+      "rva": "0x2e61a23",
+      "bytes": "48 8b 46 68",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rsi + 0x68]",
+      "meaning": "MoveField obtains the actor component table"
+    },
+    {
+      "rva": "0x2e61a27",
+      "bytes": "48 8b 88 a0 01 00 00",
+      "mnemonic": "mov",
+      "operands": "rcx, qword ptr [rax + 0x1a0]",
+      "meaning": "MoveField obtains TransformSync"
+    },
+    {
+      "rva": "0x2e61a2e",
+      "bytes": "c6 81 dc 03 00 00 01",
+      "mnemonic": "mov",
+      "operands": "byte ptr [rcx + 0x3dc], 1",
+      "meaning": "TransformSync moving byte remains at 0x3DC"
+    },
+    {
+      "rva": "0x2e623a1",
+      "bytes": "41 c6 47 48 03",
+      "mnemonic": "mov",
+      "operands": "byte ptr [r15 + 0x48], 3",
+      "meaning": "MoveField advances the same move-state byte"
+    },
+    {
+      "rva": "0x2e62624",
+      "bytes": "44 0f b7 63 58",
+      "mnemonic": "movzx",
+      "operands": "r12d, word ptr [rbx + 0x58]",
+      "meaning": "Old move-state address now holds destination level"
+    },
+    {
+      "rva": "0x2e62601",
+      "bytes": "48 8b 71 68",
+      "mnemonic": "mov",
+      "operands": "rsi, qword ptr [rcx + 0x68]",
+      "meaning": "Current companion vector"
+    },
+    {
+      "rva": "0x2e62605",
+      "bytes": "8b 41 70",
+      "mnemonic": "mov",
+      "operands": "eax, dword ptr [rcx + 0x70]",
+      "meaning": "Current companion count"
+    },
+    {
+      "rva": "0x2e62608",
+      "bytes": "48 6b f8 3c",
+      "mnemonic": "imul",
+      "operands": "rdi, rax, 0x3c",
+      "meaning": "Current companion stride"
+    },
+    {
+      "rva": "0x2e61f3d",
+      "bytes": "48 89 44 24 20",
+      "mnemonic": "mov",
+      "operands": "qword ptr [rsp + 0x20], rax",
+      "meaning": "AcquireField fifth argument is forwarded on stack"
+    },
+    {
+      "rva": "0x2e61f53",
+      "bytes": "e8 88 e9 f3 ff",
+      "mnemonic": "call",
+      "operands": "0x2da08e0",
+      "meaning": "Native AcquireField caller"
+    },
+    {
+      "rva": "0x2da0af1",
+      "bytes": "48 8b 45 50",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rbp + 0x50]",
+      "meaning": "AcquireField retrieves fifth argument"
+    },
+    {
+      "rva": "0x2da0af8",
+      "bytes": "41 89 8e 80 01 00 00",
+      "mnemonic": "mov",
+      "operands": "dword ptr [r14 + 0x180], ecx",
+      "meaning": "ServerField owner remains at 0x180"
+    },
+    {
+      "rva": "0x2da0b2e",
+      "bytes": "e8 1d 6e 87 fe",
+      "mnemonic": "call",
+      "operands": "0x1617950",
+      "meaning": "Native TryAddRef"
+    },
+    {
+      "rva": "0x2da0b33",
+      "bytes": "84 c0",
+      "mnemonic": "test",
+      "operands": "al, al",
+      "meaning": "TryAddRef returns a bool in AL"
+    },
+    {
+      "rva": "0x2da0b6a",
+      "bytes": "49 89 77 18",
+      "mnemonic": "mov",
+      "operands": "qword ptr [r15 + 0x18], rsi",
+      "meaning": "Attacher holder offset unchanged"
+    },
+    {
+      "rva": "0x2da0b6e",
+      "bytes": "4d 89 77 08",
+      "mnemonic": "mov",
+      "operands": "qword ptr [r15 + 8], r14",
+      "meaning": "Attacher field offset unchanged"
+    },
+    {
+      "rva": "0x2da0b72",
+      "bytes": "41 88 5f 10",
+      "mnemonic": "mov",
+      "operands": "byte ptr [r15 + 0x10], bl",
+      "meaning": "Attacher valid offset unchanged"
+    },
+    {
+      "rva": "0x2da0b86",
+      "bytes": "41 c6 47 20 01",
+      "mnemonic": "mov",
+      "operands": "byte ptr [r15 + 0x20], 1",
+      "meaning": "Attacher newly-created offset unchanged"
+    },
+    {
+      "rva": "0x2e620de",
+      "bytes": "4c 8b c7",
+      "mnemonic": "mov",
+      "operands": "r8, rdi",
+      "meaning": "EnterField gets the destination field as third argument"
+    },
+    {
+      "rva": "0x2e620e8",
+      "bytes": "49 8b cf",
+      "mnemonic": "mov",
+      "operands": "rcx, r15",
+      "meaning": "EnterField gets the FieldMover as first argument"
+    },
+    {
+      "rva": "0x2e620eb",
+      "bytes": "e8 c0 04 00 00",
+      "mnemonic": "call",
+      "operands": "0x2e625b0",
+      "meaning": "Native EnterField caller"
+    },
+    {
+      "rva": "0xe6166ef",
+      "bytes": "48 8b 85 a8 02 00 00",
+      "mnemonic": "mov",
+      "operands": "rax, qword ptr [rbp + 0x2a8]",
+      "meaning": "Native AddActor user vector"
+    },
+    {
+      "rva": "0xe6166f6",
+      "bytes": "8b 8d b0 02 00 00",
+      "mnemonic": "mov",
+      "operands": "ecx, dword ptr [rbp + 0x2b0]",
+      "meaning": "Native AddActor user count"
+    },
+    {
+      "rva": "0xe6166fc",
+      "bytes": "48 c1 e1 04",
+      "mnemonic": "shl",
+      "operands": "rcx, 4",
+      "meaning": "Native user-entry size is 16 bytes"
+    },
+    {
+      "rva": "0xe616741",
+      "bytes": "ff 85 b8 02 00 00",
+      "mnemonic": "inc",
+      "operands": "dword ptr [rbp + 0x2b8]",
+      "meaning": "Native total user-actor count"
+    },
+    {
+      "rva": "0xe61678b",
+      "bytes": "e8 70 bd e8 f1",
+      "mnemonic": "call",
+      "operands": "0x4a2500",
+      "meaning": "Native 16-byte user-entry vector append"
+    }
+  ],
+  "field_mover": {
+    "ts_offset": "0x508",
+    "field": "0x10",
+    "sector": "0x40",
+    "move_state": "0x48",
+    "active_accesses": "0x4A",
+    "destination_key": "0x50",
+    "destination_level": "0x58",
+    "companion_vector": "0x68",
+    "companion_count": "0x70",
+    "companion_stride": "0x3C"
+  },
+  "transform_sync_moving": "0x3DC",
+  "affected_runtime_reads": [
+    "share_candidate busy gate",
+    "read_move_diag move/access fields"
+  ],
+  "crash_causality": "Confirmed layout defect, not established as the cause of run3 host crash.",
+  "functions": {
+    "0x2e604e0": {
+      "begin": 48628960,
+      "end": 48629334,
+      "unwind": 110724660,
+      "offset": 0
+    },
+    "0x2e60f70": {
+      "begin": 48631664,
+      "end": 48632169,
+      "unwind": 110725004,
+      "offset": 0
+    },
+    "0x2e61170": {
+      "begin": 48632176,
+      "end": 48632633,
+      "unwind": 110725052,
+      "offset": 0
+    },
+    "0x2e61990": {
+      "begin": 48634256,
+      "end": 48637351,
+      "unwind": 110725320,
+      "offset": 0
+    },
+    "0x2da08e0": {
+      "begin": 47843552,
+      "end": 47844255,
+      "unwind": 110639776,
+      "offset": 0
+    },
+    "0x2e625b0": {
+      "begin": 48637360,
+      "end": 48638692,
+      "unwind": 110725656,
+      "offset": 0
+    },
+    "0xe616690": {
+      "begin": 241264272,
+      "end": 241264880,
+      "unwind": 110634804,
+      "offset": 0
+    }
+  }
+}

@@ -1,3 +1,4 @@
+#include "mod/game/build_profile.h"
 #include "mod/session2/ui_pause.h"
 
 #include <windows.h>
@@ -53,7 +54,7 @@ using uip::Site;
 //   0x35CD9A6 sub rsp,0x30          48 83 EC 30
 //   0x35CD9AA mov rax,[rcx+0x38]    48 8B 41 38      (rcx: the only argument)
 // None is RIP-relative; the first one is (0x35CD9B4 vmovss xmm6,[rip+..] = 1.0f).
-constexpr uintptr_t kScale = 0x35CD990;
+uintptr_t kScale = 0x35CD990;  // 3527: 0x389FB30, same prologue
 constexpr uint8_t kScaleHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C, 0x24, 0x10,
                                   0x48, 0x89, 0x74, 0x24, 0x18, 0x48, 0x89, 0x7C, 0x24, 0x20,
                                   0x41, 0x56, 0x48, 0x83, 0xEC, 0x30, 0x48, 0x8B, 0x41, 0x38};
@@ -62,17 +63,30 @@ constexpr uint8_t kScaleHead[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x6C
 // end on one of them.
 constexpr uint32_t kBoundaries[] = {5, 10, 15, 20, 22, 26, 30};
 // The callers (0xAD1300): 0xAD143C call (vf 0x160's scale) / 0xAD14D6 call (the dt).
-constexpr uintptr_t kCall1 = 0xAD143C, kCall2 = 0xAD14D6;
+uintptr_t kCall1 = 0xAD143C, kCall2 = 0xAD14D6;
 constexpr uint8_t kCall1Bytes[] = {0xE8, 0x4F, 0xC5, 0xAF, 0x02};
 constexpr uint8_t kCall2Bytes[] = {0xE8, 0xB5, 0xC4, 0xAF, 0x02};
-constexpr uintptr_t kRet1 = 0xAD1441, kRet2 = 0xAD14DB;
+uintptr_t kRet1 = 0xAD1441, kRet2 = 0xAD14DB;
+// 1.0.0.3527 [V capstone, 2026-11-05]: the only callers of 0x389FB30 are in 0xBDE6F0. Its view walk changed (the vf is
+// +0x178, the view's fields moved), and the walk only names the view for the log, so it does not run on this build.
+constexpr uint8_t kCall1Bytes3527[] = {0xE8, 0xFF, 0x12, 0xCC, 0x02};
+constexpr uint8_t kCall2Bytes3527[] = {0xE8, 0x65, 0x12, 0xCC, 0x02};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the scale moved whole by +0xD00 to 0x38A0830 (the only function
+// within +0x4000 of 3527's that starts with kScaleHead; .pdata 0x111 bytes, as 2976's). Its only two callers are
+// 0xBDEC4C / 0xBDECE6 in 0xBDEB10 (= 0xBDE6F0 + 0x420, the calls at the same +0x13C / +0x1D6); only their rel32
+// changed. The clock globals, from FrameClock_NowMs 0x15FA340 (cmp byte [local],0 ; base + frac / 1000) and the main
+// loop's write at 0xBDF1D6..0xBDF1F6 (frac += dt us): local 0x70DBF2D, base 0x70DBF68, frac 0x70DBF78 (read only).
+constexpr uint8_t kCall1Bytes3576[] = {0xE8, 0xDF, 0x1B, 0xCC, 0x02};
+constexpr uint8_t kCall2Bytes3576[] = {0xE8, 0x45, 0x1B, 0xCC, 0x02};
+bool g_is_3527 = false;  // 3527's layout: 3527, 3549 and 3576
+bool g_is_3576 = false;  // 3576's addresses
 // vf 0x168 of every UI root: vmovss xmm0,[rip+..] (1.0f) ; ret.
 constexpr uintptr_t kTrivialVf = 0x63DA70;
 constexpr uint8_t kTrivialVfBytes[] = {0xC5, 0xFA, 0x10, 0x05, 0x3C, 0x56, 0x73, 0x05, 0xC3};
 // FrameClock_NowMs 0x1416B80's globals (read only, from the drain thread).
-constexpr uintptr_t kClockLocal = 0x6C8CD35;  // u8: 1 = the per-frame scaled clock for every thread
-constexpr uintptr_t kClockBase = 0x6C8CD68;   // u64 ms
-constexpr uintptr_t kClockFrac = 0x6C8CD70;   // u64 us (added dt * 1e6 per frame, 0xAD19D3)
+uintptr_t kClockLocal = 0x6C8CD35;  // u8: 1 = the per-frame scaled clock for every thread
+uintptr_t kClockBase = 0x6C8CD68;   // u64 ms
+uintptr_t kClockFrac = 0x6C8CD70;   // u64 us (added dt * 1e6 per frame, 0xAD19D3)
 
 constexpr uint32_t kOneBits = 0x3F800000;  // 1.0f
 constexpr uint32_t kSourceCheckEvery = 30;  // first-call frames between two walks while a UI value is in force
@@ -142,7 +156,7 @@ void emit(uint16_t kind, uintptr_t world, uint32_t old_bits, uint32_t new_bits, 
     if (done) {
         n.walk = *done;
         n.walked = true;
-    } else if (walk) {
+    } else if (walk && !g_is_3527) {
         n.walk = uip::walk_views(FastMem{}, world, g_trivial);
         n.walked = true;
         c_walks.fetch_add(1, std::memory_order_relaxed);
@@ -173,7 +187,7 @@ float on_scale(uintptr_t world, float orig, uintptr_t ret) noexcept {
         c_transitions.fetch_add(1, std::memory_order_relaxed);
         g_tick.store(0, std::memory_order_relaxed);
         emit(uip::kEvTransition, world, prev, bits, d, live, mode, site, bits != kOneBits, nullptr);
-    } else if (site == Site::First && bits != kOneBits &&
+    } else if (!g_is_3527 && site == Site::First && bits != kOneBits &&
                g_tick.fetch_add(1, std::memory_order_relaxed) % kSourceCheckEvery == kSourceCheckEvery - 1) {
         // Same value: has another view become the one that asks for it (a menu opened from another one)?
         const uip::ViewWalk w = uip::walk_views(FastMem{}, world, g_trivial);
@@ -219,6 +233,7 @@ bool read_sections() {
         std::memcpy(s.name, h.Name, 8);
         s.va = h.VirtualAddress;
         s.size = h.Misc.VirtualSize;
+        s.flags = h.Characteristics;
         g_secs.push_back(s);
     }
     return !g_secs.empty();
@@ -231,6 +246,12 @@ bool bytes_at(uintptr_t rva, std::span<const uint8_t> expected) {
 }
 
 bool code_ready() {
+    if (g_is_3576) {
+        return bytes_at(kScale, kScaleHead) && bytes_at(kCall1, kCall1Bytes3576) && bytes_at(kCall2, kCall2Bytes3576);
+    }
+    if (g_is_3527) {
+        return bytes_at(kScale, kScaleHead) && bytes_at(kCall1, kCall1Bytes3527) && bytes_at(kCall2, kCall2Bytes3527);
+    }
     return bytes_at(kScale, kScaleHead) && bytes_at(kCall1, kCall1Bytes) && bytes_at(kCall2, kCall2Bytes) &&
            bytes_at(kTrivialVf, kTrivialVfBytes);
 }
@@ -241,11 +262,20 @@ bool install() {
         std::span<const uint8_t> bytes;
         const char* what;
     };
-    const Ctx ctx[] = {{kScale, kScaleHead, "the UI time scale 0x35CD990 (30-byte prologue)"},
-                       {kCall1, kCall1Bytes, "its caller 0xAD143C"},
-                       {kCall2, kCall2Bytes, "its caller 0xAD14D6"},
-                       {kTrivialVf, kTrivialVfBytes, "the roots' vf 0x168 0x63DA70"}};
-    for (const Ctx& c : ctx) {
+    const Ctx ctx_2976[] = {{kScale, kScaleHead, "the UI time scale 0x35CD990 (30-byte prologue)"},
+                            {kCall1, kCall1Bytes, "its caller 0xAD143C"},
+                            {kCall2, kCall2Bytes, "its caller 0xAD14D6"},
+                            {kTrivialVf, kTrivialVfBytes, "the roots' vf 0x168 0x63DA70"}};
+    const Ctx ctx_3527[] = {{kScale, kScaleHead, "the UI time scale 0x389FB30 (30-byte prologue)"},
+                            {kCall1, kCall1Bytes3527, "its caller 0xBDE82C"},
+                            {kCall2, kCall2Bytes3527, "its caller 0xBDE8C6"}};
+    const Ctx ctx_3576[] = {{kScale, kScaleHead, "the UI time scale 0x38A0830 (30-byte prologue)"},
+                            {kCall1, kCall1Bytes3576, "its caller 0xBDEC4C"},
+                            {kCall2, kCall2Bytes3576, "its caller 0xBDECE6"}};
+    const std::span<const Ctx> sites = g_is_3576   ? std::span<const Ctx>(ctx_3576)
+                                       : g_is_3527 ? std::span<const Ctx>(ctx_3527)
+                                                   : std::span<const Ctx>(ctx_2976);
+    for (const Ctx& c : sites) {
         if (!gad::in_real_code(g_secs, static_cast<uint32_t>(c.rva), static_cast<uint32_t>(c.bytes.size()))) {
             const gad::Section* s = gad::section_of(g_secs, static_cast<uint32_t>(c.rva));
             log::error("UiPause: {} (exe+0x{:X}) is not inside .rsrc (section {}); REFUSED, not hooked", c.what, c.rva,
@@ -253,7 +283,7 @@ bool install() {
             return false;
         }
         if (!bytes_at(c.rva, c.bytes)) {
-            log::error("UiPause: {} (exe+0x{:X}) is not the expected code of build 2976; REFUSED, not hooked", c.what,
+            log::error("UiPause: {} (exe+0x{:X}) is not the expected code of this build; REFUSED, not hooked", c.what,
                        c.rva);
             return false;
         }
@@ -416,6 +446,19 @@ std::string ledger_text() {
 // every hop's vtable checked): the world is up. Read only, VirtualQuery-checked reads.
 bool player_in_world() {
     uintptr_t world = 0, mgr = 0, vt = 0, actor = 0, avt = 0;
+    if (g_is_3576) {
+        // Build 1.0.0.3576 (static, 2026-11-06; not yet run): no reader profile yet. World slot 0x71C0100
+        // (core_globals_3576.json; 0xC9DB6B reads it and then +0x30), ClientActorManager vtable 0x5946C40 (RTTI).
+        return peek(g_base + 0x71C0100, world) && world && peek(world + g2976::kWorldSystem_ActorManager, mgr) && mgr &&
+               peek(mgr, vt) && vt == g_base + 0x5946C40 && peek(mgr + g2976::kActorManager_ControlledActor, actor) &&
+               actor && peek(actor, avt) && avt;
+    }
+    if (const auto* profile = game::reader_profile(); g_is_3527 && profile) {
+        return peek(g_base + profile->world_system, world) && world &&
+               peek(world + g2976::kWorldSystem_ActorManager, mgr) && mgr && peek(mgr, vt) &&
+               vt == g_base + profile->vt_actor_manager && peek(mgr + g2976::kActorManager_ControlledActor, actor) && actor &&
+               peek(actor, avt) && avt;
+    }
     return peek(g_base + g2976::kWorldSystemSlot, world) && world &&
            peek(world + g2976::kWorldSystem_ActorManager, mgr) && mgr && peek(mgr, vt) &&
            vt == g_base + g2976::kVtClientActorManager &&
@@ -510,12 +553,32 @@ void watch_frames(FrameWatch& w) {
 
 DWORD WINAPI ui_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    if (g_base != g2976::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {
+    const auto build = game::current_build();
+    if (build == game::Build::unsupported || !(game::legacy_layout() || build == game::Build::v3576)) {
         log::error("UiPause: unsupported game build; ui_pause_block stays off");
         return 0;
+    }
+    if (build == game::Build::v3576) {  // see kCall1Bytes3576
+        g_is_3527 = true;
+        g_is_3576 = true;
+        kScale = 0x38A0830;
+        kCall1 = 0xBDEC4C;
+        kCall2 = 0xBDECE6;
+        kRet1 = 0xBDEC51;
+        kRet2 = 0xBDECEB;
+        kClockLocal = 0x70DBF2D;
+        kClockBase = 0x70DBF68;
+        kClockFrac = 0x70DBF78;
+    } else if (build == game::Build::v3527) {
+        g_is_3527 = true;
+        kScale = 0x389FB30;
+        kCall1 = 0xBDE82C;
+        kCall2 = 0xBDE8C6;
+        kRet1 = 0xBDE831;
+        kRet2 = 0xBDE8CB;
+        kClockLocal = 0x70D9E3D;
+        kClockBase = 0x70D9E60;
+        kClockFrac = 0x70D9E70;
     }
     if (!read_sections()) {
         log::error("UiPause: the game's section table is unreadable; ui_pause_block stays off");

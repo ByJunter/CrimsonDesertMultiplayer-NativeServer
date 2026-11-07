@@ -100,6 +100,7 @@ add_library(cdmp_common STATIC
     src/common/reliable.cpp
     src/common/send_gate.cpp
     src/common/troc_frame.cpp
+    src/common/native_opcode.cpp
     src/common/lz_block.cpp
     src/common/capture_file.cpp
     src/common/save_guard.cpp
@@ -168,8 +169,16 @@ add_library(cdmp_mod SHARED
     src/mod/session2/rope_probe.cpp
     src/mod/session2/tree_bend.cpp
     src/mod/session2/docked_gimmicks.cpp
+    src/mod/session2/interact_gate.cpp
+    src/mod/session2/store_gate.cpp
+    src/mod/session2/shop_ui_trace.cpp
+    src/mod/session2/guest_shop_window.cpp
+    src/mod/session2/housing_share.cpp
+    src/mod/session2/guest_shop_branch.cpp
     src/mod/session2/companion_probe.cpp
     src/mod/session2/field_share.cpp
+    src/mod/session2/interaction_condition.cpp
+    src/mod/session2/remote_visible.cpp
     src/mod/session2/guest_lifecycle.cpp
     src/mod/session2/identity_fix.cpp
     src/mod/session2/identity_probe.cpp
@@ -192,6 +201,12 @@ add_library(cdmp_mod SHARED
     src/mod/session2/load_trip.cpp
     src/mod/session2/slot_refresh.cpp
     src/mod/session2/ui_pause.cpp
+    src/mod/session2/achievement_guard.cpp
+    src/mod/session2/field_leave_guard.cpp
+    src/mod/session2/focus_follow.cpp
+    src/mod/session2/manager_probe.cpp
+    src/mod/session2/pivot_guard.cpp
+    src/mod/session2/seq_marker.cpp
     src/mod/session2/user2_funnels.cpp
     src/mod/session2/fast_travel.cpp
     src/mod/session2/travel_probe.cpp
@@ -256,12 +271,21 @@ cdmp_strict(cdmp_probe)
 target_include_directories(cdmp_probe PRIVATE tools)
 target_link_libraries(cdmp_probe PRIVATE cdmp_common)
 
+# Opt-in external diagnostic capture for failures that bypass in-process handlers.
+add_executable(cdmp_debug_watch EXCLUDE_FROM_ALL tools/porting/debug_watch.cpp)
+cdmp_strict(cdmp_debug_watch)
+target_link_libraries(cdmp_debug_watch PRIVATE dbghelp)
+
 # Tests.
 enable_testing()
 add_executable(cdmp_tests tests/tests.cpp)
 cdmp_strict(cdmp_tests)
 target_link_libraries(cdmp_tests PRIVATE cdmp_common)
 add_test(NAME unit COMMAND cdmp_tests)
+add_executable(cdmp_tests_native_opcode tests/native_opcode_tests.cpp)
+cdmp_strict(cdmp_tests_native_opcode)
+target_link_libraries(cdmp_tests_native_opcode PRIVATE cdmp_common)
+add_test(NAME native_opcode COMMAND cdmp_tests_native_opcode)
 # Option D (docs/OPCION-D-EMULADOR.md): the parts that do not need the game.
 add_executable(cdmp_tests_optd tests/optd_tests.cpp)
 cdmp_strict(cdmp_tests_optd)
@@ -356,6 +380,59 @@ add_executable(cdmp_tests_optd_field tests/optd_field_tests.cpp src/mod/session2
 cdmp_strict(cdmp_tests_optd_field)
 target_link_libraries(cdmp_tests_optd_field PRIVATE cdmp_common safetyhook::safetyhook)
 add_test(NAME optd_field COMMAND cdmp_tests_optd_field)
+# 3527 null-condition regression, with an optional replay of the installed
+# executable's serializer bytes in this isolated test process.
+add_executable(cdmp_tests_optd_interaction_condition tests/optd_interaction_condition_tests.cpp
+    src/mod/session2/interaction_condition.cpp src/mod/game/safe_memory.cpp src/mod/log.cpp)
+cdmp_strict(cdmp_tests_optd_interaction_condition)
+target_link_libraries(cdmp_tests_optd_interaction_condition PRIVATE cdmp_common safetyhook::safetyhook)
+add_test(NAME optd_interaction_condition COMMAND cdmp_tests_optd_interaction_condition)
+add_executable(cdmp_tests_optd_character_phase tests/optd_character_phase_tests.cpp src/mod/game/safe_memory.cpp)
+cdmp_strict(cdmp_tests_optd_character_phase)
+target_include_directories(cdmp_tests_optd_character_phase PRIVATE src)
+add_test(NAME optd_character_phase COMMAND cdmp_tests_optd_character_phase)
+add_executable(cdmp_tests_optd_docking_dedupe tests/optd_docking_dedupe_tests.cpp)
+cdmp_strict(cdmp_tests_optd_docking_dedupe)
+target_include_directories(cdmp_tests_optd_docking_dedupe PRIVATE src)
+add_test(NAME optd_docking_dedupe COMMAND cdmp_tests_optd_docking_dedupe)
+
+add_executable(cdmp_tests_optd_gimmick_interact tests/optd_gimmick_interact_tests.cpp)
+cdmp_strict(cdmp_tests_optd_gimmick_interact)
+target_include_directories(cdmp_tests_optd_gimmick_interact PRIVATE src)
+add_test(NAME optd_gimmick_interact COMMAND cdmp_tests_optd_gimmick_interact)
+
+add_executable(cdmp_tests_optd_guest_shop_branch tests/optd_guest_shop_branch_tests.cpp)
+cdmp_strict(cdmp_tests_optd_guest_shop_branch)
+target_include_directories(cdmp_tests_optd_guest_shop_branch PRIVATE src)
+add_test(NAME optd_guest_shop_branch COMMAND cdmp_tests_optd_guest_shop_branch)
+add_executable(cdmp_tests_optd_housing_share tests/optd_housing_share_tests.cpp)
+cdmp_strict(cdmp_tests_optd_housing_share)
+target_include_directories(cdmp_tests_optd_housing_share PRIVATE src)
+add_test(NAME optd_housing_share COMMAND cdmp_tests_optd_housing_share)
+
+add_executable(cdmp_tests_optd_achievement_guard tests/optd_achievement_guard_tests.cpp)
+cdmp_strict(cdmp_tests_optd_achievement_guard)
+target_include_directories(cdmp_tests_optd_achievement_guard PRIVATE src)
+add_test(NAME optd_achievement_guard COMMAND cdmp_tests_optd_achievement_guard)
+
+add_executable(cdmp_tests_optd_field_leave_guard tests/optd_field_leave_guard_tests.cpp)
+cdmp_strict(cdmp_tests_optd_field_leave_guard)
+target_include_directories(cdmp_tests_optd_field_leave_guard PRIVATE src)
+add_test(NAME optd_field_leave_guard COMMAND cdmp_tests_optd_field_leave_guard)
+
+add_executable(cdmp_tests_optd_focus_follow tests/optd_focus_follow_tests.cpp)
+cdmp_strict(cdmp_tests_optd_focus_follow)
+target_include_directories(cdmp_tests_optd_focus_follow PRIVATE src)
+add_test(NAME optd_focus_follow COMMAND cdmp_tests_optd_focus_follow)
+
+add_executable(cdmp_tests_optd_pivot_guard tests/optd_pivot_guard_tests.cpp)
+cdmp_strict(cdmp_tests_optd_pivot_guard)
+target_include_directories(cdmp_tests_optd_pivot_guard PRIVATE src)
+add_test(NAME optd_pivot_guard COMMAND cdmp_tests_optd_pivot_guard)
+add_executable(cdmp_tests_optd_seq_marker tests/optd_seq_marker_tests.cpp)
+cdmp_strict(cdmp_tests_optd_seq_marker)
+target_include_directories(cdmp_tests_optd_seq_marker PRIVATE src)
+add_test(NAME optd_seq_marker COMMAND cdmp_tests_optd_seq_marker)
 # P-RELOJ: the clock gate's logic on fake game memory.
 add_executable(cdmp_tests_optd_clock tests/optd_clock_tests.cpp src/mod/session2/clock_gate.cpp
     src/mod/game/safe_memory.cpp src/mod/log.cpp)
@@ -525,6 +602,29 @@ add_executable(cdmp_tests_optd_observer_milestone tests/optd_observer_milestone_
 cdmp_strict(cdmp_tests_optd_observer_milestone)
 target_link_libraries(cdmp_tests_optd_observer_milestone PRIVATE cdmp_common)
 add_test(NAME optd_observer_milestone COMMAND cdmp_tests_optd_observer_milestone)
+# The guest's repeat of a 2322 its own login wrote back (preload_release_logic.h): offline logic only.
+add_executable(cdmp_tests_optd_preload_release tests/optd_preload_release_tests.cpp)
+cdmp_strict(cdmp_tests_optd_preload_release)
+target_include_directories(cdmp_tests_optd_preload_release PRIVATE src)
+add_test(NAME optd_preload_release COMMAND cdmp_tests_optd_preload_release)
+# Which hide requests are refused so the two players can see each other (remote_visible_logic.h): offline logic only.
+add_executable(cdmp_tests_optd_remote_visible tests/optd_remote_visible_tests.cpp)
+cdmp_strict(cdmp_tests_optd_remote_visible)
+target_include_directories(cdmp_tests_optd_remote_visible PRIVATE src)
+add_test(NAME optd_remote_visible COMMAND cdmp_tests_optd_remote_visible)
+add_executable(cdmp_tests_optd_milestone_native tests/optd_milestone_native_tests.cpp)
+cdmp_strict(cdmp_tests_optd_milestone_native)
+target_include_directories(cdmp_tests_optd_milestone_native PRIVATE src)
+add_test(NAME optd_milestone_native COMMAND cdmp_tests_optd_milestone_native
+    --exe "${CMAKE_CURRENT_SOURCE_DIR}/../bin64/CrimsonDesert.exe")
+set_tests_properties(optd_milestone_native PROPERTIES SKIP_RETURN_CODE 77)
+add_executable(cdmp_tests_optd_apply_playback tests/optd_apply_playback_tests.cpp)
+cdmp_strict(cdmp_tests_optd_apply_playback)
+target_include_directories(cdmp_tests_optd_apply_playback PRIVATE src)
+target_link_libraries(cdmp_tests_optd_apply_playback PRIVATE safetyhook::safetyhook)
+add_test(NAME optd_apply_playback COMMAND cdmp_tests_optd_apply_playback
+    --exe "${CMAKE_CURRENT_SOURCE_DIR}/../bin64/CrimsonDesert.exe")
+set_tests_properties(optd_apply_playback PROPERTIES SKIP_RETURN_CODE 77)
 # P2 without game heap work on the mod's threads (pendientes/p8-heap-inyeccion.md): offline logic only - the
 # classification (hold/drop/stop), the queue to the NetworkThread (order, bounds, reserve, epochs), the in-flight
 # bound, the 2001's pacing, the stall watch, the exception notes and a simulated host pause.
@@ -695,6 +795,10 @@ add_executable(cdmp_tests_optd_remote_interp tests/optd_remote_interp_tests.cpp)
 cdmp_strict(cdmp_tests_optd_remote_interp)
 target_link_libraries(cdmp_tests_optd_remote_interp PRIVATE cdmp_common)
 add_test(NAME optd_remote_interp COMMAND cdmp_tests_optd_remote_interp)
+add_executable(cdmp_tests_native_movement tests/native_movement_tests.cpp)
+cdmp_strict(cdmp_tests_native_movement)
+target_link_libraries(cdmp_tests_native_movement PRIVATE cdmp_common)
+add_test(NAME native_movement COMMAND cdmp_tests_native_movement)
 # P8 session 8 pets (pendientes/p8-impl-mascotas.md): child_settle through child_hold.cpp's test seams (the split
 # with the owner's character in the same call / just announced / still withheld, the timed native re-announce,
 # drops, D-53's wait, observer_hold_acks), its pure rules (child_settle_logic.h), remote_interp's cap for owned
@@ -796,6 +900,10 @@ target_link_libraries(cdmp_tests_optd_door_trace PRIVATE cdmp_common)
 add_test(NAME optd_door_trace COMMAND cdmp_tests_optd_door_trace)
 # S43 (docs/research/s25/s43-puertas-y-r42.md): scene_level_share's pure logic (scene_level_share_logic.h): the
 # per-user loaded sets, the keep/delete decision, the owner gate, the 2598 / 2834 / 2104 parsers on captured bytes.
+add_executable(cdmp_tests_optd_hud_status tests/optd_hud_status_tests.cpp)
+cdmp_strict(cdmp_tests_optd_hud_status)
+target_include_directories(cdmp_tests_optd_hud_status PRIVATE src)
+add_test(NAME optd_hud_status COMMAND cdmp_tests_optd_hud_status)
 add_executable(cdmp_tests_optd_scene_level_share tests/optd_scene_level_share_tests.cpp)
 cdmp_strict(cdmp_tests_optd_scene_level_share)
 target_link_libraries(cdmp_tests_optd_scene_level_share PRIVATE cdmp_common)

@@ -58,6 +58,9 @@ namespace cdmp::session2 {
 // first-Update point is then not hooked (one owner per entry; "left to guest_remote_update_guard" in its ON line).
 void guest_s3_start(bool diag, bool crash_dump, bool update_guard, bool actor_diag = false,
                     bool update_site_taken = false);
+// True only after the checked null-action consumer hook is installed.  A
+// required guest_update_guard remains fail-closed while this is false.
+bool guest_update_guard_ready() noexcept;
 bool guest_s3_wanted();
 // Every 5 s from the guest's diagnostics thread (guest_diag_worker.h; not a
 // game thread, not the network thread): formats the new records. One caller.

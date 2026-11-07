@@ -10,6 +10,7 @@
 #include <deque>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <random>
 #include <string>
@@ -352,6 +353,195 @@ void test_troc_link() {
     CHECK(host_link.push(packet(2716, 0)));
     pump(20);
     CHECK(guest_got.size() == 301);
+}
+
+// Native payloads may cross the tunnel only after both endpoints identify
+// the same executable and opcode map. Reconnection and reset cannot erase a
+// mismatch on the current connection.
+void test_troc_link_identity() {
+    for (int scenario = 0; scenario < 5; ++scenario) {
+        std::vector<Bytes> to_host, to_guest, host_got, guest_got;
+        ClientSession guest("guest", 0, [&](const Bytes& b) { to_host.push_back(b); }, {},
+                            ClientSession::Role::Initiator);
+        ClientSession host("host", 0, [&](const Bytes& b) { to_guest.push_back(b); }, {},
+                           ClientSession::Role::Responder);
+        troc::TrocLink guest_link(guest, troc::Dir::ToHostServer, troc::Dir::ToGuestClient,
+            [&](Bytes&& p, uint32_t) { guest_got.push_back(std::move(p)); });
+        troc::TrocLink host_link(host, troc::Dir::ToGuestClient, troc::Dir::ToHostServer,
+            [&](Bytes&& p, uint32_t) { host_got.push_back(std::move(p)); });
+        host_link.require_identity(3527, 0x123456789ABCDEF0ULL);
+        if (scenario < 3)
+            guest_link.require_identity(scenario == 1 ? 2976 : 3527,
+                scenario == 2 ? 0x123456789ABCDEF1ULL : 0x123456789ABCDEF0ULL);
+        uint32_t now = 1000;
+        auto pump = [&](int rounds) {
+            for (int i = 0; i < rounds; ++i) {
+                now += 5;
+                guest.tick(now); host.tick(now);
+                guest_link.tick(now); host_link.tick(now);
+                auto a = std::move(to_host); to_host.clear();
+                for (auto& b : a) host.on_datagram(b, now);
+                auto b = std::move(to_guest); to_guest.clear();
+                for (auto& p : b) guest.on_datagram(p, now);
+            }
+        };
+        CHECK(!host_link.connected());
+        pump(30);
+        CHECK(host.state() == ClientSession::State::Connected);
+        if (scenario >= 3) {
+            // A peer bypassing the identity handshake cannot reach native code.
+            // Opcode 3 is reserved; malformed identities fail just like game data.
+            CHECK(guest.send_reliable(proto::RelKind::TrocFrame,
+                troc::encode_batch({troc::Dir::ToHostServer, {packet(scenario == 3 ? 2319 : 3, 1)}}), now));
+            pump(30);
+        }
+        if (scenario == 0) {
+            CHECK(host_link.connected() && guest_link.connected());
+            CHECK(!host_link.broken() && !guest_link.broken());
+            CHECK(host_got.empty() && guest_got.empty());  // identities never reach game code
+            CHECK(guest_link.push(packet(2319, 4)));
+            CHECK(host_link.push(packet(2005, 4)));
+            pump(30);
+            CHECK(host_got.size() == 1 && guest_got.size() == 1);
+            host.disconnect(now);
+            pump(400);
+            CHECK(host_link.broken() && guest_link.broken());
+            host_link.reset(); guest_link.reset();
+            CHECK(!host_link.connected() && !guest_link.connected());
+            pump(30);
+            CHECK(host_link.connected() && guest_link.connected());
+        } else {
+            CHECK(host_link.broken());
+            CHECK(!host_link.connected());
+            CHECK(host_got.empty());
+            host_link.reset();
+            CHECK(host_link.broken());
+            CHECK(!host_link.push(packet(2005, 4)));
+        }
+    }
+}
+
+void test_troc_link_identity_lifecycle() {
+    for (const bool late_guest : {false, true}) {
+        std::vector<Bytes> to_host, to_guest;
+        ClientSession guest("guest", 0, [&](const Bytes& b) { to_host.push_back(b); }, {},
+                            ClientSession::Role::Initiator);
+        ClientSession host("host", 0, [&](const Bytes& b) { to_guest.push_back(b); }, {},
+                           ClientSession::Role::Responder);
+        troc::TrocLink host_link(host, troc::Dir::ToGuestClient, troc::Dir::ToHostServer, [](Bytes&&, uint32_t) {});
+        host_link.require_identity(3527, 42);
+        std::unique_ptr<troc::TrocLink> guest_link;
+        auto attach_guest = [&] {
+            guest_link = std::make_unique<troc::TrocLink>(guest, troc::Dir::ToHostServer, troc::Dir::ToGuestClient,
+                                                         [](Bytes&&, uint32_t) {});
+            guest_link->require_identity(3527, 42);
+        };
+        if (!late_guest) attach_guest();
+        uint32_t now = 1000;
+        auto pump = [&](int rounds, bool tick_guest = true) {
+            for (int i = 0; i < rounds; ++i) {
+                now += 5;
+                guest.tick(now); host.tick(now);
+                // Match mod.cpp: drain Welcome and reliable packets before the
+                // link observes the connection in tick().
+                auto a = std::move(to_host); to_host.clear();
+                for (auto& b : a) host.on_datagram(b, now);
+                auto b = std::move(to_guest); to_guest.clear();
+                for (auto& p : b) guest.on_datagram(p, now);
+                host_link.tick(now);
+                if (guest_link && tick_guest) guest_link->tick(now);
+            }
+        };
+        pump(150);
+        if (late_guest) {
+            CHECK(!host_link.connected() && !host_link.broken());
+            CHECK(host_link.packets_out() > 0);  // first identity ACKed without a receiver
+            attach_guest();
+            // Only host retries advance: a late handler receives its declaration
+            // even if the guest hasn't begun its network-loop tick yet.
+            pump(400, false);
+            CHECK(guest_link->connected() && !guest_link->broken());
+            pump(20);
+        }
+        CHECK(host_link.connected() && guest_link->connected());
+        CHECK(!host_link.broken() && !guest_link->broken());
+        pump(30);
+        const uint64_t sent = host_link.packets_out() + guest_link->packets_out();
+        pump(500);
+        CHECK(host_link.packets_out() + guest_link->packets_out() == sent);  // no response ping-pong
+    }
+}
+
+// The guest's game dies without a goodbye and a new process connects to the same host. The new connection breaks the
+// host's link, the broken link drops the new guest's identity, and only a reset lets it through (2026-11-05, two PCs).
+void test_troc_link_guest_crash_and_return() {
+    std::vector<Bytes> to_host, to_guest;
+    auto guest = std::make_unique<ClientSession>("guest", 0, [&](const Bytes& b) { to_host.push_back(b); },
+                                                 ClientSession::EventFn{}, ClientSession::Role::Initiator);
+    ClientSession host("host", 0, [&](const Bytes& b) { to_guest.push_back(b); }, {}, ClientSession::Role::Responder);
+    std::vector<Bytes> host_got;
+    troc::TrocLink host_link(host, troc::Dir::ToGuestClient, troc::Dir::ToHostServer,
+                             [&](Bytes&& p, uint32_t) { host_got.push_back(std::move(p)); });
+    host_link.require_identity(3527, 42);
+    auto make_guest_link = [&] {
+        auto link = std::make_unique<troc::TrocLink>(*guest, troc::Dir::ToHostServer, troc::Dir::ToGuestClient,
+                                                     [](Bytes&&, uint32_t) {});
+        link->require_identity(3527, 42);
+        return link;
+    };
+    auto guest_link = make_guest_link();
+    uint32_t now = 1000;
+    bool guest_alive = true;
+    auto pump = [&](int rounds) {
+        for (int i = 0; i < rounds; ++i) {
+            now += 5;
+            if (guest_alive) guest->tick(now);
+            host.tick(now);
+            auto a = std::move(to_host);
+            to_host.clear();
+            for (auto& b : a) host.on_datagram(b, now);
+            auto c = std::move(to_guest);
+            to_guest.clear();
+            if (guest_alive) {
+                for (auto& p : c) guest->on_datagram(p, now);
+            }
+            host_link.tick(now);
+            if (guest_alive) guest_link->tick(now);
+        }
+    };
+    pump(150);
+    CHECK(host_link.connected() && guest_link->connected());
+    CHECK(guest_link->push(packet(2716, 0)));
+    pump(20);
+    CHECK(host_got.size() == 1);
+
+    // The crash: nothing more from that process, and the host times it out.
+    guest_alive = false;
+    guest_link.reset();
+    guest.reset();
+    pump(1400);
+    CHECK(host.state() != ClientSession::State::Connected);
+
+    // A new process, on a newer connection. However long it tries, the broken link never lets its identity in.
+    const uint32_t old_epoch = host.epoch();
+    guest = std::make_unique<ClientSession>("guest", 0, [&](const Bytes& b) { to_host.push_back(b); },
+                                            ClientSession::EventFn{}, ClientSession::Role::Initiator);
+    guest_link = make_guest_link();
+    guest_alive = true;
+    pump(2000);
+    CHECK(host.state() == ClientSession::State::Connected && host.epoch() > old_epoch);
+    CHECK(host_link.broken() && !host_link.connected());
+    CHECK(!guest_link->connected());
+
+    // What the host does in READY (GuestLifecycle::link_reset_due): the same connection then works.
+    host_link.reset();
+    CHECK(!host_link.broken());
+    pump(400);
+    CHECK(host_link.connected() && guest_link->connected());
+    CHECK(!host_link.broken() && !guest_link->broken());
+    CHECK(guest_link->push(packet(2716, 0)));
+    pump(20);
+    CHECK(host_got.size() == 2);
 }
 
 // A Steam-like link: a send buffer drained at a fixed rate, then a fixed
@@ -1935,7 +2125,7 @@ void test_save_trace_budget() {
     CHECK(b.total() == 5 && b.non_write_cap() == 2);
 }
 
-static_assert(proto::kVersion == 8);
+    static_assert(proto::kVersion == 9);
 static_assert(static_cast<uint8_t>(proto::RelKind::TrocFrame) == proto::kMaxRelKind);
 
 }  // namespace
@@ -1948,6 +2138,9 @@ int main() {
     test_tunnel_sender_batching();
     test_tunnel_over_reliable();
     test_troc_link();
+    test_troc_link_identity();
+    test_troc_link_identity_lifecycle();
+    test_troc_link_guest_crash_and_return();
     test_steam_backpressure();
     test_lz_codec();
     test_compressed_batches();

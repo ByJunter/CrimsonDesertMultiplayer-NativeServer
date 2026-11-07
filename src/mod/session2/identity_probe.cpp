@@ -11,9 +11,11 @@
 #include <cstring>
 #include <format>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/offsets_s2.h"
+#include "mod/session2/profile_s2.h"
 #include "mod/session2/server.h"
 
 #pragma intrinsic(_ReturnAddress)
@@ -84,9 +86,58 @@ constexpr uintptr_t kStatusVtable = 0x5B203F0;    // ServerStatusActorComponent 
 constexpr uintptr_t kStatusLoad = 0x293FE70;      // its +0x50: the 5-byte thunk to .xtls 0x10427500
 constexpr uintptr_t kLoadStub = 0x35EA90;         // the shared vf50 stub (jmp .xtls 0x86F0570)
 
+// Build 3527. The load entry is byte-for-byte identical apart from its RVA.
+// The true Status login-phases function keeps the four-argument ABI and the
+// actor = [obj+8] contract. (The earlier signature-only 0x2E13FB0 candidate
+// belongs to ServerKnowledgeActorComponent and must never be hooked here.)
+constexpr uintptr_t kLoad3527 = 0x2225250;
+constexpr uintptr_t kPhases3527 = 0x2BB0D60;
+constexpr uint8_t kPhases3527Head[] = {
+    0x44, 0x89, 0x4C, 0x24, 0x20, 0x4C, 0x89, 0x44, 0x24, 0x18, 0x53, 0x55, 0x56,
+    0x57, 0x41, 0x54, 0x41, 0x56, 0x41, 0x57, 0x48, 0x81, 0xEC, 0x80, 0x00, 0x00,
+    0x00, 0x4C, 0x8B, 0xFA, 0x4C, 0x8B, 0x71, 0x08, 0x49, 0x8B, 0x7E, 0x78};
+constexpr uintptr_t kStatusVtable3527 = 0x5EE7610;
+constexpr uintptr_t kStatusLoad3527 = 0x2BAFA40;
+
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). The load entry: kLoadHead (49 bytes) unique in the file at
+// 3527's +0xC40 (.pdata 0x2225E90..0x2226CCE). The login phases: kPhases3527Head at 3527's +0xC70 (.pdata
+// 0x2BB19D0..0x2BB1EA7). ServerStatusActorComponent's vtable by RTTI; its +0x50 is the 5-byte thunk at 3527's +0xC70,
+// whose target 0xE390C80 is the same Status load as 3527's 0xE483B00: mov rax,[rdi+0x90] ; mov [rax],0x7FFF...FFFF,
+// so Status -> u64* characterNo is +0x90 as in 3527 (identity_status_number_offset()).
+constexpr uintptr_t kLoad3576 = 0x2225E90;
+constexpr uintptr_t kPhases3576 = 0x2BB19D0;
+constexpr uintptr_t kStatusVtable3576 = 0x5EE9828;
+constexpr uintptr_t kStatusLoad3576 = 0x2BB06B0;
+
+struct IdentityProbeProfile {
+    uintptr_t load, phases, status_vtable, status_load;
+    const uint8_t* load_head;
+    size_t load_head_size;
+    const uint8_t* phases_head;
+    size_t phases_head_size;
+    bool legacy_probe_points;
+};
+
+const IdentityProbeProfile* identity_probe_profile() noexcept {
+    static constexpr IdentityProbeProfile old{kLoad, kPhases, kStatusVtable, kStatusLoad,
+                                               kLoadHead, sizeof kLoadHead, kPhasesHead, sizeof kPhasesHead, true};
+    static constexpr IdentityProbeProfile current{kLoad3527, kPhases3527, kStatusVtable3527, kStatusLoad3527,
+                                                   kLoadHead, sizeof kLoadHead, kPhases3527Head,
+                                                   sizeof kPhases3527Head, false};
+    static constexpr IdentityProbeProfile current3576{kLoad3576, kPhases3576, kStatusVtable3576, kStatusLoad3576,
+                                                       kLoadHead, sizeof kLoadHead, kPhases3527Head,
+                                                       sizeof kPhases3527Head, false};
+    switch (game::current_build()) {
+        case game::Build::v2976: return &old;
+        case game::Build::v3527: return &current;
+        case game::Build::v3576: return &current3576;
+        default: return nullptr;
+    }
+}
+
 enum Point : int { kPtLoad, kPtComponent, kPtOwner, kPtPhases, kPtAck, kPtPacker, kPtVersion, kPtClientVersion, kPoints };
-constexpr const char* kPointName[kPoints] = {"load 0x20688A0",        "component 0x20693EB",
-                                             "owner 0x2AE1010",       "phases 0x2941020",
+constexpr const char* kPointName[kPoints] = {"component load",        "component 0x20693EB",
+                                             "owner 0x2AE1010",       "Status login phases",
                                              "2358 path 0x28F31F0",   "packer 0x17908C0",
                                              "version write 0x1791B98", "client version write 0xB74302"};
 // Lines per point, the host's comparison lines per point and in total.
@@ -178,9 +229,23 @@ std::string character_no(uintptr_t actor) {
     return hex_or(ok, no);
 }
 
+// _currentRestoreCodeVersionXXX per build. 3527: the global the Status load 0xE483B00 compares with 4 at 0xE483B6F
+// (tools/porting/data/identity_fields_3527.txt). 3576 (static, 2026-11-06; not yet run): the same compare in the same
+// load 0xE390C80 (0xE390CEF), and the one global CommonStatusActorComponent::LoadSaveData 0x18C9190 writes at 0x18C93A4
+// (the 2976 site's bytes, mov eax,[r11+0x60] ; mov [rip+..],eax). 0: unknown (logged as unreadable).
+uintptr_t restore_version_rva() {
+    switch (game::current_build()) {
+        case game::Build::v2976: return kRestoreVersion;
+        case game::Build::v3527: return 0x70D9E90;
+        case game::Build::v3576: return 0x70DBF98;
+        default: return 0;
+    }
+}
+
 std::string restore_version() {
     uint32_t v = 0;
-    const bool ok = peek(g_base + kRestoreVersion, v);
+    const uintptr_t at = restore_version_rva();
+    const bool ok = at && peek(g_base + at, v);
     return hex_or(ok, v);
 }
 
@@ -212,7 +277,9 @@ struct Ident {
 Ident identify(uintptr_t actor) {
     Ident id;
     if (!actor) return id;
-    const uintptr_t user_vt = g_base + off::kServerUserActorVtable;
+    // The build's ServerUserActor vtable (profile_s2.h; 0 = none: no actor is told to be a user actor).
+    const uintptr_t user_vt_rva = profile::rva(off::kServerUserActorVtable);
+    const uintptr_t user_vt = user_vt_rva ? g_base + user_vt_rva : 0;
     id.who = identity_who(actor, users_now(), user_vt, id.self);
     id.owner = identity_owner(actor, user_vt, id.self);
     peek(id.owner + idp::kKey, id.owner_key);
@@ -351,7 +418,8 @@ uintptr_t __fastcall owner_detour(void* comp, void* type, void* no, void* no2) n
     return r;
 }
 
-// 0x2941020(obj, res*, ?, u32) -> res; the character is [obj+8].
+// 0x2941020 / 0x2BB0D60: the character is [obj+8]. Both builds use the same
+// four-argument ABI.
 int* __fastcall phases_detour(void* obj, int* res, void* r8, uint64_t r9) noexcept {
     bool logged = false, host = false;
     uintptr_t actor = 0;
@@ -492,7 +560,7 @@ void on_client_version(safetyhook::Context& ctx) noexcept {
         uint32_t old = 0;
         const bool old_ok = peek(g_base + kRestoreVersion, old);
         uint64_t no = 0;
-        const bool no_ok = peek(peekp(ctx.rbx + idp::kStatusCharacterNo), no);
+        const bool no_ok = peek(peekp(ctx.rbx + identity_status_number_offset()), no);
         note(kPtClientVersion, false,
              "the host's client applies a CharacterStatAck: global 0x6C8CD98 {} -> 0x{:X} | its Status 0x{:X}, "
              "characterNo now {}",
@@ -565,10 +633,21 @@ IdWho identity_who(uintptr_t actor, const IdUsers& users, uintptr_t user_vtable,
     return users.user2 ? IdWho::Other : IdWho::User2ByKey;
 }
 
-bool identity_character_no(uintptr_t actor, uint64_t& no) {
+uint32_t identity_status_number_offset() noexcept {
+    const auto b = game::current_build();
+    return identity_status_number_offset_for_build(b == game::Build::v3527 || b == game::Build::v3576);
+}
+
+bool identity_character_no_at(uintptr_t actor, uint64_t& no, uint32_t status_number_offset) {
+    if (status_number_offset != idp::kStatusCharacterNo &&
+        status_number_offset != idp::kStatusCharacterNo3527) return false;
     uintptr_t table = 0, status = 0, p = 0;
     return actor && peek(actor + idp::kActorComponents, table) && table && peek(table + idp::kTableStatus, status) &&
-           status && peek(status + idp::kStatusCharacterNo, p) && p && peek(p, no);
+           status && peek(status + status_number_offset, p) && p && peek(p, no);
+}
+
+bool identity_character_no(uintptr_t actor, uint64_t& no) {
+    return identity_character_no_at(actor, no, identity_status_number_offset());
 }
 
 uintptr_t identity_status_actor(uintptr_t status) {
@@ -589,14 +668,19 @@ void init_base() {
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
     g_image_end = base + nt->OptionalHeader.SizeOfImage;
     g_base = base;
-    // Status is told by its vtable, whose +0x50 must be the thunk the report names.
+    const auto* p = identity_probe_profile();
+    if (!p) {
+        log::warn("Session2 C2 probe: unsupported game build");
+        return;
+    }
+    // Status is told by its vtable, whose +0x50 must be the load the report names.
     uintptr_t vf = 0;
-    if (peek(g_base + kStatusVtable + 0x50, vf) && vf == g_base + kStatusLoad) {
-        g_status_vt = g_base + kStatusVtable;
+    if (peek(g_base + p->status_vtable + 0x50, vf) && vf == g_base + p->status_load) {
+        g_status_vt = g_base + p->status_vtable;
     } else {
         log::warn("Session2 C2 probe: ServerStatusActorComponent's vtable (exe+0x{:X}) is not the expected one; "
                   "Status is not marked among the components",
-                  kStatusVtable);
+                  p->status_vtable);
     }
 }
 
@@ -604,11 +688,14 @@ void init_base() {
 
 bool identity_shared_hooks_install(const IdentityFixCalls& calls) {
     init_base();
+    const auto* p = identity_probe_profile();
+    if (!p) return false;
     // The calls before the hooks go live (or at once, if the probe has them).
     g_fix_after_load.store(calls.after_load, std::memory_order_release);
     g_fix_before_phases.store(calls.before_phases, std::memory_order_release);
-    const bool load = hook_entry(kPtLoad, kLoad, kLoadHead, sizeof kLoadHead, g_load, &load_detour);
-    const bool phases = hook_entry(kPtPhases, kPhases, kPhasesHead, sizeof kPhasesHead, g_phases, &phases_detour);
+    const bool load = hook_entry(kPtLoad, p->load, p->load_head, p->load_head_size, g_load, &load_detour);
+    const bool phases =
+        hook_entry(kPtPhases, p->phases, p->phases_head, p->phases_head_size, g_phases, &phases_detour);
     if (load && phases) return true;
     // A hook that did go in stays (calling the original only); the fix does not run from it.
     g_fix_after_load.store(nullptr, std::memory_order_release);
@@ -618,10 +705,12 @@ bool identity_shared_hooks_install(const IdentityFixCalls& calls) {
 
 bool identity_load_hook_share(const GuestSaveLoadCalls& calls) {
     init_base();
+    const auto* p = identity_probe_profile();
+    if (!p) return false;
     // The calls before the hook goes live (or at once, if the fix or the probe has it).
     g_guest_after.store(calls.after, std::memory_order_release);
     g_guest_before.store(calls.before, std::memory_order_release);
-    if (hook_entry(kPtLoad, kLoad, kLoadHead, sizeof kLoadHead, g_load, &load_detour)) return true;
+    if (hook_entry(kPtLoad, p->load, p->load_head, p->load_head_size, g_load, &load_detour)) return true;
     g_guest_before.store(nullptr, std::memory_order_release);
     g_guest_after.store(nullptr, std::memory_order_release);
     return false;
@@ -630,20 +719,27 @@ bool identity_load_hook_share(const GuestSaveLoadCalls& calls) {
 bool identity_probe_install() {
     if (g_active.load()) return true;
     init_base();
+    const auto* profile = identity_probe_profile();
+    if (!profile) return false;
     // Each point on its own. The component hook needs the load hook (its frame).
-    if (hook_entry(kPtLoad, kLoad, kLoadHead, sizeof kLoadHead, g_load, &load_detour) &&
+    if (hook_entry(kPtLoad, profile->load, profile->load_head, profile->load_head_size, g_load, &load_detour) &&
+        profile->legacy_probe_points &&
         code_ok(kComponentSite, kComponentSiteBytes, sizeof kComponentSiteBytes, kPointName[kPtComponent])) {
         hook_mid(kPtComponent, kComponentHook, g_component, on_component);
     }
-    hook_entry(kPtOwner, kOwner, kOwnerHead, sizeof kOwnerHead, g_owner, &owner_detour);
-    hook_entry(kPtPhases, kPhases, kPhasesHead, sizeof kPhasesHead, g_phases, &phases_detour);
-    hook_entry(kPtAck, kAck, kAckHead, sizeof kAckHead, g_ack, &ack_detour);
-    hook_entry(kPtPacker, kPacker, kPackerHead, sizeof kPackerHead, g_packer, &packer_detour);
-    if (code_ok(kVersionThis, kVersionThisBytes, sizeof kVersionThisBytes, kPointName[kPtVersion]) &&
+    hook_entry(kPtPhases, profile->phases, profile->phases_head, profile->phases_head_size, g_phases, &phases_detour);
+    if (profile->legacy_probe_points) {
+        hook_entry(kPtOwner, kOwner, kOwnerHead, sizeof kOwnerHead, g_owner, &owner_detour);
+        hook_entry(kPtAck, kAck, kAckHead, sizeof kAckHead, g_ack, &ack_detour);
+        hook_entry(kPtPacker, kPacker, kPackerHead, sizeof kPackerHead, g_packer, &packer_detour);
+    }
+    if (profile->legacy_probe_points &&
+        code_ok(kVersionThis, kVersionThisBytes, sizeof kVersionThisBytes, kPointName[kPtVersion]) &&
         code_ok(kVersionSite, kVersionSiteBytes, sizeof kVersionSiteBytes, kPointName[kPtVersion])) {
         hook_mid(kPtVersion, kVersionHook, g_version, on_version);
     }
-    if (code_ok(kClientStatus, kClientStatusBytes, sizeof kClientStatusBytes, kPointName[kPtClientVersion]) &&
+    if (profile->legacy_probe_points &&
+        code_ok(kClientStatus, kClientStatusBytes, sizeof kClientStatusBytes, kPointName[kPtClientVersion]) &&
         code_ok(kClientVersionSite, kClientVersionSiteBytes, sizeof kClientVersionSiteBytes,
                 kPointName[kPtClientVersion])) {
         hook_mid(kPtClientVersion, kClientVersionHook, g_client_version, on_client_version);

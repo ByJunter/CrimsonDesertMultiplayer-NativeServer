@@ -1,4 +1,6 @@
 #include "mod/session2/p8_probes.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -460,7 +462,8 @@ void on_h2322(safetyhook::Context& ctx) noexcept {
     const uintptr_t wrapper = ctx.r8;
     const uintptr_t raw = rdp(wrapper + 0x18);
     const uint16_t size = rdv<uint16_t>(wrapper + 0x10);
-    const uint16_t op = rdv<uint16_t>(raw), len = rdv<uint16_t>(raw + 3);
+    const uint16_t op = native_opcode::decode(game::current_build(), rdv<uint16_t>(raw)).value_or(0);
+    const uint16_t len = rdv<uint16_t>(raw + 3);
     uint32_t key = 0;
     const bool key_ok = rd(raw + 5, key);
     const uint8_t disabled = rdv<uint8_t>(ctx.rcx + 0x21, 0xFF);
@@ -976,6 +979,7 @@ bool read_sections() {
         std::memcpy(s.name, h.Name, 8);
         s.va = h.VirtualAddress;
         s.size = h.Misc.VirtualSize;
+        s.flags = h.Characteristics;
         g_secs.push_back(s);
     }
     return !g_secs.empty();
@@ -1183,6 +1187,7 @@ bool p8_exe_sections(uintptr_t base, std::vector<gad::Section>& out) {
         std::memcpy(sec.name, h.Name, 8);
         sec.va = h.VirtualAddress;
         sec.size = h.Misc.VirtualSize;
+        sec.flags = h.Characteristics;
         out.push_back(sec);
     }
     return !out.empty();

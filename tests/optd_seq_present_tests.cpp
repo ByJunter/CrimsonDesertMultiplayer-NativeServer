@@ -427,6 +427,29 @@ void test_ra_tramp() {
     CHECK(gpr::ra_expect(0x230) == nullptr);
 }
 
+// 3576 (static): the same decisions as 3527, each handler +0x660 and each trampoline +0xDD0 (the whole block moved).
+void test_ra_layout_3576() {
+    const auto& o = gpr::kRaLayout3527;
+    const auto& n = gpr::kRaLayout3576;
+    CHECK(o.expect.size() == n.expect.size() && o.slots == n.slots && o.fn_lo == n.fn_lo && o.fn_hi == n.fn_hi &&
+          o.stage_proc == n.stage_proc);
+    std::set<uint32_t> tramps;
+    for (size_t i = 0; i < n.expect.size(); ++i) {
+        const gpr::RaExpect& a = o.expect[i];
+        const gpr::RaExpect& b = n.expect[i];
+        CHECK(a.off == b.off && a.kind == b.kind && a.use == b.use);
+        CHECK(b.client == a.client + 0x660 && b.tramp == a.tramp + 0xDD0);
+        CHECK(gpr::ra_expect(n, b.off) == &b);
+        tramps.insert(b.tramp);
+    }
+    CHECK(tramps.size() == n.expect.size());
+    CHECK(gpr::kStageLayout3576.proc == gpr::kStageLayout3527.proc &&
+          gpr::kStageLayout3576.tl_id == gpr::kStageLayout3527.tl_id &&
+          gpr::kStageLayout3576.vt_timeline == gpr::kVtTimeline3576);
+    CHECK(gpr::ev_info_3576(gpr::Ev::CameraSelector).entry == 0x37A1320 &&
+          gpr::ev_info_3576(gpr::Ev::PlayerCameraPreset).entry == 0xC349E0);
+}
+
 void test_ra_judge() {
     using V = gpr::RaVerdict;
     gpr::RaFacts f;
@@ -641,6 +664,7 @@ int main() {
     test_ra_plan_refuses();
     test_ra_build();
     test_ra_tramp();
+    test_ra_layout_3576();
     test_ra_judge();
     test_rb_judge();
     test_sd_scan_due();

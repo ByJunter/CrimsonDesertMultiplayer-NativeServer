@@ -1,0 +1,569 @@
+{
+  "timestamp": 1793722278,
+  "sha256": "dc4237f21d6ce1e49f8e5d6fa89bf803fbbe6549123078efdc393265c7bf6841",
+  "limitations": "Static identity and selected operands only; no live verification or complete object-layout certification.",
+  "mappings": [
+    {
+      "symbol": "kSessionSend",
+      "old_rva": 21198656,
+      "new_rva": 23178432,
+      "reason": "Unique head; session+0xC8, request+0x30, single call to shared queue push.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 23178432,
+        "end": 23178496,
+        "unwind": 105424140,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 10 57 48 83 ec 20 48 8b 89 c8 00 00 00 49 8d 40 30 33 ff 48 8b da 4d 85 c0 48 8d 54"
+    },
+    {
+      "symbol": "kSyncSessionSend",
+      "old_rva": 21201072,
+      "new_rva": 23180848,
+      "reason": "Unique head; session+0xE0, single call to shared queue push.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 23180848,
+        "end": 23180894,
+        "unwind": 105420892,
+        "offset": 0
+      },
+      "first_32_bytes": "40 53 48 83 ec 20 48 8b 89 e0 00 00 00 48 8b da 48 8d 54 24 30 4c 89 44 24 30 e8 e1 c3 d8 fe 48"
+    },
+    {
+      "symbol": "kQueuePush",
+      "old_rva": 3530576,
+      "new_rva": 3832368,
+      "reason": "Only direct call in both session send methods; lock, enqueue pointer, increment count+0x58, signal event.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 3832368,
+        "end": 3832579,
+        "unwind": 105423916,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 10 48 89 74 24 18 57 48 83 ec 20 48 8b f2 48 8b f9 48 89 4c 24 30 48 8b 01 ff 50 08"
+    },
+    {
+      "symbol": "kNetLoopPump",
+      "old_rva": 3521236,
+      "new_rva": 3822692,
+      "reason": "Unique exact 39-byte mid-hook signature; native loop consumes buffers and calls client receive.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 3821968,
+        "end": 3823669,
+        "unwind": 105422344,
+        "offset": 724
+      },
+      "first_32_bytes": "49 8b 87 e0 00 00 00 48 8b 38 48 89 7d c7 48 8b 07 48 8b cf ff 50 08 90 8b 5f 58 48 8b 07 48 8b"
+    },
+    {
+      "symbol": "kClientOnRecvPacket",
+      "old_rva": 3525120,
+      "new_rva": 3826624,
+      "reason": "Native pump call after size=word[buffer+0x800A]-0x1F, r9=buffer+3, rdx=[ClientNet+0x10], rcx=ClientNet.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 3826624,
+        "end": 3827468,
+        "unwind": 105422984,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 08 48 89 74 24 10 48 89 7c 24 18 55 41 54 41 55 41 56 41 57 48 8d 6c 24 d9 48 81 ec"
+    },
+    {
+      "symbol": "kClientPostPacket",
+      "old_rva": 3524208,
+      "new_rva": 3825712,
+      "reason": "Only old-head candidate allocating 0x8030 packet buffer through the identified thread allocator.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 3825712,
+        "end": 3826255,
+        "unwind": 105422820,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 10 4c 89 4c 24 20 55 56 57 41 54 41 55 41 56 41 57 48 83 ec 20 45 8b e0 4c 8b f2 4c"
+    },
+    {
+      "symbol": "kAllocThread",
+      "old_rva": 75430320,
+      "new_rva": 78645920,
+      "reason": "Entire 92-byte function matches after relative masking; TLS fields+0x90/+0x98 unchanged.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 78645920,
+        "end": 78646012,
+        "unwind": 105446264,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 08 48 89 74 24 10 57 48 83 ec 20 65 48 8b 04 25 58 00 00 00 48 8b fa 44 8b 05 8e 52"
+    },
+    {
+      "symbol": "kAllocGlobal",
+      "old_rva": 75430520,
+      "new_rva": 78646120,
+      "reason": "Sibling branch of thread allocation in ClientPostPacket; critical section protects shared heap.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 78646120,
+        "end": 78646217,
+        "unwind": 105424064,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 08 57 48 83 ec 20 48 8b f9 48 8b da 48 8d 0d 49 2f 56 02 ff 15 93 46 a9 00 48 8b 05"
+    },
+    {
+      "symbol": "kNwSessionCtor",
+      "old_rva": 21196512,
+      "new_rva": 23176352,
+      "reason": "Named RTTI NwSession vtable store at entry+0x1F; clears fields+0x88/+0x90/+0x98, saves bool arg at+0xA9, creates subobjects, returns this.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 23176352,
+        "end": 23177354,
+        "unwind": 107903016,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 10 48 89 4c 24 08 55 56 57 41 54 41 55 41 56 41 57 48 8b ec 48 83 ec 20 48 8b f1 48"
+    },
+    {
+      "symbol": "kTlsIndexSlot",
+      "old_rva": 113806416,
+      "new_rva": 118316368,
+      "reason": "RIP-relative global loaded into r8d in complete matched thread allocator.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kServerOnRecvPacket",
+      "old_rva": 41368608,
+      "new_rva": 43694064,
+      "reason": "Unique exact 47-byte documented signature; sole caller in server loop passes native session and packet-buffer fields unchanged.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 43694064,
+        "end": 43696155,
+        "unwind": 110166956,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 10 4c 89 4c 24 20 48 89 4c 24 08 55 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 e9 48"
+    },
+    {
+      "symbol": "ServerNetSendPacket",
+      "old_rva": 41367664,
+      "new_rva": 43693104,
+      "reason": "Unique exact 46-byte documented signature; all 532 direct callers load the same global ServerNet into rcx.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 43693104,
+        "end": 43694056,
+        "unwind": 110166832,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 20 4c 89 44 24 18 66 89 54 24 10 48 89 4c 24 08 55 56 57 41 54 41 55 41 56 41 57 48"
+    },
+    {
+      "symbol": "ServerNetExecuteTroc",
+      "old_rva": 41372448,
+      "new_rva": 43698176,
+      "reason": "Unique documented signature; handler dispatch with original TrocParams calling convention.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 43698176,
+        "end": 43698232,
+        "unwind": 110167504,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 4c 24 08 53 48 83 ec 20 4c 8b ca 48 8b d9 c7 01 00 00 00 00 48 8b 02 48 8d 54 24 48 49 8b"
+    },
+    {
+      "symbol": "ClientNetExecuteTroc",
+      "old_rva": 3527328,
+      "new_rva": 3829040,
+      "reason": "Unique documented signature; normal client Troc dispatcher.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 3829040,
+        "end": 3830058,
+        "unwind": 105423436,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 10 48 89 4c 24 08 55 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 d9 48 81 ec b0 00 00"
+    },
+    {
+      "symbol": "ServerRunThreadLoop",
+      "old_rva": 41366512,
+      "new_rva": 43691904,
+      "reason": "Enclosing exception-directory function of the sole ServerOnRecvPacket call.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 43691904,
+        "end": 43692518,
+        "unwind": 110166656,
+        "offset": 0
+      },
+      "first_32_bytes": "48 89 5c 24 08 55 56 57 41 54 41 55 41 56 41 57 48 83 ec 50 4c 8b f9 e8 64 1f 00 00 c6 84 24 98"
+    },
+    {
+      "symbol": "kServerNetSlot",
+      "old_rva": 114726528,
+      "new_rva": 119268320,
+      "reason": "All 532 direct native ServerNetSendPacket callers load this RIP-relative global into rcx.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kClientNetSlot",
+      "old_rva": 114725232,
+      "new_rva": 119267024,
+      "reason": "296 of 299 direct ClientPostPacket callers load this RIP-relative global into rcx; other three call from this object directly.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kExceptOneVf1",
+      "old_rva": 44521904,
+      "new_rva": 47204256,
+      "reason": "vf1 of exact RTTI-named ToNearExceptOneControlSendTargetFinder.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 47204256,
+        "end": 47204555,
+        "unwind": 110558316,
+        "offset": 0
+      },
+      "first_32_bytes": "40 53 48 83 ec 50 48 8b 41 10 48 8b 48 68 48 8b 99 a0 01 00 00 48 8d 8b 08 05 00 00 48 8d 54 24"
+    },
+    {
+      "symbol": "kExceptOneSelfVf1",
+      "old_rva": 44521600,
+      "new_rva": 47203952,
+      "reason": "vf1 of exact RTTI-named ToNearExceptOneSelfSendTargetFinder.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 47203952,
+        "end": 47204251,
+        "unwind": 110558232,
+        "offset": 0
+      },
+      "first_32_bytes": "40 53 48 83 ec 50 48 8b 41 10 48 8b 48 68 48 8b 99 a0 01 00 00 48 8d 8b 08 05 00 00 48 8d 54 24"
+    },
+    {
+      "symbol": "kToNearVf1",
+      "old_rva": 44521568,
+      "new_rva": 47203920,
+      "reason": "vf1 of exact RTTI-named ToNearSendTargetFinder; also independently unique head signature.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kWindowsLockVf1",
+      "old_rva": 20386624,
+      "new_rva": 22361616,
+      "reason": "vf1 of exact RTTI-named WindowsLock<3>; indirect call through lock object slot+0x18.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kWindowsLockVf2",
+      "old_rva": 13520624,
+      "new_rva": 14614896,
+      "reason": "vf2 of exact RTTI-named WindowsLock<3>; indirect call through lock object slot+0x20.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kSlotRefreshReqSequence",
+      "old_rva": 44180597,
+      "new_rva": 46841275,
+      "reason": "Unique full relative-masked native refresh sequence; lock, busy flag+0x60, refresh call, unlock preserved.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": {
+        "begin": 46841024,
+        "end": 46841798,
+        "unwind": 110530196,
+        "offset": 251
+      },
+      "first_32_bytes": "48 8b 05 36 26 51 04 4c 8b 78 48 4c 89 7d 07 45 32 f6 44 88 75 0f 49 8b 1f 48 89 5d 77 48 8b 03"
+    },
+    {
+      "symbol": "kServerActorLookupSlot",
+      "old_rva": 114726552,
+      "new_rva": 119268344,
+      "reason": "RIP-relative target of first mov rax in the unique slot refresh sequence, then manager read at+0x48.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kSaveMgrRefreshSlots",
+      "old_rva": 25627680,
+      "new_rva": 26943616,
+      "reason": "Only direct call in unique slot refresh sequence; target is the native refresh thunk, not its virtualized implementation.",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null,
+      "first_32_bytes": "e9 3b 29 d9 09 19 3e e0 3d 5a e9 da ef 91 01 23 75 f9 8e 8b e3 ff c2 bd 66 32 73 f4 03 4a 38 0f"
+    },
+    {
+      "symbol": "kNwVirtualAsyncSessionVtable",
+      "old_rva": 91381952,
+      "new_rva": 95173432,
+      "reason": "Exact RTTI primary vtable name .?AVNwVirtualAsyncSession@pa@@",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kNwAsyncSessionVtable",
+      "old_rva": 91382080,
+      "new_rva": 95173304,
+      "reason": "Exact RTTI primary vtable name .?AVNwAsyncSession@pa@@",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kToNearExceptOneControlVtable",
+      "old_rva": 95572824,
+      "new_rva": 99534816,
+      "reason": "Exact RTTI primary vtable name .?AVToNearExceptOneControlSendTargetFinder@pa@@",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kToNearExceptOneSelfVtable",
+      "old_rva": 95572856,
+      "new_rva": 99534848,
+      "reason": "Exact RTTI primary vtable name .?AVToNearExceptOneSelfSendTargetFinder@pa@@",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kToNearVtable",
+      "old_rva": 95573016,
+      "new_rva": 99534880,
+      "reason": "Exact RTTI primary vtable name .?AVToNearSendTargetFinder@pa@@",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    },
+    {
+      "symbol": "kWindowsLock3Vtable",
+      "old_rva": 89637152,
+      "new_rva": 93359632,
+      "reason": "Exact RTTI primary vtable name .?AV?$WindowsLock@$02@pa@@",
+      "validation": "static_semantic_cross_reference",
+      "runtime_verified": false,
+      "function": null
+    }
+  ],
+  "replacement_arrays": [
+    {
+      "file": "src/mod/game/offsets.h",
+      "name": "kClientPostPacketHead",
+      "new_rva": 3825712,
+      "bytes": "48 89 5c 24 10 4c 89 4c 24 20 55 56 57 41",
+      "changed": false,
+      "length": 14
+    },
+    {
+      "file": "src/mod/game/offsets.h",
+      "name": "kClientOnRecvPacketHead",
+      "new_rva": 3826624,
+      "bytes": "48 89 5c 24 08 48 89 74 24 10 48 89 7c 24",
+      "changed": false,
+      "length": 14
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kServerOnRecvPacketHead",
+      "new_rva": 43694064,
+      "bytes": "48 89 5c 24 10 4c 89 4c 24 20 48 89 4c 24 08 55 56 57 41 54",
+      "changed": false,
+      "length": 20
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kSessionSendHead",
+      "new_rva": 23178432,
+      "bytes": "48 89 5c 24 10 57 48 83 ec 20 48 8b 89 c8 00 00 00 49 8d 40 30",
+      "changed": false,
+      "length": 21
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kNwSessionCtorHead",
+      "new_rva": 23176352,
+      "bytes": "48 89 5c 24 10 48 89 4c 24 08 55 56 57 41 54 41 55 41 56 41 57",
+      "changed": true,
+      "length": 21
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kQueuePushHead",
+      "new_rva": 3832368,
+      "bytes": "48 89 5c 24 10 48 89 74 24 18 57 48 83 ec 20 48 8b f2 48 8b f9",
+      "changed": false,
+      "length": 21
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kAllocGlobalHead",
+      "new_rva": 78646120,
+      "bytes": "48 89 5c 24 08 57 48 83 ec 20 48 8b f9 48 8b da",
+      "changed": false,
+      "length": 16
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kAllocThreadBytes",
+      "new_rva": 78645920,
+      "bytes": "48 89 5c 24 08 48 89 74 24 10 57 48 83 ec 20 65 48 8b 04 25 58 00 00 00 48 8b fa 44 8b 05 8e 52 5d 02 48 8b f1 4a 8b 1c c0 b8 98 00 00 00 80 3c 18 00 75 05 e8 db 59 0a 00 b9 90 00 00 00 4c 8b c7 48 8b d6 48 8b 0c 19 48 8b 5c 24 30 48 8b 74 24 38 48 83 c4 20 5f e9 3c fc ff ff",
+      "changed": true,
+      "length": 92
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kExceptOneVf1Head",
+      "new_rva": 47204256,
+      "bytes": "40 53 48 83 ec 50 48 8b 41 10 48 8b 48 68 48 8b 99 a0 01 00 00",
+      "changed": false,
+      "length": 21
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kToNearVf1Head",
+      "new_rva": 47203920,
+      "bytes": "48 8b 41 10 48 8b 48 68 48 8b 89 a0 01 00 00 e9",
+      "changed": false,
+      "length": 16
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kSyncSessionSendHead",
+      "new_rva": 23180848,
+      "bytes": "40 53 48 83 ec 20 48 8b 89 e0 00 00 00 48 8b da",
+      "changed": false,
+      "length": 16
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kNetLoopPumpHead",
+      "new_rva": 3822692,
+      "bytes": "49 8b 87 e0 00 00 00 48 8b 38 48 89 7d c7",
+      "changed": false,
+      "length": 14
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kNetLoopPumpAob",
+      "new_rva": 3822692,
+      "bytes": "49 8b 87 e0 00 00 00 48 8b 38 48 89 7d c7 48 8b 07 48 8b cf ff 50 08 90 8b 5f 58 48 8b 07 48 8b cf ff 50 10 85 db 74",
+      "changed": false,
+      "length": 39
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kClientOnRecvPacketHead",
+      "new_rva": 3826624,
+      "bytes": "48 89 5c 24 08 48 89 74 24 10 48 89 7c 24",
+      "changed": false,
+      "length": 14
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kWindowsLockVf1Head",
+      "new_rva": 22361616,
+      "bytes": "48 8b 01 48 ff 60 18",
+      "changed": false,
+      "length": 7
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kWindowsLockVf2Head",
+      "new_rva": 14614896,
+      "bytes": "48 8b 01 48 ff 60 20",
+      "changed": false,
+      "length": 7
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kSaveMgrRefreshSlotsHead",
+      "new_rva": 26943616,
+      "bytes": "e9 3b 29 d9 09",
+      "changed": true,
+      "length": 5
+    },
+    {
+      "file": "src/mod/session2/offsets_s2.h",
+      "name": "kSlotRefreshReqSequenceBytes",
+      "new_rva": 46841275,
+      "bytes": "48 8b 05 36 26 51 04 4c 8b 78 48 4c 89 7d 07 45 32 f6 44 88 75 0f 49 8b 1f 48 89 5d 77 48 8b 03 48 8b cb ff 50 08 90 45 38 77 60 75 0c 41 c6 47 60 01 41 b6 01 44 88 75 0f 48 8b 03 48 8b cb ff 50 10 90 45 84 f6 75 05 e9 91 00 00 00 48 8b 0d e9 25 51 04 48 8b 49 48 e8 68 62 d0 fe 90 49 8b 1f 48 89 5d 77 48 8b 03 48 8b cb ff 50 08 90 41 c6 47 60 00 48 8b 03 48 8b cb ff 50 10",
+      "changed": true,
+      "length": 125
+    },
+    {
+      "file": "src/mod/session2/remote_rope_logic.h",
+      "name": "kToNearVf1Bytes",
+      "new_rva": 47203920,
+      "bytes": "48 8b 41 10 48 8b 48 68 48 8b 89 a0 01 00 00",
+      "changed": false,
+      "length": 15
+    },
+    {
+      "file": "src/mod/session2/user2_funnels.cpp",
+      "name": "kExecuteTrocBytes",
+      "new_rva": 43698176,
+      "bytes": "48 89 4c 24 08 53 48 83 ec 20 4c 8b ca 48 8b d9 c7 01 00 00 00 00 48 8b 02 48 8d 54 24 48 49 8b c9 ff 50 10 8b 08 89 0b eb 05 48 8b 5c 24 30 48 8b c3 48 83 c4 20 5b c3",
+      "changed": false,
+      "length": 56
+    }
+  ],
+  "changed_fields": [
+    {
+      "symbol": "kTls_UseGlobalHeap",
+      "old": 509,
+      "new": 510,
+      "evidence": "ClientPostPacket mov ebp,0x1FE; add rbp,[gs:0x58]; cmp byte[rbp],0 selects global/thread allocation. Same offset in session constructor."
+    },
+    {
+      "symbol": "server_thread_park_tls_offset",
+      "old": 17504,
+      "new": 17456,
+      "evidence": "ServerRunThread loop uses mov esi,0x4430 then derives pointer from the current thread TLS block."
+    }
+  ],
+  "constructor_vtable": {
+    "lea_site": 23176383,
+    "vtable": 95173280
+  }
+}

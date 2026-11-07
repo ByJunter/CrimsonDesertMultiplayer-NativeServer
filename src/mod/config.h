@@ -272,6 +272,27 @@ struct Config {
     // time scale's transitions and the view behind them) | "1" (1.0 instead of a UI pause while a P8
     // session is live) | "force" (always; one-PC tests). The raw ini value; parsed by ui_pause_logic.h.
     std::string s2_ui_pause_block = "0";
+    // Host and guest, build 3527 (session2/seq_marker.h): the own sequencer manager's load marker is put back if it
+    // falls with no load running. Without it the host gets no death screen once a guest has joined.
+    bool s2_seq_marker_guard = true;
+    bool s2_seq_marker_trace = false;
+    // Host and guest, builds 3527 and 3549 (session2/pivot_guard.h): a scene's ChangePivot with no target skips, instead
+    // of closing the game.
+    bool s2_change_pivot_guard = true;
+    // Host and guest, builds 3527 and 3549 (session2/focus_follow.h): each PC shows the character the other player
+    // controls and hides the one left behind.
+    bool s2_focus_follow = true;
+    // Host and guest, builds 3527 and 3549 (session2/field_leave_guard.h): the other player leaving a field does not
+    // unload the manager of its owner, so the host keeps its town NPCs when the guest leaves.
+    bool s2_field_leave_guard = true;
+    // Guest (session2/docking_dedupe_logic.h): the same equipment-docking request at most once per 2 s (the rest only
+    // ever got a Nak, and filled the tunnel).
+    bool s2_docking_dedupe = true;
+    // Guest, builds 3527 and 3549 (session2/achievement_guard.h): once the game has played in a host's world, no Steam
+    // achievement is unlocked until it is restarted (it holds the host's progress there).
+    bool s2_achievement_guard = true;
+    // Host, build 3549, log only (session2/manager_probe.h): who changes the sequencer managers' state.
+    bool s2_manager_probe = false;
     // P8 S1, NPC scenes, MEASUREMENT ONLY (pendientes/p8-s1-escenas-npc.md §5, "Implementado para la medida").
     // HOST (session2/host_scene_diag.h), s1_scene_diag=1: H1 the server's StartActionReq flag 0x2A78D0D (kept local
     // vs relayed, per NPC key and hash), H2 who binds the host client's scene NPCs and when, H3 the host's scene
@@ -416,6 +437,9 @@ struct Config {
     // remote_interp_pair, host AND guest (needs remote_interp and [sniffer] enabled): 0 | 1. A ridden horse's delay
     // targets its rider's (the game's) while its samples are dense enough; the same no-jump approach.
     bool s2_remote_interp_pair = false;
+    // remote_interp_players, host AND guest (needs remote_interp): "0" | "probe" | "1". The other player's character
+    // gets an interpolation delay that follows how late its samples arrive (remote_interp_logic.h, "the players' class").
+    std::string s2_remote_interp_players = "0";
     // P8 S1 option A, the sequencer part (session2/observer_seq_copy.h, guest_seq_route.h;
     // pendientes/p8-impl-opcion-a.md), each "0" (default) | "probe" | "1"; the raw ini values.
     // observer_seq_copy, HOST (needs create_session and [sniffer] enabled): the host client's sequencers
@@ -675,6 +699,43 @@ struct Config {
     // state requests withheld (the host stays the controller); probe counts. Needs docked_gimmicks on; the host
     // ignores it (logged).
     std::string s2_docked_gimmicks_other = "0";
+    // [session2] guest_gimmick_interact = 0 | trace | 1 and guest_gimmick_interact_events (hex hashes), guest
+    // (gimmick_interact_logic.h): the market stalls' "Buy" on objects the host controls.
+    std::string s2_guest_gimmick_interact = "0";
+    std::string s2_guest_gimmick_interact_events;
+    // [session2] interact_gate = 0 | probe | 1, interact_gate_errors (hex), interact_gate_pass (interact_gate.h):
+    // the client's press-time interaction evaluation (build 3549), probed on both roles, bypassed on the guest.
+    std::string s2_interact_gate = "0";
+    std::string s2_interact_gate_errors;
+    std::string s2_interact_gate_pass = "3";
+    std::string s2_interact_gate_types = "7";
+    // [session2] store_gate = 0 | probe | 1 (store_gate.h), both roles: the guest's buy/sell passes the shop-scene test.
+    std::string s2_store_gate = "0";
+    // [session2] guest_shop_branch = 0 | 1 (guest_shop_branch.h), guest: the shopkeepers' window on the guest.
+    std::string s2_guest_shop_branch = "0";
+    // [session2] shop_ui_trace = 0 | 1 (shop_ui_trace.h), both roles, log only: the shop window's UI events.
+    std::string s2_shop_ui_trace = "0";
+    // [session2] guest_shop_window = 0 | 1 (guest_shop_window.h), guest: its press on a shopkeeper opens the buy window.
+    std::string s2_guest_shop_window = "0";
+    // [session2] housing_share = 0 | probe | 1 | live (housing_share.h), host: the guest sees the host's houses (1: login set only; live: also live changes, UNSAFE).
+    std::string s2_housing_share = "0";
+    // [session2] housing_share_live_ops = "" | logical opcodes, e.g. 2623 (with housing_share=live only): the live
+    // changes forwarded to the guest, one at a time while each is tested; empty = all but 2500 (2500 never).
+    std::string s2_housing_share_live_ops;
+    // [session2] housing_share_edits = 0 | 1 (with housing_share=1 or live), host: the host's construction-mode edits
+    // reach the guest (its client's SyncHousingPlacedSceneObjectListReq 2408, sent to user 2 as the login Ack 2733).
+    bool s2_housing_share_edits = false;
+    // [session2] housing_share_guest_spawn = 0 (default) | 1 (with housing_share), host: 0 drops user 2's own spawn
+    // requests of the housing gimmicks (2492, 2446), so only the host's client spawns them (the guest crash of 2026-11-07).
+    bool s2_housing_share_guest_spawn = false;
+    // [session2] housing_share_rekey = 0 (default) | 1 | opcode list (with housing_share), host: 0 keeps the host's key
+    // (the house is another player's: the guest sees the host's props, never its walls, and never crashes); 1 gives
+    // user 2 the host's housing under its own key (it owns the house: walls too, but its client crashes when the host
+    // opens the construction mode); a list re-keys only those housing opcodes (hsh::parse_rekey; 35245,2733 crashed too).
+    std::string s2_housing_share_rekey = "0";
+    // [session2] housing_share_drop_gimmicks = 0 (default) | all | waiting, host: the host's 2733 reaches user 2 without
+    // its gimmick records (category 4: doors, furniture), all of them or those of the host's latest 2500 waiting list.
+    std::string s2_housing_share_drop_gimmicks = "0";
     // gimmick_event_dedup, BOTH PCs (session2/gimmick_event_dedup_logic.h; research/s25/gimmicks-dueno.md section 7):
     // "0" (default) | "probe" | "1". CreateProjectileFromGimmickEventReq 2779 has no controller check on the server, so
     // both clients' 2779 make two projectiles. GUEST: each outgoing 2779 decided against the controller the last 2005

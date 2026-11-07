@@ -47,8 +47,10 @@ namespace cdmp::session2 {
 // enabled=1 (the pairs come from the client's OnRecvPacket: horse_follow_client_attach, from this thread).
 // combat_raw = [session2] remote_interp_combat (P8 session 25, default "0"; the guest only, warned and off on the
 // host).
+// players_raw = [session2] remote_interp_players (2026-11-05, default "0"; remote_interp_logic.h "the players' class"):
+// the other player's character gets a delay that follows how late its samples arrive. Both PCs.
 void remote_interp_start(const std::string& raw, bool guest, uint32_t owned_cap_ms = 0, bool pair = false,
-                         const std::string& combat_raw = "0");
+                         const std::string& combat_raw = "0", const std::string& players_raw = "0");
 // P8 session 25, GUEST: a host packet about to be queued for this client (guest_deliver, the mod's network thread):
 // its own character (2756) and the 2922 / 2991 engaging an enemy with it. Lock-free, no allocation, no log.
 void remote_interp_on_host_packet(uint16_t opcode, std::span<const uint8_t> payload) noexcept;

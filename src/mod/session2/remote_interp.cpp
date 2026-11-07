@@ -22,6 +22,7 @@
 #include "mod/session2/guest_actor_diag_logic.h"
 #include "mod/session2/horse_follow.h"
 #include "mod/session2/p8_probes.h"
+#include "mod/game/build_profile.h"
 #include "mod/session2/remote_interp_logic.h"
 
 namespace cdmp::session2 {
@@ -47,7 +48,7 @@ struct HookSite {
     uint32_t off;  // buffer - mc
     const char* what;
 };
-constexpr HookSite kHooks[rip::kSites] = {
+constexpr HookSite kHooks2976[rip::kSites] = {
     {0x11B200E, {0x4C, 0x63, 0x15, 0x33, 0x75, 0xB0, 0x05}, Site::SetPos, rip::kPosBuffer,
      "the delay read of setInterpolatePositionData 0x11B1FD0"},
     {0x11B2730, {0x4C, 0x63, 0x1D, 0x11, 0x6E, 0xB0, 0x05}, Site::SetRot, rip::kRotBuffer,
@@ -57,17 +58,46 @@ constexpr HookSite kHooks[rip::kSites] = {
     {0x11B2B62, {0x48, 0x63, 0x05, 0xDF, 0x69, 0xB0, 0x05}, Site::UpdRot, rip::kRotBuffer,
      "the delay read of updateInterpolateRotateData 0x11B2AF0"},
 };
+// 1.0.0.3527 [V capstone on the PE; buffers read live on 2026-11-05]: the same four readers of the delay, same registers
+// (rdi buffer, set: now = rax+rbx, update: now = rcx). The movement controller grew 0x60 before its buffers.
+constexpr HookSite kHooks3527[rip::kSites] = {
+    {0x1386C3E, {0x4C, 0x63, 0x15, 0x83, 0x15, 0xD8, 0x05}, Site::SetPos, 0x430,
+     "the delay read of setInterpolatePositionData 0x1386C00"},
+    {0x1387360, {0x4C, 0x63, 0x1D, 0x61, 0x0E, 0xD8, 0x05}, Site::SetRot, 0x4E8,
+     "the delay read of setInterpolateRotateData 0x1387310"},
+    {0x13870CA, {0x48, 0x63, 0x05, 0xF7, 0x10, 0xD8, 0x05}, Site::UpdPos, 0x430,
+     "the delay read of updateInterpolatePositionData 0x1387050"},
+    {0x1387792, {0x48, 0x63, 0x05, 0x2F, 0x0A, 0xD8, 0x05}, Site::UpdRot, 0x4E8,
+     "the delay read of updateInterpolateRotateData 0x1387720"},
+};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run): the four functions moved whole by +0x7B0 (each a .pdata start at
+// old + 0x7B0: 0x13873B0, 0x1387AC0, 0x1387800, 0x1387ED0); the four reads are the same instructions at the same offsets
+// (only the RIP displacement differs) and all four resolve to the delay 0x710A2D8 (3527's 0x71081C8 + 0x2110, the block's
+// move). Both emptying thresholds `cmp r8,0x3E8` are at old + 0x7B0 too. The buffer offsets (mc+0x430 / +0x4E8) are
+// 3527's: not re-derived (no caller in the normal code); resolve() checks cc's back pointer, so a wrong one only fails.
+constexpr HookSite kHooks3576[rip::kSites] = {
+    {0x13873EE, {0x4C, 0x63, 0x15, 0xE3, 0x2E, 0xD8, 0x05}, Site::SetPos, 0x430,
+     "the delay read of setInterpolatePositionData 0x1386C00 (3576 0x13873B0)"},
+    {0x1387B10, {0x4C, 0x63, 0x1D, 0xC1, 0x27, 0xD8, 0x05}, Site::SetRot, 0x4E8,
+     "the delay read of setInterpolateRotateData 0x1387310 (3576 0x1387AC0)"},
+    {0x138787A, {0x48, 0x63, 0x05, 0x57, 0x2A, 0xD8, 0x05}, Site::UpdPos, 0x430,
+     "the delay read of updateInterpolatePositionData 0x1387050 (3576 0x1387800)"},
+    {0x1387F42, {0x48, 0x63, 0x05, 0x8F, 0x23, 0xD8, 0x05}, Site::UpdRot, 0x4E8,
+     "the delay read of updateInterpolateRotateData 0x1387720 (3576 0x1387ED0)"},
+};
+const HookSite* g_sites = kHooks2976;
 constexpr uint32_t kHookLen = 7;
-constexpr uintptr_t kDelayGlobal = 0x6CB9548;  // GlobalVariableInt value (object 0x6CB9510), default 200
+uintptr_t g_delay_global = 0x6CB9548;  // GlobalVariableInt value (2976 object 0x6CB9510; 3527 0x71081C8), default 200
 
 // The emptying threshold: cmp r8,0x3E8 right before `jbe` (0x11B207A / 0x11B277C).
-constexpr uintptr_t kThreshold[2] = {0x11B2073, 0x11B2775};
+uintptr_t g_threshold_sites[2] = {0x11B2073, 0x11B2775};  // 3527: 0x1386CA3, 0x13873A5
 constexpr uint8_t kThresholdOrig[7] = {0x49, 0x81, 0xF8, 0xE8, 0x03, 0x00, 0x00};
 constexpr uint8_t kThresholdNew[7] = {0x49, 0x81, 0xF8, 0xC4, 0x09, 0x00, 0x00};  // 2500
 static_assert(rip::kPatchedThreshold == 0x9C4);
 
 // The rule of the task: hooks and patches only inside [0x1000, 0x51EB000) (never .xtls).
-constexpr uintptr_t kCodeBegin = 0x1000, kCodeEnd = 0x51EB000;
+constexpr uintptr_t kCodeBegin = 0x1000;
+uintptr_t g_code_end = 0x51EB000;  // 3527: 0x5595000
 
 constexpr uint64_t kSummaryMs = 60000;
 
@@ -116,6 +146,14 @@ std::atomic<uint32_t> g_pair_last_horse{0}, g_pair_last_d{0};
 // P8 session 25 ([session2] remote_interp_combat, guest; remote_interp_logic.h "the combat class"): (b)'s table, fed
 // by the mod's network thread (remote_interp_on_host_packet), and what the class did per update-position frame.
 std::atomic<uint8_t> g_combat{0};     // 0 | probe | 1
+// 2026-11-05, remote_interp_players (remote_interp_logic.h "the players' class"): 0 | probe | 1.
+std::atomic<uint8_t> g_players{0};
+std::atomic<uint32_t> g_player_delay{0};  // the other player's delay after its last step (ms; 0 = none yet)
+std::atomic<uint64_t> g_pl_frames{0}, g_pl_samples{0};
+rip::Histogram<6> g_pl_hitch_today{rip::kHitchBounds};  // hitches with the delay in force (ms the character stood)
+rip::Histogram<6> g_pl_hitch_would{rip::kHitchBounds};  // the same samples with the players' delay
+rip::Histogram<8> g_pl_late{rip::kPlayerBounds};   // how late each sample arrived (ms)
+rip::Histogram<8> g_pl_delay{rip::kPlayerBounds};  // the delay it would use / uses, per frame (ms)
 std::atomic<uint32_t> g_own_char{0};  // this client's character (its MainPlayerDataStartAck 2756)
 rip::EngageTable g_engage;
 std::atomic<uint64_t> g_cb_packets{0}, g_cb_no_own{0};
@@ -172,7 +210,7 @@ uint8_t owned_of(rip::Slot& slot, uintptr_t actor, uint64_t now) noexcept {
 // set position only: what the game is about to do with the new sample (resets, cadence). arrivals: the combat
 // class is on (its arrival gaps are kept for every newer sample, moved or not).
 void observe_insert(const safetyhook::Context& c, uintptr_t buf, KeyClass cls, rip::Slot* slot, uint32_t key,
-                    uint8_t owned, uint32_t owned_cap, bool arrivals) noexcept {
+                    uint8_t owned, uint32_t owned_cap, bool arrivals, uint64_t now) noexcept {
     const FastMem m;
     const rip::LastSample last = rip::last_sample(m, buf, true);
     uint64_t ts_new = 0;
@@ -182,6 +220,22 @@ void observe_insert(const safetyhook::Context& c, uintptr_t buf, KeyClass cls, r
         return;
     }
     if (arrivals && slot && cls == KeyClass::Npc) slot->note_arrival(ts_new);
+    // The players' class: every newer sample of the other player's character, and how late it is here.
+    const auto pmode = static_cast<Mode>(g_players.load(std::memory_order_relaxed));
+    if (slot && cls == KeyClass::Character && pmode != Mode::Off) {
+        const uint64_t prev = slot->arr_last.load(std::memory_order_relaxed);
+        if (slot->note_arrival(ts_new) && now > ts_new) {
+            const uint64_t late = now - ts_new;
+            g_pl_samples.fetch_add(1, std::memory_order_relaxed);
+            g_pl_late.add(late);
+            const uint32_t would = rip::from_fix(slot->d_fix.load(std::memory_order_relaxed));
+            const uint32_t gd = game_delay();
+            const uint32_t today = pmode == Mode::On && g_applying.load(std::memory_order_relaxed) && would ? would : gd;
+            if (const uint32_t h = rip::player_hitch(now, today, prev, ts_new)) g_pl_hitch_today.add(h);
+            if (const uint32_t h = rip::player_hitch(now, would ? would : gd, prev, ts_new)) g_pl_hitch_would.add(h);
+            rip::note_lateness(*slot, now, static_cast<uint32_t>(std::min<uint64_t>(late, rip::kMaxLateness + 1)));
+        }
+    }
     rip::SetIn in;
     in.count = last.count;
     in.ts_last = last.ts;
@@ -238,7 +292,7 @@ void set_dest(safetyhook::Context& c, Site s, uint32_t v) noexcept {
 
 template <size_t I>
 void on_delay_read(safetyhook::Context& c) noexcept {
-    constexpr HookSite hs = kHooks[I];
+    const HookSite& hs = g_sites[I];
     SiteCounters& sc = g_site[I];
     sc.calls.fetch_add(1, std::memory_order_relaxed);
     sc.tids.add(GetCurrentThreadId());
@@ -267,13 +321,15 @@ void on_delay_read(safetyhook::Context& c) noexcept {
     const uint8_t owned = (owned_cap || cmode != Mode::Off) && slot && cls == KeyClass::Npc
                               ? owned_of(*slot, r.actor, now)
                               : rip::kOwnedUnknown;
-    if (hs.site == Site::SetPos) observe_insert(c, buf, cls, slot, r.key, owned, owned_cap, cmode != Mode::Off);
+    if (hs.site == Site::SetPos) observe_insert(c, buf, cls, slot, r.key, owned, owned_cap, cmode != Mode::Off, now);
     if (hs.site == Site::UpdPos && slot) {
         // P8 mount ride: a horse its rider (0xA, which always reads the game's value) rides now targets gd.
         uint32_t pair_delay = 0;
         if (cls == KeyClass::Npc && g_pair_on.load(std::memory_order_relaxed) &&
             g_pairs.rider_of(r.key, GetTickCount64())) {
-            pair_delay = gd;
+            // The rider's delay: the game's, or with remote_interp_players=1 the one the rider has now.
+            const uint32_t pd = g_player_delay.load(std::memory_order_relaxed);
+            pair_delay = static_cast<Mode>(g_players.load(std::memory_order_relaxed)) == Mode::On && pd ? pd : gd;
         }
         bool dense = false;
         // P8 session 25: the combat class ((b): this client's engagement table, on the mod's clock).
@@ -287,6 +343,13 @@ void on_delay_read(safetyhook::Context& c) noexcept {
         }
         rip::update_step(*slot, cls, now, gd, rip::delay_cap(owned, owned_cap), pair_delay, &dense, csp);
         if (csp && cs.cls.in) note_combat_frame(*slot, buf, now, cs);
+        const auto pmode = static_cast<Mode>(g_players.load(std::memory_order_relaxed));
+        if (cls == KeyClass::Character && pmode != Mode::Off) {
+            const uint32_t would = rip::update_player(*slot, now, gd);
+            g_pl_frames.fetch_add(1, std::memory_order_relaxed);
+            g_pl_delay.add(would);
+            g_player_delay.store(would, std::memory_order_relaxed);
+        }
         if (pair_delay) {
             g_pair_frames.fetch_add(1, std::memory_order_relaxed);
             (dense ? g_pair_dense : g_pair_sparse).fetch_add(1, std::memory_order_relaxed);
@@ -312,6 +375,7 @@ void on_delay_read(safetyhook::Context& c) noexcept {
     rip::DelayIn in;
     in.mode = mode;
     in.applying = g_applying.load(std::memory_order_relaxed);
+    in.players = static_cast<Mode>(g_players.load(std::memory_order_relaxed)) == Mode::On;
     in.cls = cls;
     in.have_slot = slot != nullptr;
     in.updated = slot && slot->updated.load(std::memory_order_relaxed);
@@ -342,13 +406,13 @@ bool bytes_at(uintptr_t rva, std::span<const uint8_t> expected) {
            std::memcmp(actual.data(), expected.data(), expected.size()) == 0;
 }
 
-bool in_allowed_range(uintptr_t rva, size_t len) { return rva >= kCodeBegin && rva + len <= kCodeEnd; }
+bool in_allowed_range(uintptr_t rva, size_t len) { return rva >= kCodeBegin && rva + len <= g_code_end; }
 
 bool code_ready() {
-    for (const HookSite& h : kHooks) {
-        if (!bytes_at(h.rva, h.bytes)) return false;
+    for (size_t i = 0; i < rip::kSites; ++i) {
+        if (!bytes_at(g_sites[i].rva, g_sites[i].bytes)) return false;
     }
-    return bytes_at(kThreshold[0], kThresholdOrig) && bytes_at(kThreshold[1], kThresholdOrig);
+    return bytes_at(g_threshold_sites[0], kThresholdOrig) && bytes_at(g_threshold_sites[1], kThresholdOrig);
 }
 
 // Writes `len` bytes at exe+rva with every thread kept out of the page (user2_funnels' write_code).
@@ -369,22 +433,23 @@ bool write_code(uintptr_t rva, const uint8_t* bytes, size_t len) {
 }
 
 bool install_hooks() {
-    for (const HookSite& h : kHooks) {
+    for (size_t i = 0; i < rip::kSites; ++i) {
+        const HookSite& h = g_sites[i];
         if (!in_allowed_range(h.rva, kHookLen)) {
-            log::error("RemoteInterp: {} (exe+0x{:X}) is outside [0x1000, 0x51EB000); REFUSED, nothing hooked", h.what,
+            log::error("RemoteInterp: {} (exe+0x{:X}) is outside the game's code; REFUSED, nothing hooked", h.what,
                        h.rva);
             return false;
         }
         if (!bytes_at(h.rva, h.bytes)) {
-            log::error("RemoteInterp: {} (exe+0x{:X}) is not the expected code of build 2976; REFUSED, nothing "
+            log::error("RemoteInterp: {} (exe+0x{:X}) is not the expected code of this build; REFUSED, nothing "
                        "hooked",
                        h.what, h.rva);
             return false;
         }
     }
-    for (size_t i = 0; i < rip::kSites; ++i) g_resume[i] = g_base + kHooks[i].rva + kHookLen;
+    for (size_t i = 0; i < rip::kSites; ++i) g_resume[i] = g_base + g_sites[i].rva + kHookLen;
     for (size_t i = 0; i < rip::kSites; ++i) {
-        const HookSite& h = kHooks[i];
+        const HookSite& h = g_sites[i];
         if (!p8_install_mid(g_base, g_secs, h.rva, kHookLen, h.bytes, kFns[i], g_hooks[i], "RemoteInterp", h.what)) {
             // The ones already in stay as probes (they change nothing without g_applying).
             log::error("RemoteInterp: hook {} of 4 refused; the delay stays the game's (the others only count)",
@@ -397,7 +462,7 @@ bool install_hooks() {
 
 // Both sites verified, then written; the first put back if the second cannot be written.
 bool patch_threshold() {
-    for (uintptr_t rva : kThreshold) {
+    for (uintptr_t rva : g_threshold_sites) {
         if (!in_allowed_range(rva, sizeof kThresholdOrig) ||
             !gad::in_real_code(g_secs, static_cast<uint32_t>(rva), sizeof kThresholdOrig)) {
             log::error("RemoteInterp: the emptying threshold exe+0x{:X} is not inside .rsrc/[0x1000, 0x51EB000); "
@@ -414,14 +479,14 @@ bool patch_threshold() {
     }
     // A failed write may still have changed the bytes (it reads them back): put back every site already touched.
     for (size_t i = 0; i < 2; ++i) {
-        if (write_code(kThreshold[i], kThresholdNew, sizeof kThresholdNew)) continue;
+        if (write_code(g_threshold_sites[i], kThresholdNew, sizeof kThresholdNew)) continue;
         bool back = true;
         for (size_t j = 0; j <= i; ++j) {
-            if (!bytes_at(kThreshold[j], kThresholdOrig)) {
-                back = write_code(kThreshold[j], kThresholdOrig, sizeof kThresholdOrig) && back;
+            if (!bytes_at(g_threshold_sites[j], kThresholdOrig)) {
+                back = write_code(g_threshold_sites[j], kThresholdOrig, sizeof kThresholdOrig) && back;
             }
         }
-        log::error("RemoteInterp: exe+0x{:X} could not be written; threshold stays 1000 ms ({})", kThreshold[i],
+        log::error("RemoteInterp: exe+0x{:X} could not be written; threshold stays 1000 ms ({})", g_threshold_sites[i],
                    back ? "sites restored" : "a site COULD NOT BE RESTORED");
         return false;
     }
@@ -431,6 +496,12 @@ bool patch_threshold() {
 // The local player's controlled actor exists (ui_pause's check): the world is up.
 bool player_in_world() {
     uintptr_t world = 0, mgr = 0, vt = 0, actor = 0, avt = 0;
+    if (const auto* profile = game::reader_profile(); profile && game::layout_3527()) {
+        return peek(g_base + profile->world_system, world) && world &&
+               peek(world + g2976::kWorldSystem_ActorManager, mgr) && mgr && peek(mgr, vt) &&
+               vt == g_base + profile->vt_actor_manager && peek(mgr + g2976::kActorManager_ControlledActor, actor) && actor &&
+               peek(actor, avt) && avt;
+    }
     return peek(g_base + g2976::kWorldSystemSlot, world) && world &&
            peek(world + g2976::kWorldSystem_ActorManager, mgr) && mgr && peek(mgr, vt) &&
            vt == g_base + g2976::kVtClientActorManager &&
@@ -612,7 +683,7 @@ void summary() {
         const SiteCounters& s = g_site[i];
         sites += std::format(" | {}: calls {} resolved {} (0xA {}, 0xB {}, other {}) unresolved [no CC {}, CC not its "
                              "mc {}, no actor {}, no key {}] no slot {} replaced {} threads [{}]",
-                             rip::site_name(kHooks[i].site), s.calls.load(), s.resolved.load(), s.cls[0].load(),
+                             rip::site_name(g_sites[i].site), s.calls.load(), s.resolved.load(), s.cls[0].load(),
                              s.cls[1].load(), s.cls[2].load(), s.fail[1].load(), s.fail[2].load(), s.fail[3].load(),
                              s.fail[4].load(), s.no_slot.load(), s.replaced.load(), tids_text(s.tids));
     }
@@ -645,22 +716,43 @@ void summary() {
               g_table.reclaimed(), g_table.rekeyed(), g_table.full(), owned, top_slots());
     if (g_pair_on.load()) log::info("{}", pairs_text());
     if (g_combat.load()) log::info("{}", combat_text());
+    if (g_players.load()) {
+        log::info("RemoteInterp summary players [{}]: the other player's character, frames {} | hitches (it stood still "
+                  "while moving; ms) with the delay in force {} [{}], with the players' delay {} [{}] | samples {}, "
+                  "lateness [{}] | players' delay per frame [{}] | now {} ms",
+                  rip::mode_name(static_cast<Mode>(g_players.load())), g_pl_frames.load(), g_pl_hitch_today.total(),
+                  hist_text(g_pl_hitch_today), g_pl_hitch_would.total(), hist_text(g_pl_hitch_would), g_pl_samples.load(),
+                  hist_text(g_pl_late), hist_text(g_pl_delay), g_player_delay.load());
+    }
 }
 
 DWORD WINAPI interp_thread(LPVOID) {
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    IMAGE_DOS_HEADER dos{};
-    IMAGE_NT_HEADERS64 nt{};
-    if (g_base != g2976::kImageBase || !peek(g_base, dos) || !peek(g_base + dos.e_lfanew, nt) ||
-        nt.FileHeader.TimeDateStamp != g2976::kPeTimestamp) {
+    const auto build = game::current_build();
+    if (build == game::Build::unsupported || (!game::legacy_layout() && build != game::Build::v3576)) {
         log::error("RemoteInterp: unsupported game build; remote_interp stays off");
         return 0;
+    }
+    if (build == game::Build::v3527) {
+        g_sites = kHooks3527;
+        g_delay_global = 0x71081C8;
+        g_threshold_sites[0] = 0x1386CA3;
+        g_threshold_sites[1] = 0x13873A5;
+        g_code_end = 0x5595000;
+    } else if (build == game::Build::v3576) {
+        // kHooks3576; the thresholds at 3527's + 0x7B0; the real code section .text1 ends at 0x5597000 (0x1000 +
+        // 0x5596000, its flags: execute, not write).
+        g_sites = kHooks3576;
+        g_delay_global = 0x710A2D8;
+        g_threshold_sites[0] = 0x1387453;
+        g_threshold_sites[1] = 0x1387B55;
+        g_code_end = 0x5597000;
     }
     if (!p8_exe_sections(g_base, g_secs)) {
         log::error("RemoteInterp: the game's section table is unreadable; remote_interp stays off");
         return 0;
     }
-    g_delay_addr = g_base + kDelayGlobal;
+    g_delay_addr = g_base + g_delay_global;
     bool ready = false;
     for (int i = 0; i < 24000 && !(ready = code_ready()); ++i) Sleep(5);
     if (!ready) log::warn("RemoteInterp: the game's code is not the expected one after 2 minutes; checking once more");
@@ -694,13 +786,13 @@ DWORD WINAPI interp_thread(LPVOID) {
     }
     log::info("RemoteInterp ON ({}, {}): 4 mid hooks at the delay reads exe+0x{:X} / 0x{:X} / 0x{:X} / 0x{:X} (7 "
               "verified bytes each, inside .rsrc) | {} | emptying threshold {} ms{}",
-              rip::mode_name(mode), g_guest ? "guest" : "host", kHooks[0].rva, kHooks[1].rva, kHooks[2].rva,
-              kHooks[3].rva,
+              rip::mode_name(mode), g_guest ? "guest" : "host", g_sites[0].rva, g_sites[1].rva, g_sites[2].rva,
+              g_sites[3].rva,
               mode == Mode::On ? "0xB actors in mode 2: their own delay = clamp(max(last 3 gaps) + 150, 200, 1800), "
                                  "approached at <= +0.5 / -0.25 ms per ms; 0xA and the rest: the game's"
                                : "probe: counts and the delay it WOULD use, nothing changed",
               g_threshold.load(),
-              mode == Mode::On ? (g_patch_state.load() == 1 ? " (exe+0x11B2073 / 0x11B2775 patched)" : " (patch REFUSED)")
+              mode == Mode::On ? (g_patch_state.load() == 1 ? " (both sites patched)" : " (patch REFUSED)")
                                : "");
     if (const auto cmode = static_cast<Mode>(g_combat.load()); cmode != Mode::Off) {
         log::info("RemoteInterp combat class ON ({}): an 0xB controller whose last {} arrival gaps are <= {} ms, or "
@@ -725,7 +817,7 @@ DWORD WINAPI interp_thread(LPVOID) {
 }  // namespace
 
 void remote_interp_start(const std::string& raw, bool guest, uint32_t owned_cap_ms, bool pair,
-                         const std::string& combat_raw) {
+                         const std::string& combat_raw, const std::string& players_raw) {
     const auto p = rip::parse_mode(raw);
     if (!p.known) {
         log::warn("RemoteInterp: remote_interp='{}' is not 0, probe or 1; it stays off", raw);
@@ -746,7 +838,19 @@ void remote_interp_start(const std::string& raw, bool guest, uint32_t owned_cap_
         log::warn("RemoteInterp: remote_interp_combat is the guest's half (the host's is combat_follow_v2); off here");
         pc.mode = Mode::Off;
     }
+    auto pp = rip::parse_mode(players_raw);
+    if (!pp.known) {
+        log::warn("RemoteInterp: remote_interp_players='{}' is not 0, probe or 1; it stays off", players_raw);
+        pp.mode = Mode::Off;
+    }
     if (g_started.exchange(true)) return;
+    g_players.store(static_cast<uint8_t>(pp.mode));
+    if (pp.mode != Mode::Off) {
+        log::info("RemoteInterp: remote_interp_players={}: the other player's character (0xA) {} a delay that follows how "
+                  "late its samples arrive (peak + {} ms, {}..{} ms, the peak falling 1 ms per {} ms)",
+                  rip::mode_name(pp.mode), pp.mode == Mode::On ? "gets" : "is measured for", rip::kPlayerMargin,
+                  rip::kMinDelay, rip::kPlayerMax, 16 * rip::kLateDecayDiv);
+    }
     g_mode.store(static_cast<uint8_t>(p.mode));
     g_combat.store(static_cast<uint8_t>(pc.mode));  // before any host packet can reach remote_interp_on_host_packet
     g_guest = guest;

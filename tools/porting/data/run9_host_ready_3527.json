@@ -1,0 +1,104 @@
+{
+  "loading": {
+    "state": "0x18",
+    "idle": true,
+    "field": "0x390B7FD9680",
+    "owner": "0x90100000",
+    "local_controller": "0x90100000",
+    "local_actor": "0xA0100001",
+    "owner_matches_local": true,
+    "sequencer_manager": "0x390E3EC3480",
+    "preload_marker": 3,
+    "pending_preload": 0,
+    "wait_count": 0,
+    "wait_entries": [],
+    "wait_blockers": []
+  },
+  "host": {
+    "server_net": "0x39124571400",
+    "host_session": "0x39105C6EC40",
+    "server_actor_manager": "0x3914561DF00",
+    "server_actor_count": 284,
+    "field": {
+      "address": "0x39144CCD510",
+      "vtable_rva": "0x5EF0908",
+      "open": 1,
+      "owner": "0x90100000",
+      "key": "0x81020001",
+      "level_entry": "0x3914E640520",
+      "user_list": "0x391A2FBAB50",
+      "user_count": 1,
+      "user_actor_count": 9,
+      "listed_actor_sum": 9,
+      "listed_actor_sum_matches": true,
+      "users": [
+        {
+          "index": 0,
+          "user": "0x391641A0000",
+          "key": "0x90100000",
+          "actors": 9,
+          "pad": 0
+        }
+      ]
+    },
+    "users": [
+      {
+        "role": "host",
+        "address": "0x391641A0000",
+        "vtable_rva": "0x5EECCA8",
+        "key": "0x90100000",
+        "session": "0x39105C6EC40",
+        "main_character": "0x391640F0200",
+        "current_character": "0x391640F0200",
+        "main_is_current": true,
+        "main": {
+          "address": "0x391640F0200",
+          "vtable_rva": "0x5EE4DA8",
+          "key": "0xA0100001",
+          "controller": "0x90100000",
+          "components": "0x391641B0400",
+          "transform": {
+            "address": "0x391641EF500",
+            "local_position": [
+              -89.5107421875,
+              404.0164794921875,
+              -711.41796875
+            ],
+            "sector": [
+              -5,
+              -4
+            ],
+            "world_position": [
+              -5089.5107421875,
+              404.0164794921875,
+              -4711.41796875
+            ],
+            "parent_identity": true,
+            "parent_translation": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "parent_sector": [
+              0,
+              0
+            ]
+          },
+          "status": {
+            "address": "0x3916423F600",
+            "vtable_rva": "0x5EE7610",
+            "actor_back_pointer_matches": true,
+            "character_number_pointer": "0x3916404B840",
+            "character_number": "0x7FFFFFFFFFFFFFFF"
+          },
+          "action_state": {
+            "control": "0x3916438BB40",
+            "restore_state": "0x391641FFDC0",
+            "restored_byte": 1
+          }
+        },
+        "field": "0x39144CCD510"
+      }
+    ]
+  }
+}

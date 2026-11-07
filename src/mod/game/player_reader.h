@@ -12,6 +12,8 @@
 
 namespace cdmp::game {
 
+struct ReaderProfile;
+
 struct PlayerSnapshot {
     proto::Vec3 position;        // world space (chunk origin applied); Y is up
     proto::Vec3 local_position;  // physics position, relative to the map chunk
@@ -30,6 +32,8 @@ public:
     // reader stays disabled for the whole session.
     bool init();
     bool enabled() const { return enabled_; }
+    // Builds 3527 and 3549: read the character the player controls (Damiane after a switch) instead of the main one.
+    void set_follow_focus(bool on) { follow_focus_ = on; }
 
     std::optional<PlayerSnapshot> read();
 
@@ -41,11 +45,14 @@ public:
 
 private:
     std::optional<uintptr_t> resolve_actor();
+    std::optional<uintptr_t> focus_actor(uintptr_t main_actor);
     void read_stats(uintptr_t components, PlayerSnapshot& out);
     std::nullopt_t fail(const char* why);
 
     bool enabled_ = false;
+    bool follow_focus_ = false;
     uintptr_t base_ = 0;
+    const ReaderProfile* profile_ = nullptr;
     std::string last_failure_;
 };
 

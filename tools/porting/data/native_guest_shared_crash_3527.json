@@ -1,0 +1,600 @@
+{
+  "capture": "..\\bin64\\cdmp_packets.guest_20261104-233742.bin",
+  "parsed_bytes": 5223819,
+  "pending_tail_bytes": 0,
+  "sizes": {
+    "unknown_1001": {
+      "202": 1
+    },
+    "ConnectToServerAck": {
+      "6": 1
+    },
+    "ConnectCryptogramToServerReq": {
+      "286": 1
+    },
+    "ConnectCryptogramToServerAck": {
+      "325": 1
+    },
+    "LoginUserToFieldServerReq": {
+      "19": 1
+    },
+    "ServerTimeInfoAck": {
+      "20": 10
+    },
+    "MainUserDataStartAck": {
+      "8": 1
+    },
+    "CharacterLobbyDataAck": {
+      "165": 1
+    },
+    "MainUserDataEndAck": {
+      "4": 1
+    },
+    "LoginCharacterToFieldServerReq": {
+      "23": 1
+    },
+    "ClearCharacterLobbyDataForSinglePlayAck": {
+      "4": 1
+    },
+    "ApplyBuffAck": {
+      "77": 79
+    },
+    "DataDefinedRegenerateValueAck": {
+      "90": 10
+    },
+    "UnapplyBuffAck": {
+      "77": 22
+    },
+    "VaryHPAck": {
+      "92": 1
+    },
+    "FactionManagementUpdateAck": {
+      "7029": 1
+    },
+    "FactionManagementBuffUpdateAck": {
+      "158": 1
+    },
+    "VaryDataDefinedStaticStatAck": {
+      "41": 27
+    },
+    "UpdateChangeBuffLevelAck": {
+      "42": 18
+    },
+    "UpdateFactionConquerDataAck": {
+      "1396": 1
+    },
+    "MainPlayerDataStartAck": {
+      "25": 1
+    },
+    "CharacterStatAck": {
+      "60": 1
+    },
+    "CharacterDataDefinedRegenerateStatAck": {
+      "1605": 1
+    },
+    "CharacterDataDefinedStatAck": {
+      "1707": 1
+    },
+    "CharacterCustomizationAck": {
+      "279": 1
+    },
+    "SetFieldNPCSaveDataKeyAck": {
+      "12": 1
+    },
+    "SubLevelInfoListAck": {
+      "731": 1
+    },
+    "AddDonationItemCountToCampListAck": {
+      "65": 1
+    },
+    "EquipmentListOnLoginAck": {
+      "7389": 1
+    },
+    "ChangeUseItemReserveSlotAck": {
+      "436": 13
+    },
+    "RoyalSupplyDataListAck": {
+      "93": 1
+    },
+    "UpdateDiscoveredLevelGimmickSceneObjectDataAck": {
+      "32677": 17,
+      "25252": 1
+    },
+    "EntitlementDataListAck": {
+      "14": 1
+    },
+    "UpdateFieldGimmickSaveDescListAck": {
+      "32532": 8,
+      "14601": 1
+    },
+    "ActivateContentsPhaseGamePlayTriggerInfoListAck": {
+      "21": 1
+    },
+    "SyncPlayerHouseDataListAck": {
+      "25": 1
+    },
+    "VaryExpandedInventorySlotAck": {
+      "18": 1
+    },
+    "AddItemToInventoryAck": {
+      "32484": 25,
+      "30639": 1
+    },
+    "ItemChangedInventoryDataListAck": {
+      "1983": 1
+    },
+    "UpdateItemSharedCoolTimeAck": {
+      "201": 1
+    },
+    "AddHousingGimmickAck": {
+      "25": 1
+    },
+    "ToggleFoldItemGroupAck": {
+      "48": 1
+    },
+    "ChangeInventoryItemListSortTypeAck": {
+      "8": 3
+    },
+    "ChangeBankInformationAck": {
+      "23": 2
+    },
+    "BankHistoryListAck": {
+      "337": 1,
+      "40": 1
+    },
+    "StoreDataListAck": {
+      "6535": 5,
+      "6209": 3,
+      "7024": 5,
+      "8328": 1,
+      "6372": 3,
+      "4090": 11,
+      "3438": 8,
+      "5231": 7,
+      "3927": 8,
+      "993": 35,
+      "5394": 6,
+      "5557": 4,
+      "1319": 44,
+      "1156": 70,
+      "5883": 1,
+      "5720": 3,
+      "2949": 6,
+      "3275": 5,
+      "2623": 23,
+      "2786": 17,
+      "1482": 16,
+      "2297": 11,
+      "2134": 8,
+      "32615": 6,
+      "4253": 5,
+      "4416": 3,
+      "4905": 3,
+      "4742": 6,
+      "2460": 15,
+      "3601": 7,
+      "1971": 9,
+      "1645": 12,
+      "667": 15,
+      "15": 37,
+      "504": 30,
+      "3112": 9,
+      "5068": 3,
+      "341": 23,
+      "3764": 3,
+      "830": 18,
+      "1808": 4,
+      "178": 4,
+      "13381": 1,
+      "18434": 1,
+      "8002": 1,
+      "20390": 1,
+      "8817": 1,
+      "4579": 2
+    },
+    "VaryExpandedFarmSlotAck": {
+      "5": 1
+    },
+    "UpdateMercenaryExpandedSlotListAck": {
+      "77": 1
+    },
+    "ShipCrewStationChangeAck": {
+      "36": 12
+    },
+    "ChangeMercenaryFactionInfoAck": {
+      "12": 1
+    },
+    "MercenaryDataListAck": {
+      "23269": 81
+    },
+    "MercenaryEquipmentListAck": {
+      "1489": 1,
+      "1120": 1,
+      "751": 1,
+      "1858": 1,
+      "382": 2
+    },
+    "GlobalGameEventUpdateAck": {
+      "6": 14
+    },
+    "SyncStageOceanLevelCandidatePostionReq": {
+      "45": 148
+    },
+    "MoveFieldCompleteReq": {
+      "1": 2
+    },
+    "VaryExpandedNoSaveInventorySlotAck": {
+      "8": 1
+    },
+    "RegistPlayGuideListAck": {
+      "1417": 1
+    },
+    "GlobalGameEventVaryTradeItemPriceAck": {
+      "65": 1
+    },
+    "ActorLoadDataAck": {
+      "16802": 1,
+      "23231": 1,
+      "6788": 1,
+      "6587": 1,
+      "6808": 1,
+      "6764": 1,
+      "6929": 1,
+      "6752": 1,
+      "6778": 1,
+      "6819": 1,
+      "16665": 1
+    },
+    "SyncSceneObjectAck": {
+      "615": 35
+    },
+    "SetMoveFieldAck": {
+      "5": 2
+    },
+    "MoveFieldCompleteAck": {
+      "51": 1
+    },
+    "MoveFieldCompletePostAck": {
+      "6": 1
+    },
+    "OpenPartyAck": {
+      "25": 1
+    },
+    "UpdateFactionDependencyDataAck": {
+      "342": 1
+    },
+    "UpdateFactionBlockDataAck": {
+      "4731": 1
+    },
+    "ChangedAutoSpawnCloseFilterStateAck": {
+      "17": 1
+    },
+    "PlayAllPreLoadSequencerAck": {
+      "4": 1
+    },
+    "StartActionReq": {
+      "729": 8
+    },
+    "ProcessAfterBeginFrameEventReq": {
+      "4": 34
+    },
+    "SceneLevelLoadCompleteSyncSceneObjectListReq": {
+      "8": 12
+    },
+    "GimmickBranchStateReq": {
+      "8": 11
+    },
+    "GimmickExecuteFrameEventReq": {
+      "246": 89
+    },
+    "UpdateGimmickReq": {
+      "244": 31
+    },
+    "OnDemandEquipDockingGimmickSpawnReq": {
+      "21": 2
+    },
+    "ChangeDrowningStateReq": {
+      "6": 2
+    },
+    "SyncFieldGimmickSavedByGimmickStateAck": {
+      "69": 15
+    },
+    "ChangeAIStateReq": {
+      "672": 2
+    },
+    "UpdateSequencerGamePlayDataEventReq": {
+      "15": 6
+    },
+    "UpdateGimmickBodyMotionTypeReq": {
+      "5": 8
+    },
+    "GamePlayTriggerInOutReq": {
+      "161": 20
+    },
+    "SyncFieldGimmickSavedByCoolTimeAck": {
+      "32": 1
+    },
+    "UpdateFieldGimmickSaveDataToResetAck": {
+      "5": 3
+    },
+    "SyncWeatherStateReq": {
+      "24": 1
+    },
+    "MoveActorReq": {
+      "518": 2
+    },
+    "LoadingCompleteReq": {
+      "1": 1
+    },
+    "LoadingCompleteAck": {
+      "13": 1
+    },
+    "LoginCharacterToGameReq": {
+      "0": 1
+    },
+    "GameLoadingStartReq": {
+      "0": 1
+    },
+    "UnloadSyncSceneObjectAck": {
+      "25": 15
+    },
+    "UpdateFieldGimmickSaveDataKeyAck": {
+      "12": 9
+    },
+    "MoveFieldAck": {
+      "73": 1
+    },
+    "DeleteStageOceanLevelCandidatePostionReq": {
+      "1185": 1
+    },
+    "SyncStageCandidatePostionReq": {
+      "1549": 19
+    },
+    "MoveActorAck": {
+      "239": 85
+    },
+    "ChangeAIStateAck": {
+      "672": 3
+    },
+    "UpdateElementalAck": {
+      "118": 20
+    },
+    "StartActionAck": {
+      "729": 30
+    }
+  },
+  "errors": [],
+  "movement_samples": [
+    {
+      "name": "MoveActorReq",
+      "key": "0xa01002ac",
+      "position": [
+        0.0,
+        1000.1500244140625,
+        0.0
+      ],
+      "rotation": [
+        0.0,
+        0.0871528908610344,
+        0.0,
+        0.9961949586868286
+      ]
+    },
+    {
+      "name": "MoveActorReq",
+      "key": "0xb0100347",
+      "position": [
+        -0.263459712266922,
+        1000.2507934570312,
+        0.01821616105735302
+      ],
+      "rotation": [
+        -0.4381474256515503,
+        0.5609079599380493,
+        0.4824706017971039,
+        0.5105206370353699
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "key": "0xb010022e",
+      "position": [
+        -5486.9248046875,
+        446.4753112792969,
+        -4481.2216796875
+      ],
+      "rotation": [
+        0.006541602313518524,
+        0.9995129108428955,
+        0.006263622082769871,
+        -0.029863983392715454
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "key": "0xb010022d",
+      "position": [
+        -5488.0849609375,
+        446.6380310058594,
+        -4478.8369140625
+      ],
+      "rotation": [
+        1.594487730471883e-05,
+        0.9979135990142822,
+        -1.0375937563367188e-05,
+        -0.06456416845321655
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "key": "0xb0100229",
+      "position": [
+        -5487.4853515625,
+        446.6380310058594,
+        -4481.1591796875
+      ],
+      "rotation": [
+        1.5960931705194525e-05,
+        0.9979134798049927,
+        -1.0384699635324068e-05,
+        -0.06456458568572998
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "key": "0xb010021b",
+      "position": [
+        -5486.9912109375,
+        446.16058349609375,
+        -4480.19873046875
+      ],
+      "rotation": [
+        0.7749195098876953,
+        0.5924181938171387,
+        -0.20906975865364075,
+        -0.06949883699417114
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "key": "0xb010021e",
+      "position": [
+        -5486.8447265625,
+        446.4650573730469,
+        -4480.0712890625
+      ],
+      "rotation": [
+        0.0022323336452245712,
+        0.999289333820343,
+        0.002119979588314891,
+        -0.03756791353225708
+      ]
+    },
+    {
+      "name": "MoveActorAck",
+      "key": "0xb0100220",
+      "position": [
+        -5488.67333984375,
+        446.40032958984375,
+        -4479.93310546875
+      ],
+      "rotation": [
+        -0.07161174714565277,
+        0.9972869157791138,
+        0.0071329399943351746,
+        -0.015480399131774902
+      ]
+    }
+  ],
+  "player_movement": {
+    "0xa01002ac": {
+      "count": 1,
+      "first_position": [
+        0.0,
+        1000.1500244140625,
+        0.0
+      ],
+      "last_position": [
+        0.0,
+        1000.1500244140625,
+        0.0
+      ],
+      "min_position": [
+        0.0,
+        1000.1500244140625,
+        0.0
+      ],
+      "max_position": [
+        0.0,
+        1000.1500244140625,
+        0.0
+      ],
+      "last_rotation": [
+        0.0,
+        0.0871528908610344,
+        0.0,
+        0.9961949586868286
+      ]
+    }
+  },
+  "actor_tail_candidates": [
+    {
+      "key": "0xa01002ac",
+      "record_size": 16789,
+      "position_end158": [
+        0.0,
+        1000.0,
+        0.0
+      ],
+      "rotation_end146": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "position_end154": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "rotation_end142": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "key": "0xa01002ac",
+      "record_size": 16789,
+      "position_end158": [
+        0.0,
+        1000.0,
+        0.0
+      ],
+      "rotation_end146": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "position_end154": [
+        1000.0,
+        0.0,
+        0.0
+      ],
+      "rotation_end142": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "key": "0xa01002ac",
+      "record_size": 16652,
+      "position_end158": [
+        -5089.48388671875,
+        404.027099609375,
+        -4711.26318359375
+      ],
+      "rotation_end146": [
+        0.0,
+        -0.2421151101589203,
+        0.0,
+        0.9702475070953369
+      ],
+      "position_end154": [
+        404.027099609375,
+        -4711.26318359375,
+        0.0
+      ],
+      "rotation_end142": [
+        -0.2421151101589203,
+        0.0,
+        0.9702475070953369,
+        1.0
+      ]
+    }
+  ]
+}

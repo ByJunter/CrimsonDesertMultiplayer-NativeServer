@@ -1,0 +1,43 @@
+
+=== B747F20: 0xB747F20 range={'begin': 192184096, 'end': 192184156, 'unwind': 330657400, 'offset': 0} section=.text ===
+0B747F20 48896c2418               mov      qword ptr [rsp + 0x18], rbp
+0B747F25 4889742420               mov      qword ptr [rsp + 0x20], rsi
+0B747F2A 4156                     push     r14
+0B747F2C 4c8b5140                 mov      r10, qword ptr [rcx + 0x40]
+0B747F30 31f6                     xor      esi, esi
+0B747F32 8b4148                   mov      eax, dword ptr [rcx + 0x48]
+0B747F35 31ed                     xor      ebp, ebp
+0B747F37 448b35fa2581ff           mov      r14d, dword ptr [rip - 0x7eda06]
+0B747F3E 4181f678004d31           xor      r14d, 0x314d0078
+0B747F45 4c0faff0                 imul     r14, rax
+0B747F49 4d01d6                   add      r14, r10
+0B747F4C 4d39f2                   cmp      r10, r14
+0B747F4F 0f848b000000             je       0xb747fe0
+0B747F55 448b0d9c019efb           mov      r9d, dword ptr [rip - 0x461fe64]
+
+=== B7509A0: 0xB7509A0 range={'begin': 192219552, 'end': 192219637, 'unwind': 330657540, 'offset': 0} section=.text ===
+0B7509A0 48895c2408               mov      qword ptr [rsp + 8], rbx
+0B7509A5 57                       push     rdi
+0B7509A6 4883ec20                 sub      rsp, 0x20
+0B7509AA 31db                     xor      ebx, ebx
+0B7509AC 4889cf                   mov      rdi, rcx
+0B7509AF 395908                   cmp      dword ptr [rcx + 8], ebx
+0B7509B2 7633                     jbe      0xb7509e7
+0B7509B4 6666662e0f1f840000000000 nop      word ptr cs:[rax + rax]
+0B7509C0 89d8                     mov      eax, ebx
+0B7509C2 486bc878                 imul     rcx, rax, 0x78
+0B7509C6 48030f                   add      rcx, qword ptr [rdi]
+0B7509C9 e862e425f6               call     0x19aee30
+0B7509CE ffc3                     inc      ebx
+0B7509D0 3b5f08                   cmp      ebx, dword ptr [rdi + 8]
+0B7509D3 72eb                     jb       0xb7509c0
+0B7509D5 c7470800000000           mov      dword ptr [rdi + 8], 0
+0B7509DC 488b5c2430               mov      rbx, qword ptr [rsp + 0x30]
+0B7509E1 4883c420                 add      rsp, 0x20
+0B7509E5 5f                       pop      rdi
+0B7509E6 c3                       ret      
+0B7509E7 895908                   mov      dword ptr [rcx + 8], ebx
+0B7509EA 488b5c2430               mov      rbx, qword ptr [rsp + 0x30]
+0B7509EF 4883c420                 add      rsp, 0x20
+0B7509F3 5f                       pop      rdi
+0B7509F4 c3                       ret      

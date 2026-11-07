@@ -27,8 +27,9 @@ inline constexpr uint32_t kMagic = 0x504D4443;  // bytes "CDMP"
 // messages name the receiver itself with kSelfMarker. 7: the gear in
 // SpawnInfo keeps a removal for each slot the sender's template had filled
 // (equip_state.h); a v6 peer would lose them. 8: RelKind::TrocFrame (option D,
-// common/troc_frame.h).
-inline constexpr uint16_t kVersion = 8;
+// common/troc_frame.h). 9: logical Troc IDs with a native-build/map handshake;
+// v8 game traffic contains native IDs and must never be interpreted as logical.
+inline constexpr uint16_t kVersion = 9;
 // Hello and Welcome start the same in every version from 5 (name, then the
 // rest), so a peer with another version is recognised and reported instead
 // of being ignored in silence.

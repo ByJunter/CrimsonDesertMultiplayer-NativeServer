@@ -8,6 +8,7 @@
 #include <cstring>
 #include <format>
 
+#include "mod/game/build_profile.h"
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/clock_push.h"
@@ -38,9 +39,112 @@ constexpr uint8_t kGetterHead[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x57, 0x48, 0x8
                                    0x8B, 0xFA, 0x48, 0x8D, 0x54, 0x24, 0x70, 0x48, 0x8B, 0xD9, 0xFF, 0x50, 0x60};
 constexpr uint64_t kMaxLogged = 24;
 
+// 1.0.0.3527 kept LoadingComplete and GetCurrentFieldTime as native
+// functions, but folded SyncFieldTimeOnMove into the larger MoveField path.
+// Its owner branch still publishes the world clock; the non-owner branch at
+// 0x2E620A1 only gets the destination field time and applies it to this TS.
+// A mid hook on the comparison therefore preserves the whole native move and
+// makes user 2 take that existing non-publishing branch.
+constexpr uintptr_t kTravelOwnerCmp3527 = 0x2E61FB8;
+constexpr uint8_t kTravelOwnerCmp3527Bytes[] = {0x39, 0x87, 0x80, 0x01, 0x00, 0x00};
+constexpr uintptr_t kTravelGetterCall3527 = 0x2E620AC;
+constexpr uint8_t kTravelGetterCall3527Bytes[] = {0xE8, 0xBF, 0x6E, 0x44, 0xFF};
+constexpr uintptr_t kTravelSetterCall3527 = 0x2E620B7;
+constexpr uint8_t kTravelSetterCall3527Bytes[] = {0xE8, 0xB4, 0xE4, 0x50, 0xFF};
+constexpr uintptr_t kLoading3527 = 0x236B6B0;
+constexpr uint8_t kLoadingHead3527[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x48, 0x89, 0x74, 0x24, 0x10, 0x48,
+                                        0x89, 0x7C, 0x24, 0x18, 0x55, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56,
+                                        0x41, 0x57, 0x48, 0x8B, 0xEC, 0x48, 0x83, 0xEC, 0x60, 0x4D, 0x8B,
+                                        0xE9, 0x49, 0x8B, 0xF0, 0x4C, 0x8B, 0xF2, 0x48, 0x8B, 0xD9};
+constexpr uintptr_t kLoadingFlagCmp3527 = 0x236B6EB;
+constexpr uint8_t kLoadingFlagCmp3527Bytes[] = {0x44, 0x38, 0x65, 0x50, 0x0F, 0x84, 0x0C, 0x01, 0x00, 0x00};
+constexpr uintptr_t kGetter3527 = 0x22A8F70;
+constexpr uintptr_t kWorldTime3527 = 0x6EAB9B8;  // server-realm FieldTime
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). MoveField moved whole by +0xC70: the owner check 0x2E61FB8 ->
+// 0x2E62C28 (same bytes, still r15 = FieldMover, rdi = field, then jne to the non-owner branch 0x2E62D11), its getter
+// call 0x2E620AC -> 0x2E62D1C and setter call 0x2E620B7 -> 0x2E62D27 (new rel32s). LoadingComplete 0x236B6B0 ->
+// 0x236C400 and its flag check 0x236B6EB -> 0x236C43B (+0xD50, same bytes). GetCurrentFieldTime 0x22A8F70 -> 0x22A9BB0
+// (+0xC40): the getter call's target, with kGetterHead. The world clock: the setter (thunk 0x23712C0 -> .tls$
+// 0xCBCF310) stores the server-realm FieldTime at 0xCBCF380 into 0x6EAD9B8 (3527 0x6EAB9B8 + 0x2000, as the Troc
+// block) when TLS +0x1EB is set and the owner matches; the client realm's is 0x6EAD998.
+constexpr uintptr_t kTravelOwnerCmp3576 = 0x2E62C28;
+constexpr uintptr_t kTravelGetterCall3576 = 0x2E62D1C;
+constexpr uint8_t kTravelGetterCall3576Bytes[] = {0xE8, 0x8F, 0x6E, 0x44, 0xFF};  // 0x2E62D1C: call 0x22A9BB0
+constexpr uintptr_t kTravelSetterCall3576 = 0x2E62D27;
+constexpr uint8_t kTravelSetterCall3576Bytes[] = {0xE8, 0x94, 0xE5, 0x50, 0xFF};  // 0x2E62D27: call 0x23712C0
+constexpr uintptr_t kLoading3576 = 0x236C400;
+constexpr uintptr_t kLoadingFlagCmp3576 = 0x236C43B;
+constexpr uintptr_t kGetter3576 = 0x22A9BB0;
+constexpr uintptr_t kWorldTime3576 = 0x6EAD9B8;  // server-realm FieldTime
+
+struct ClockProfile {
+    game::Build build;
+    uintptr_t loading;
+    const uint8_t* loading_head;
+    size_t loading_head_size;
+    uintptr_t loading_flag_cmp;
+    const uint8_t* loading_flag_bytes;
+    size_t loading_flag_size;
+    uintptr_t getter;
+    uintptr_t world_time;
+    bool travel_mid;
+    // The mid hook's sites (travel_mid only): MoveField's owner check and its non-owner getter/setter calls.
+    uintptr_t travel_cmp, getter_call, setter_call;
+    const uint8_t* getter_call_bytes;
+    const uint8_t* setter_call_bytes;
+};
+
+const ClockProfile* clock_profile() {
+    static constexpr ClockProfile old{game::Build::v2976,
+                                      kLoading,
+                                      kLoadingHead,
+                                      sizeof kLoadingHead,
+                                      kLoadingFlagCmp,
+                                      kLoadingFlagCmpBytes,
+                                      sizeof kLoadingFlagCmpBytes,
+                                      kGetter,
+                                      clk::kWorldTime,
+                                      false,
+                                      0, 0, 0, nullptr, nullptr};
+    static constexpr ClockProfile current{game::Build::v3527,
+                                          kLoading3527,
+                                          kLoadingHead3527,
+                                          sizeof kLoadingHead3527,
+                                          kLoadingFlagCmp3527,
+                                          kLoadingFlagCmp3527Bytes,
+                                          sizeof kLoadingFlagCmp3527Bytes,
+                                          kGetter3527,
+                                          kWorldTime3527,
+                                          true,
+                                          kTravelOwnerCmp3527, kTravelGetterCall3527, kTravelSetterCall3527,
+                                          kTravelGetterCall3527Bytes, kTravelSetterCall3527Bytes};
+    static constexpr ClockProfile current3576{game::Build::v3576,
+                                              kLoading3576,
+                                              kLoadingHead3527,
+                                              sizeof kLoadingHead3527,
+                                              kLoadingFlagCmp3576,
+                                              kLoadingFlagCmp3527Bytes,
+                                              sizeof kLoadingFlagCmp3527Bytes,
+                                              kGetter3576,
+                                              kWorldTime3576,
+                                              true,
+                                              kTravelOwnerCmp3576, kTravelGetterCall3576, kTravelSetterCall3576,
+                                              kTravelGetterCall3576Bytes, kTravelSetterCall3576Bytes};
+    static_assert(sizeof kTravelGetterCall3576Bytes == sizeof kTravelGetterCall3527Bytes &&
+                  sizeof kTravelSetterCall3576Bytes == sizeof kTravelSetterCall3527Bytes);
+    switch (game::current_build()) {
+        case game::Build::v2976: return &old;
+        case game::Build::v3527: return &current;
+        case game::Build::v3576: return &current3576;
+        default: return nullptr;
+    }
+}
+
 ClockGame g_game{};
 uintptr_t g_base = 0;
 SafetyHookInline g_travel, g_loading;
+SafetyHookMid g_travel_mid;
+const ClockProfile* g_profile = nullptr;
 std::atomic<bool> g_active{false};
 std::atomic<uint64_t> g_travels{0}, g_travel_failed{0}, g_loadings{0}, g_flags_cut{0}, g_world_moved{0},
     g_logged{0}, g_world_changes{0}, g_world_frozen{0};
@@ -66,7 +170,7 @@ struct WorldTime {
 
 WorldTime world_now() {
     WorldTime w;
-    w.ok = g_base && game::safe_read(g_base + clk::kWorldTime, w.raw, sizeof w.raw);
+    w.ok = g_base && g_profile && game::safe_read(g_base + g_profile->world_time, w.raw, sizeof w.raw);
     return w;
 }
 
@@ -161,6 +265,26 @@ void __fastcall travel_detour(void* fm, void* field) noexcept {
     if (!gated) g_travel.unsafe_call<void>(fm, field);
 }
 
+// 1.0.0.3527 (and 3576), immediately before `cmp dword ptr [rdi+0x180], eax`.
+// r15 is FieldMover and [r15] is its TransformSync.  For user 2, make eax
+// unequal to the destination owner so the original JNE takes the game's
+// existing getter+setter path.  No instruction is skipped or reimplemented.
+void travel_owner_gate_3527(safetyhook::Context& ctx) noexcept {
+    try {
+        uintptr_t ts = 0;
+        uint32_t owner = 0;
+        if (!peek(ctx.r15, ts) || !ts || !peek(ctx.rdi + 0x180, owner) || who_now(ts) != ClockWho::User2) return;
+        ctx.rax = (ctx.rax & 0xFFFFFFFF00000000ull) | static_cast<uint32_t>(owner ^ 0xFFFFFFFFu);
+        g_travels.fetch_add(1);
+        note("Session2 clock gate: user 2 move to field 0x{:X} (owner 0x{:X}) uses native non-owner time path; "
+             "world clock is not published",
+             ctx.rdi, owner);
+    } catch (...) {
+        // Leave the game's comparison untouched if identity or memory cannot
+        // be inspected safely.
+    }
+}
+
 // TransformSync LoadingComplete(TS, res, field, ?, u8 flag, now*) -> res.
 uint32_t* __fastcall loading_detour(void* ts, uint32_t* res, void* field, void* r9, uint8_t flag,
                                     uint64_t* now) noexcept {
@@ -236,35 +360,57 @@ uint8_t clock_loading_flag(ClockWho who, uint8_t flag) { return who == ClockWho:
 bool clock_gate_install() {
     if (g_active.load()) return true;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    if (!code_ok(kTravel, kTravelHead, sizeof kTravelHead, "FieldMover::SyncFieldTimeOnMove") ||
-        !code_ok(kTravelOwnerCmp, kTravelOwnerCmpBytes, sizeof kTravelOwnerCmpBytes, "its owner check") ||
-        !code_ok(kTravelGetterCall, kTravelGetterCallBytes, sizeof kTravelGetterCallBytes, "its getter call") ||
-        !code_ok(kLoading, kLoadingHead, sizeof kLoadingHead, "TransformSync LoadingComplete") ||
-        !code_ok(kLoadingFlagCmp, kLoadingFlagCmpBytes, sizeof kLoadingFlagCmpBytes, "its flag check") ||
-        !code_ok(kGetter, kGetterHead, sizeof kGetterHead, "CommonField::GetCurrentFieldTime")) {
+    g_profile = clock_profile();
+    if (!g_profile) {
+        log::error("Session2 clock gate: unsupported executable; the gate stays off");
         return false;
     }
-    g_game.field_time = reinterpret_cast<decltype(g_game.field_time)>(g_base + kGetter);
-    g_loading = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kLoading),
+    const bool travel_code_ok = g_profile->travel_mid
+        ? code_ok(g_profile->travel_cmp, kTravelOwnerCmp3527Bytes, sizeof kTravelOwnerCmp3527Bytes,
+                  "MoveField owner-clock check") &&
+              code_ok(g_profile->getter_call, g_profile->getter_call_bytes, sizeof kTravelGetterCall3527Bytes,
+                      "its non-owner getter call") &&
+              code_ok(g_profile->setter_call, g_profile->setter_call_bytes, sizeof kTravelSetterCall3527Bytes,
+                      "its non-owner setter call")
+        : code_ok(kTravel, kTravelHead, sizeof kTravelHead, "FieldMover::SyncFieldTimeOnMove") &&
+              code_ok(kTravelOwnerCmp, kTravelOwnerCmpBytes, sizeof kTravelOwnerCmpBytes, "its owner check") &&
+              code_ok(kTravelGetterCall, kTravelGetterCallBytes, sizeof kTravelGetterCallBytes, "its getter call");
+    if (!travel_code_ok ||
+        !code_ok(g_profile->loading, g_profile->loading_head, g_profile->loading_head_size,
+                 "TransformSync LoadingComplete") ||
+        !code_ok(g_profile->loading_flag_cmp, g_profile->loading_flag_bytes, g_profile->loading_flag_size,
+                 "its flag check") ||
+        !code_ok(g_profile->getter, kGetterHead, sizeof kGetterHead, "CommonField::GetCurrentFieldTime")) {
+        return false;
+    }
+    g_game.field_time = reinterpret_cast<decltype(g_game.field_time)>(g_base + g_profile->getter);
+    g_loading = safetyhook::create_inline(reinterpret_cast<void*>(g_base + g_profile->loading),
                                           reinterpret_cast<void*>(&loading_detour), SafetyHookInline::StartDisabled);
-    g_travel = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kTravel),
-                                         reinterpret_cast<void*>(&travel_detour), SafetyHookInline::StartDisabled);
-    if (!g_loading || !g_travel || !g_loading.enable()) {
+    if (!g_loading || !g_loading.enable()) {
         g_loading = {};
-        g_travel = {};
-        log::error("Session2 clock gate: cannot hook the clock functions; the gate stays off");
+        log::error("Session2 clock gate: cannot hook LoadingComplete; the gate stays off");
         return false;
     }
-    if (!g_travel.enable()) {
+    bool travel_hooked = false;
+    if (g_profile->travel_mid) {
+        g_travel_mid = safetyhook::create_mid(reinterpret_cast<void*>(g_base + g_profile->travel_cmp),
+                                              &travel_owner_gate_3527);
+        travel_hooked = static_cast<bool>(g_travel_mid);
+    } else {
+        g_travel = safetyhook::create_inline(reinterpret_cast<void*>(g_base + kTravel),
+                                             reinterpret_cast<void*>(&travel_detour), SafetyHookInline::StartDisabled);
+        travel_hooked = g_travel && g_travel.enable();
+    }
+    if (!travel_hooked) {
         (void)g_loading.disable();  // disabled, not destroyed: a thread may be inside
-        log::error("Session2 clock gate: cannot hook FieldMover::SyncFieldTimeOnMove; the gate stays off");
+        log::error("Session2 clock gate: cannot hook the travel clock branch; the gate stays off");
         return false;
     }
     g_active.store(true);
     CloseHandle(CreateThread(nullptr, 0, watch_thread, nullptr, 0, nullptr));
     log::info("Session2 clock gate ON: user 2's travels and loads never publish the world clock "
               "(hooks exe+0x{:X} SyncFieldTimeOnMove, exe+0x{:X} LoadingComplete); world clock now {}",
-              kTravel, kLoading, show(world_now()));
+              g_profile->travel_mid ? g_profile->travel_cmp : kTravel, g_profile->loading, show(world_now()));
     return true;
 }
 

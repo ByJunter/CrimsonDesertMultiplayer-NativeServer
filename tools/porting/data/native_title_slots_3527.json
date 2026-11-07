@@ -1,0 +1,24 @@
+[
+  {
+    "pid": 42600,
+    "controlled_actor": "0x0",
+    "save_manager": "0x2d886f02b00",
+    "slots": "0x2d878a53800",
+    "count": 5,
+    "slot_ids_stride_78": [
+      0,
+      1,
+      2,
+      100,
+      101
+    ]
+  },
+  {
+    "pid": 66412,
+    "controlled_actor": "0x0",
+    "save_manager": "0x3af14f02b00",
+    "slots": "0x3af06a53800",
+    "count": 0,
+    "slot_ids_stride_78": []
+  }
+]

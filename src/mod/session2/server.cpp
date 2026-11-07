@@ -1,4 +1,6 @@
 #include "mod/session2/server.h"
+#include "common/native_opcode.h"
+#include "mod/game/build_profile.h"
 
 #include <windows.h>
 
@@ -24,6 +26,7 @@
 #include "mod/net/horse_diag.h"
 #include "mod/net/remote_puppet.h"
 #include "mod/session2/attach_follow.h"
+#include "mod/session2/focus_follow.h"
 #include "mod/session2/combat_follow.h"
 #include "mod/session2/docked_gimmicks.h"
 #include "mod/session2/door_trace.h"
@@ -45,7 +48,9 @@
 #include "mod/session2/observer_milestone.h"
 #include "mod/session2/observer_scene_copy.h"
 #include "mod/session2/observer_seq_copy.h"
+#include "mod/session2/housing_share.h"
 #include "mod/session2/offsets_s2.h"
+#include "mod/session2/profile_s2.h"
 #include "mod/session2/owner_fanout.h"
 #include "mod/session2/p8_probes.h"
 #include "mod/session2/travel_probe.h"
@@ -56,6 +61,8 @@
 
 namespace cdmp::session2 {
 namespace {
+
+inline uintptr_t addr(uintptr_t legacy_rva) noexcept { return profile::rva(legacy_rva); }
 
 using AllocFn = void*(__fastcall*)(size_t size, size_t align);
 using CtorFn = void*(__fastcall*)(void* self, uint8_t flag);
@@ -270,9 +277,9 @@ int note_exception(EXCEPTION_POINTERS* ep, inj::Step step, uint16_t opcode, uint
 // one runs (for the filter: the global heap's call is under its lock).
 void* game_alloc_raw(size_t size, volatile inj::Step& step) {
     const auto tls_array = static_cast<uintptr_t>(__readgsqword(0x58));
-    const uint32_t index = *reinterpret_cast<const uint32_t*>(g_base + off::kTlsIndexSlot);
+    const uint32_t index = *reinterpret_cast<const uint32_t*>(g_base + addr(off::kTlsIndexSlot));
     const uintptr_t tls = *reinterpret_cast<const uintptr_t*>(tls_array + 8ull * index);
-    if (*reinterpret_cast<const uint8_t*>(tls + off::kTls_UseGlobalHeap) != 0) {
+    if (*reinterpret_cast<const uint8_t*>(tls + profile::tls_heap_selector_offset()) != 0) {
         g_global_heap_flag.fetch_add(1, std::memory_order_relaxed);
         step = inj::Step::AllocGlobal;
         return g_alloc_global(size, 0x10);
@@ -339,7 +346,7 @@ bool guarded_copy(void* dst, uintptr_t src, size_t n) {
 // The server instance session 2 was built in is still the current one.
 bool same_server() {
     uintptr_t net = 0, s1 = 0;
-    return peek(g_base + off::kServerNetSlot, net) && net == g_built_net.load() &&
+    return peek(g_base + addr(off::kServerNetSlot), net) && net == g_built_net.load() &&
            peek(net + off::kServerNet_Session, s1) && s1 == g_built_s1.load();
 }
 
@@ -360,7 +367,7 @@ void epoch_sessions(uintptr_t (&out)[kEpochSlots]) {
 bool session_user(uintptr_t session, uintptr_t& user) {
     uintptr_t vt = 0, back = 0;
     return session && peek(session + off::kSession_User, user) && user && peek(user, vt) &&
-           vt == g_base + off::kServerUserActorVtable && peek(user + off::kUser_Session, back) && back == session;
+           vt == g_base + addr(off::kServerUserActorVtable) && peek(user + off::kUser_Session, back) && back == session;
 }
 
 // P1, on ServerRunThread: the steps of ServerModule::Init for the game's own
@@ -377,7 +384,7 @@ bool build_session(uintptr_t& out) {
         g_ctor(obj, 0);
         step = inj::Step::BuildSession;
         const auto s = reinterpret_cast<uintptr_t>(obj);
-        *reinterpret_cast<uintptr_t*>(s) = g_base + off::kNwAsyncSessionVtable;
+        *reinterpret_cast<uintptr_t*>(s) = g_base + addr(off::kNwAsyncSessionVtable);
         *reinterpret_cast<uint64_t*>(s + off::kSession_B0) = 0;
         *reinterpret_cast<uint64_t*>(s + off::kSession_B8) = 0;
         *reinterpret_cast<uint16_t*>(s + off::kSession_C0) = 0;
@@ -386,7 +393,7 @@ bool build_session(uintptr_t& out) {
         // Never read for session 2 (its Send is ours). If something did push
         // there, Q2 is where the server takes S->C buffers back: no leak, no
         // packet for the host's client (decision D-6).
-        const uintptr_t server_net = *reinterpret_cast<uintptr_t*>(g_base + off::kServerNetSlot);
+        const uintptr_t server_net = *reinterpret_cast<uintptr_t*>(g_base + addr(off::kServerNetSlot));
         *reinterpret_cast<uintptr_t*>(s + off::kSession_OutQueue) =
             *reinterpret_cast<uintptr_t*>(server_net + off::kServerNet_FreeS2C);
         if (auto* id = *reinterpret_cast<uint32_t**>(s + off::kSession_IdPtr)) *id = kSessionId;
@@ -456,7 +463,8 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
             return;
         }
         std::vector<uint8_t> p(flen - off::kFrameOverhead);
-        const bool copied = guarded_copy(p.data(), frame + off::kFrameHeader, p.size());
+        const bool copied = guarded_copy(p.data(), frame + off::kFrameHeader, p.size()) &&
+                            native_opcode::decode_packet(game::current_build(), p, troc::Dir::ToGuestClient);
         auto v = copied ? troc::parse_wire(p, troc::Dir::ToGuestClient) : std::nullopt;
         // salida-en-carga.md §2: a Nak 1013 for session 2 (e.g. its logout refused), counted.
         if (copied && p.size() >= 2 && (p[0] | (p[1] << 8)) == kOpNak) {
@@ -534,7 +542,8 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
             const bool move = v->opcode == kOpMoveFieldAck;
             const size_t n = v->payload.size();
             const uint32_t me = g_user2_userkey.load();
-            alias = tpl::alias_owner(p, troc::kHeaderSize, v->opcode, me, move || travel_loading_owner_alias(), &owner_orig);
+            alias = tpl::alias_owner(p, troc::kHeaderSize, v->opcode, me, move || travel_loading_owner_alias(),
+                                     &owner_orig, game::current_build());
             owner_copy = alias == tpl::AliasOut::Rewrite ? me : owner_orig;
             if (move) milestone_value = owner_orig;  // 0 unless the known layout (as before)
             const char* what = move ? "MoveFieldAck 2174" : "LoadingFieldDataAck 2643";
@@ -584,6 +593,11 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
             loading_ack_n = std::min(v->payload.size(), sizeof loading_ack);
             std::memcpy(loading_ack, v->payload.data(), loading_ack_n);
         }
+        // housing_share (housing_share.h): user 2's own housing login set is replaced by the host's.
+        if (housing_share_wanted() && self == live_session2() &&
+            housing_share_on_out(opcode, std::span<const uint8_t>(p.data(), p.size()))) {
+            return;
+        }
         // P8 (observer_hold_acks.h, observer_scene_copy.h): only what goes to the live session 2.
         const bool to_live = (observer_hold_acks_active() || observer_scene_copy_wanted() || horse_follow_active() ||
                               observer_seq_copy_wanted() || attach_follow_active() || combat_follow_active()) &&
@@ -616,6 +630,7 @@ void take_frame(uintptr_t rq, uintptr_t self) noexcept {
             if (to_live && pushed) horse_follow_on_out(opcode, p, &push_outgoing_extra);
             // P8 session 8 pets (attach_follow.h): a child riding the host's character follows its 2697s.
             if (to_live && pushed) attach_follow_on_out(opcode, p, &push_outgoing_extra);
+            if (to_live && pushed) focus_follow_count_out(opcode, v->payload);
             // P8 session 9 C1 (combat_follow.h): who fights user 2, and the enemies' real samples (anchors).
             if (to_live && pushed) combat_follow_on_out(opcode, v->payload);
         }
@@ -691,7 +706,7 @@ int* __fastcall session2_send(void* self, int* res, void* rq) {
         // the server drops its reference and frees it (D0 §3.2). If that is
         // impossible, report failure: SendPacket then frees it itself.
         uintptr_t server_net = 0, q2 = 0;
-        if (!peek(g_base + off::kServerNetSlot, server_net) || !peek(server_net + off::kServerNet_FreeS2C, q2) ||
+        if (!peek(g_base + addr(off::kServerNetSlot), server_net) || !peek(server_net + off::kServerNet_FreeS2C, q2) ||
             !guarded_push(q2, reinterpret_cast<void*>(r + off::kRq_Frame))) {
             result = 1;
         }
@@ -724,7 +739,8 @@ void mirror_copy(uintptr_t pkt, uintptr_t rsp) noexcept {
             return;
         }
         std::vector<uint8_t> p(size);
-        if (!guarded_copy(p.data(), pkt, size)) return;
+        if (!guarded_copy(p.data(), pkt, size) ||
+            !native_opcode::decode_packet(game::current_build(), p, troc::Dir::ToHostServer)) return;
         std::memcpy(p.data() + troc::kHeaderSize, &user2_key, 4);
         std::lock_guard lock(g_mirror_mu);
         if (g_mirror.size() >= kMaxMirrored) {
@@ -739,6 +755,91 @@ void mirror_copy(uintptr_t pkt, uintptr_t rsp) noexcept {
 }
 
 // ---------------------------------------------------------------- P2: OnRecvPacket entry
+
+// Build 3527, the ways a Req of user 2 can outlive the host's user (run 9, exe+0x2AEF244).
+constexpr uintptr_t kServerRecvRet3527 = 0x29AC01A;
+constexpr uintptr_t kSeqEventApply3527 = 0x2AEF1F0;
+constexpr uintptr_t kSeqEventApplyRet3527 = 0x2AEF4B9;
+constexpr uint8_t kSeqEventApplyHead3527[] = {0x48, 0x89, 0x5C, 0x24, 0x10, 0x44, 0x89, 0x4C, 0x24, 0x20, 0x48,
+                                              0x89, 0x4C, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54};
+// Build 1.0.0.3576 (static, 2026-11-06; not yet run). OnRecvPacket 0x29AC440 (profile_s2.h) is 0x82B bytes as in 3527:
+// its only `ret` is at +0x82A (0x29ACC6A). The apply moved by +0xC50 with the same 20-byte head (0x2AEFE40, .pdata
+// 0x2AEFE40..0x2AF010A), its `ret` at +0x2C9 (0x2AF0109) as in 3527, and +0x54 (0x2AEFE94) is the same
+// `mov rdx,[rdx]` on the null owner's manager that crashed run 9 at exe+0x2AEF244.
+struct GoodbyeGuards {
+    uintptr_t recv_ret, apply, apply_ret;
+};
+constexpr GoodbyeGuards kGoodbye3527{kServerRecvRet3527, kSeqEventApply3527, kSeqEventApplyRet3527};
+constexpr GoodbyeGuards kGoodbye3576{0x29ACC6A, 0x2AEFE40, 0x2AF0109};
+const GoodbyeGuards* goodbye_guards() noexcept {
+    switch (game::current_build()) {
+        case game::Build::v3527: return &kGoodbye3527;
+        case game::Build::v3576: return &kGoodbye3576;
+        default: return nullptr;
+    }
+}
+SafetyHookMid g_seq_event_hook;
+uintptr_t g_recv_ret = 0, g_seq_event_ret = 0;
+constexpr uint16_t kOpAttackByCollisionReq = 2815;  // logical; native 2150 on 3527
+std::atomic<uint64_t> g_friendly_fire_dropped{0};
+
+// AttackByCollisionReq: u32 attacker | u32 target | ... Both belong to a user, and not the same one.
+bool cross_player_hit(uintptr_t pkt, uintptr_t rsp) noexcept {
+    uint16_t size = 0;
+    uint32_t attacker = 0, target = 0;
+    if (!peek(rsp + 0x28, size) || size < troc::kHeaderSize + 8 || !peek(pkt + troc::kHeaderSize, attacker) ||
+        !peek(pkt + troc::kHeaderSize + 4, target) || attacker == target) {
+        return false;
+    }
+    try {
+        const auto a = hold_actor_owner(attacker);
+        if (!a || !*a) return false;
+        const auto t = hold_actor_owner(target);
+        return t && *t && *a != *t;
+    } catch (...) {
+        return false;
+    }
+}
+std::atomic<bool> g_host_leaving{false};
+std::atomic<uint64_t> g_after_host_goodbye{0}, g_seq_event_no_manager{0};
+
+// UpdateSequencerGamePlayDataEventReq's handler passes ServerField::vf48's result here as `this`, and vf48 answers
+// null once the field's owner is gone. Queued Reqs already past on_server_recv reach it: they end with no error
+// (out = 0: the handler then sends no Nak, and the client that asked is on its way out with the host's world).
+void on_seq_event_apply(safetyhook::Context& ctx) {
+    if (ctx.rcx) return;
+    g_seq_event_no_manager.fetch_add(1, std::memory_order_relaxed);
+    *reinterpret_cast<int*>(ctx.rdx) = 0;
+    ctx.rax = ctx.rdx;
+    ctx.rip = g_seq_event_ret;
+}
+
+void install_host_goodbye_guards() {
+    constexpr uint8_t kRet = 0xC3;
+    const GoodbyeGuards* g = goodbye_guards();
+    if (!g) {
+        log::warn("Session2: the host's goodbye guards have no addresses for this build; not installed");
+        return;
+    }
+    uint8_t recv_ret = 0, event_ret = 0;
+    uint8_t head[sizeof kSeqEventApplyHead3527]{};
+    if (!game::safe_read(g_base + g->recv_ret, &recv_ret, 1) ||
+        !game::safe_read(g_base + g->apply_ret, &event_ret, 1) ||
+        !game::safe_read(g_base + g->apply, head, sizeof head) || recv_ret != kRet || event_ret != kRet ||
+        std::memcmp(head, kSeqEventApplyHead3527, sizeof head) != 0) {
+        log::warn("Session2: the host's goodbye guards do not match this executable; not installed");
+        return;
+    }
+    g_seq_event_ret = g_base + g->apply_ret;
+    g_seq_event_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + g->apply), on_seq_event_apply);
+    if (!g_seq_event_hook) {
+        log::warn("Session2: cannot hook exe+0x{:X}; a Req of user 2 can crash the host's goodbye", g->apply);
+    }
+    g_recv_ret = g_base + g->recv_ret;  // read by the hook on OnRecvPacket, installed after this
+    log::info("Session2: host's goodbye guards ON (user 2's Reqs stop at the host's 2001; exe+0x{:X} tolerates a field "
+              "without an owner)",
+              g->apply);
+}
 
 void on_server_recv(safetyhook::Context& ctx) {
     // P1 lazily, on this thread (ServerRunThread, server realm): the session
@@ -822,7 +923,33 @@ void on_server_recv(safetyhook::Context& ctx) {
         }
     }
     // P6, second layer (log only, decision D-5): the server is asked to save.
-    if (pkt && peek(pkt, op) && (op == 3037 || op == 2910)) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+    if (pkt && peek(pkt, op)) op = native_opcode::decode(game::current_build(), op).value_or(0);
+    // Run 9: the host's own goodbye deleted its user, the field's owner, and a Req of user 2 still on its way then
+    // found no owner and crashed the server. From the host's goodbye on, user 2's Reqs are not handled.
+    if (g_recv_ret) {
+        if (!from_user2 && op == troc::kOpLogoutSessionReq) {
+            g_host_leaving.store(true, std::memory_order_relaxed);
+        } else if (!from_user2 && op == kOpLoginCharacterToFieldServerReq) {
+            g_host_leaving.store(false, std::memory_order_relaxed);
+        } else if (from_user2 && g_host_leaving.load(std::memory_order_relaxed)) {
+            g_after_host_goodbye.fetch_add(1, std::memory_order_relaxed);
+            *reinterpret_cast<int*>(ctx.rdx) = 0;
+            ctx.rax = ctx.rdx;
+            ctx.rip = g_recv_ret;
+            return;
+        }
+    }
+    if (op == 3037 || op == 2910) g_n.save_reqs.fetch_add(1, std::memory_order_relaxed);
+    // No friendly fire between the two players' sides. The game has no notion of it: a hit from one player's character
+    // or companion on the other's counts, the victim's AI answers, and two companions left side by side (a guest
+    // playing a copy of the host's save has its twins at the same spots) keep fighting for the whole session.
+    if (op == kOpAttackByCollisionReq && g_recv_ret && cross_player_hit(pkt, ctx.rsp)) {
+        g_friendly_fire_dropped.fetch_add(1, std::memory_order_relaxed);
+        *reinterpret_cast<int*>(ctx.rdx) = 0;
+        ctx.rax = ctx.rdx;
+        ctx.rip = g_recv_ret;
+        return;
+    }
     // E4: copy the host player's movement for user 2 (mirror_delay_ms later).
     if (g_opt.mirror_host && (op == kOpMoveActorReq || op == kOpStartActionReq || op == kOpRotateActorReq) &&
         ctx.r8 != s2) {
@@ -965,9 +1092,16 @@ uintptr_t __fastcall except_one_self(void* finder, void* out) { return finder_co
 // ---------------------------------------------------------------- install
 
 bool head_matches(uintptr_t rva, const uint8_t* expected, size_t n, const char* what) {
-    std::vector<uint8_t> actual(n);
-    if (game::safe_read(g_base + rva, actual.data(), n) && std::memcmp(actual.data(), expected, n) == 0) return true;
-    log::error("Session2: {} (exe+0x{:X}) does not start with the expected bytes; option D stays off", what, rva);
+    const auto resolved = addr(rva);
+    const auto sig = profile::signature(rva, {expected, n});
+    if (!resolved || sig.empty()) {
+        log::error("Session2: {} has no verified address/signature for this build; option D stays off", what);
+        return false;
+    }
+    std::vector<uint8_t> actual(sig.size());
+    if (game::safe_read(g_base + resolved, actual.data(), actual.size()) &&
+        std::memcmp(actual.data(), sig.data(), sig.size()) == 0) return true;
+    log::error("Session2: {} (exe+0x{:X}) does not start with the expected bytes; option D stays off", what, resolved);
     return false;
 }
 
@@ -975,12 +1109,13 @@ void load_channels() {
     g_channel.fill(kNotReq);
     g_blocked_channel.fill(kNotReq);
     size_t n = 0, blocked = 0;
-    for (uintptr_t a = g_base + off::kTrocInstancesBegin; a < g_base + off::kTrocInstancesEnd; a += 8) {
+    for (uintptr_t a = g_base + addr(off::kTrocInstancesBegin); a < g_base + addr(off::kTrocInstancesEnd); a += 8) {
         auto vt = game::read_ptr(a);
         if (!vt || *vt < g_base || *vt >= g_base + 0x10000000) continue;
         if (game::rtti_name_of_vtable(*vt).rfind(".?AVTrocTr", 0) != 0) continue;
         auto kind = game::read<uint32_t>(a + off::kTroc_Kind);
         auto op = game::read<uint16_t>(a + off::kTroc_Opcode);
+        if (op) op = native_opcode::decode(game::current_build(), *op);
         auto ch = game::read<uint8_t>(a + off::kTroc_Channel);
         const std::string name =
             kind && *kind != off::kTrocKindServer ? game::short_class_name(game::rtti_name_of_vtable(*vt), "TrocTr")
@@ -1024,11 +1159,11 @@ bool build_vtable() {
         VirtualAlloc(nullptr, 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
     if (!vt) return false;
     // COL at [-1] keeps the RTTI name; then the 15 entries.
-    if (!game::safe_read(g_base + off::kNwVirtualAsyncSessionVtable - 8, vt,
+    if (!game::safe_read(g_base + addr(off::kNwVirtualAsyncSessionVtable) - 8, vt,
                          (off::kSessionVtableEntries + 1) * sizeof(uintptr_t))) {
         return false;
     }
-    if (vt[1 + off::kSessionVfSend] != g_base + off::kSessionSend) return false;
+    if (vt[1 + off::kSessionVfSend] != g_base + addr(off::kSessionSend)) return false;
     vt[1 + off::kSessionVfSend] = reinterpret_cast<uintptr_t>(&session2_send);
     DWORD old = 0;
     VirtualProtect(vt, 4096, PAGE_READONLY, &old);
@@ -1037,8 +1172,10 @@ bool build_vtable() {
 }
 
 bool vtable_slot_is(uintptr_t vtable_rva, int slot, uintptr_t fn_rva) {
-    auto v = game::read<uintptr_t>(g_base + vtable_rva + 8 * slot);
-    return v && *v == g_base + fn_rva;
+    const auto vt = addr(vtable_rva), fn = addr(fn_rva);
+    if (!vt || !fn) return false;
+    auto v = game::read<uintptr_t>(g_base + vt + 8 * slot);
+    return v && *v == g_base + fn;
 }
 
 }  // namespace
@@ -1046,9 +1183,7 @@ bool vtable_slot_is(uintptr_t vtable_rva, int slot, uintptr_t fn_rva) {
 bool server_install(const ServerOptions& opt) {
     g_opt = opt;
     g_base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(g_base);
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(g_base + dos->e_lfanew);
-    if (g_base != off::kImageBase || nt->FileHeader.TimeDateStamp != off::kPeTimestamp) {
+    if (!profile::supported_build() || !game::validate_native_catalog()) {
         log::error("Session2: unsupported game build; option D stays off");
         return false;
     }
@@ -1086,11 +1221,11 @@ bool server_install(const ServerOptions& opt) {
         }
     }
 
-    g_alloc_global = reinterpret_cast<AllocFn>(g_base + off::kAllocGlobal);
-    g_alloc_thread = reinterpret_cast<AllocFn>(g_base + off::kAllocThread);
-    g_ctor = reinterpret_cast<CtorFn>(g_base + off::kNwSessionCtor);
-    g_push = reinterpret_cast<PushFn>(g_base + off::kQueuePush);
-    g_to_near = reinterpret_cast<FinderVf1>(g_base + off::kToNearVf1);
+    g_alloc_global = reinterpret_cast<AllocFn>(g_base + addr(off::kAllocGlobal));
+    g_alloc_thread = reinterpret_cast<AllocFn>(g_base + addr(off::kAllocThread));
+    g_ctor = reinterpret_cast<CtorFn>(g_base + addr(off::kNwSessionCtor));
+    g_push = reinterpret_cast<PushFn>(g_base + addr(off::kQueuePush));
+    g_to_near = reinterpret_cast<FinderVf1>(g_base + addr(off::kToNearVf1));
 
     if (hooks_server) {
         load_channels();
@@ -1105,7 +1240,8 @@ bool server_install(const ServerOptions& opt) {
             g_opt.mirror_host = false;
         }
         g_want_session.store(opt.create_session);
-        g_recv_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + off::kServerOnRecvPacket), on_server_recv);
+        if (opt.create_session && goodbye_guards()) install_host_goodbye_guards();
+        g_recv_hook = safetyhook::create_mid(reinterpret_cast<void*>(g_base + addr(off::kServerOnRecvPacket)), on_server_recv);
         if (!g_recv_hook) {
             g_want_session.store(false);
             log::error("Session2: cannot hook ServerNet::OnRecvPacket; option D stays off");
@@ -1119,35 +1255,35 @@ bool server_install(const ServerOptions& opt) {
         // relocates exactly the first instruction (7 bytes, mov rax,[r15+0xE0]).
         std::vector<gad::Section> secs;
         if (!p8_exe_sections(g_base, secs) ||
-            !p8_install_mid(g_base, secs, off::kNetLoopPump, off::kNetLoopPumpPatch,
+            !p8_install_mid(g_base, secs, addr(off::kNetLoopPump), off::kNetLoopPumpPatch,
                             std::span<const uint8_t>(off::kNetLoopPumpAob, sizeof off::kNetLoopPumpAob),
                             on_client_pump, g_pump_hook, "Session2", "the client NetworkThread's turn")) {
             g_want_session.store(false);
             g_recv_hook = {};
             log::error("Session2: cannot hook the client NetworkThread's turn (exe+0x{:X}); option D stays off",
-                       off::kNetLoopPump);
+                       addr(off::kNetLoopPump));
             return false;
         }
         log::info("Session2: the guest's Req go to the server from the client NetworkThread (mid-hook exe+0x{:X}, "
                   "every turn <= 16 ms): buffer from that thread's own heap (exe+0x{:X}), push exe+0x{:X}; queue "
                   "{} Req / {} MB, at most {} not yet taken by the server",
-                  off::kNetLoopPump, off::kAllocThread, off::kQueuePush, g_q.limits().max_packets,
+                  addr(off::kNetLoopPump), addr(off::kAllocThread), addr(off::kQueuePush), g_q.limits().max_packets,
                   g_q.limits().max_bytes >> 20, g_q.limits().in_flight_max);
         if (g_opt.mirror_host) {
             CloseHandle(CreateThread(nullptr, 0, mirror_thread, nullptr, 0, nullptr));
             log::info("Session2: mirror on: user 2 repeats the host player's movement {} ms later",
                       opt.mirror_delay_ms);
         }
-        log::info("Session2: hooked ServerNet::OnRecvPacket (exe+0x{:X}); session 2 {}", off::kServerOnRecvPacket,
+        log::info("Session2: hooked ServerNet::OnRecvPacket (exe+0x{:X}); session 2 {}", addr(off::kServerOnRecvPacket),
                   opt.create_session ? "will be built on the server thread" : "not built (create_session=0)");
     }
     if (hooks_finders) {
         // Created disabled and enabled once assigned: the detours call through
         // these objects (review finding 4).
-        g_control_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + off::kExceptOneVf1),
+        g_control_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + addr(off::kExceptOneVf1)),
                                                    reinterpret_cast<void*>(&except_one_control),
                                                    SafetyHookInline::StartDisabled);
-        g_self_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + off::kExceptOneSelfVf1),
+        g_self_hook = safetyhook::create_inline(reinterpret_cast<void*>(g_base + addr(off::kExceptOneSelfVf1)),
                                                 reinterpret_cast<void*>(&except_one_self),
                                                 SafetyHookInline::StartDisabled);
         if (!g_control_hook || !g_self_hook || !g_control_hook.enable() || !g_self_hook.enable()) {
@@ -1165,9 +1301,9 @@ bool server_install(const ServerOptions& opt) {
 void server_probe_log(const char* when) {
     using game::read;
     using game::read_ptr;
-    const auto sn = read_ptr(g_base + off::kServerNetSlot);
-    const auto cn = read_ptr(g_base + off::kClientNetSlot);
-    const auto sam = read_ptr(g_base + off::kSamSlot);
+    const auto sn = read_ptr(g_base + addr(off::kServerNetSlot));
+    const auto cn = read_ptr(g_base + addr(off::kClientNetSlot));
+    const auto sam = profile::sam_ptr(g_base, [](uintptr_t a) { return game::read_ptr(a); });
     auto rva = [](std::optional<uintptr_t> v) {
         return v ? std::format("exe+0x{:X}", *v - g_base) : std::string("?");
     };
@@ -1217,25 +1353,26 @@ void server_probe_log(const char* when) {
     }
     // E3 (opcion-d-e3-riesgos.md §1.3-§1.6): is each user's character in the
     // same field? Main character = [user+0xD0]; TS = [[pj+0x68]+0x1A0];
-    // sector = [TS+0x540]. Users in different ServerField instances never
+    // sector = [TS+runtime field layout]. Users in different ServerField instances never
     // share a sector, so the host would not see user 2.
     auto where = [&](std::optional<uintptr_t> session) -> std::string {
+        const auto& layout = runtime_field_layout();
         if (!session) return "-";
         const auto user = read_ptr(*session + off::kSession_User);
         const auto pj = user ? read_ptr(*user + 0xD0) : std::nullopt;
         const auto key = pj ? read<uint32_t>(*pj + off::kServerActor_Key) : std::nullopt;
         const auto c68 = pj ? read_ptr(*pj + 0x68) : std::nullopt;
         const auto ts = c68 ? read_ptr(*c68 + 0x1A0) : std::nullopt;
-        const auto sector = ts ? read_ptr(*ts + 0x540) : std::nullopt;
-        // Its ServerField: [TS+0x4F0+0x10] (opcion-d-campo-compartido.md §1): owner +0x180,
-        // users in the field +0x2A8 (the game lets in only one), user actors +0x2B0,
-        // generation +0x2C8.
-        const auto field = ts ? read_ptr(*ts + 0x500) : std::nullopt;
+        const auto sector = ts ? read_ptr(*ts + layout.ts_sector) : std::nullopt;
+        // Its ServerField: [TS+FieldMover+0x10] (opcion-d-campo-compartido.md §1).
+        const auto field = ts ? read_ptr(*ts + layout.ts_field_mover + fld::kFmField) : std::nullopt;
         std::string f = "-";
         if (field) {
             f = std::format("{} owner {} users {} user actors {} generation {}", hex(field),
-                            hex(read<uint32_t>(*field + 0x180)), hex(read<uint32_t>(*field + 0x2A8)),
-                            hex(read<uint32_t>(*field + 0x2B0)), hex(read<uint32_t>(*field + 0x2C8)));
+                            hex(read<uint32_t>(*field + fld::kOwner)),
+                            hex(read<uint32_t>(*field + layout.user_count)),
+                            hex(read<uint32_t>(*field + layout.user_actors)),
+                            hex(read<uint32_t>(*field + layout.key)));
         }
         return std::format("character {} key {} TS {} sector {} field {}", hex(pj), hex(key), hex(ts), hex(sector),
                            f);
@@ -1245,10 +1382,18 @@ void server_probe_log(const char* when) {
               s2 ? where(std::optional<uintptr_t>(s2)) : std::string("-"));
     // The server's world time (FieldTime, exe+0x6A6D238): user 2's MoveField and
     // LoadingCompleteReq 01 copy its save's time here (R1).
+    // 3576 (static, 2026-11-06; not yet run): 0x6EAD9B8, what GetCurrentFieldTime 0x22A9BB0 (3527's 0x22A8F70 +0xC40,
+    // same head) loads at 0x22A9C20 when the TLS realm byte +0x1EB is set (the client's at 0x6EAD998 otherwise): the
+    // Troc block's +0x2000.
     uint8_t ft[32] = {};
-    if (game::safe_read(g_base + 0x6A6D238, ft, sizeof ft)) {
+    const auto b = game::current_build();
+    const uintptr_t world_time = b == game::Build::v3576   ? 0x6EAD9B8
+                                 : b == game::Build::v3527 ? 0x6EAB9B8
+                                 : b == game::Build::v2976 ? 0x6A6D238
+                                                           : 0;
+    if (world_time && game::safe_read(g_base + world_time, ft, sizeof ft)) {
         std::string h;
-        for (uint8_t b : ft) h += std::format("{:02X}", b);
+        for (uint8_t byte : ft) h += std::format("{:02X}", byte);
         log::info("Session2 probe ({}): server FieldTime {}", when, h);
     }
 }
@@ -1270,13 +1415,13 @@ bool server_user2_present() {
 bool server_users(uintptr_t& host, uintptr_t& user2) {
     uintptr_t net = 0, s1 = 0;
     const uintptr_t s2 = live_session2();
-    return s2 && peek(g_base + off::kServerNetSlot, net) && peek(net + off::kServerNet_Session, s1) &&
+    return s2 && peek(g_base + addr(off::kServerNetSlot), net) && peek(net + off::kServerNet_Session, s1) &&
            session_user(s1, host) && session_user(s2, user2);
 }
 
 bool server_host_user(uintptr_t& host) {
     uintptr_t net = 0, s1 = 0;
-    return peek(g_base + off::kServerNetSlot, net) && peek(net + off::kServerNet_Session, s1) &&
+    return peek(g_base + addr(off::kServerNetSlot), net) && peek(net + off::kServerNet_Session, s1) &&
            session_user(s1, host);
 }
 
@@ -1316,7 +1461,7 @@ namespace {
 // the injection for good: no retry (the game's state may be damaged). Only the
 // allocation from the thread's own heap and our filling are handled; inside the
 // push (Q0's lock) it is passed on (note_exception, P8 review I1).
-bool push_request(uintptr_t server_net, const uint8_t* pkt, size_t len, uint8_t channel, uint32_t tag,
+bool push_native_request(uintptr_t server_net, const uint8_t* pkt, size_t len, uint8_t channel, uint32_t tag,
                   uint16_t opcode, uint32_t epoch) {
     void* mem = nullptr;
     if (!game_alloc(off::kPbSize, mem, opcode, epoch)) return false;
@@ -1349,6 +1494,14 @@ bool push_request(uintptr_t server_net, const uint8_t* pkt, size_t len, uint8_t 
     }
 }
 
+// Keep C++ buffer lifetime outside the SEH-only native allocation/publication function.
+bool push_request(uintptr_t server_net, const uint8_t* pkt, size_t len, uint8_t channel, uint32_t tag,
+                  uint16_t opcode, uint32_t epoch) {
+    const auto native = native_opcode::encode_copy(game::current_build(), {pkt, len}, troc::Dir::ToHostServer);
+    if (!native) return false;
+    return push_native_request(server_net, native->data(), native->size(), channel, tag, opcode, epoch);
+}
+
 // The NetworkThread hook's body: hands what is due, in order, bounded by the
 // buffers the server has not taken yet (a paused server keeps the rest here).
 void pump_body(uintptr_t client_net) {
@@ -1358,11 +1511,11 @@ void pump_body(uintptr_t client_net) {
     if (!g_q_size.load(std::memory_order_acquire) || g_halted_epoch.load()) return;
     uintptr_t cn = 0, server_net = 0;
     // Only the client of the current game (r15 = ClientNet at 0x35BAD4) and a live server.
-    if (!peek(g_base + off::kClientNetSlot, cn) || cn != client_net) {
+    if (!peek(g_base + addr(off::kClientNetSlot), cn) || cn != client_net) {
         g_pump_other_net.fetch_add(1, std::memory_order_relaxed);
         return;
     }
-    if (!peek(g_base + off::kServerNetSlot, server_net) || !server_net) return;
+    if (!peek(g_base + addr(off::kServerNetSlot), server_net) || !server_net) return;
     const uint32_t tid = GetCurrentThreadId();
     if (g_pump_tid.load(std::memory_order_relaxed) != tid) g_pump_tid.store(tid);
     const uint32_t epoch = g_want_epoch.load();
@@ -1507,6 +1660,11 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
         g_n.inject_blocked.fetch_add(1);
         return inj::Outcome::Blocked;
     }
+    // housing_share_guest_spawn=0 (housing_share.h): user 2 never spawns the host's housing gimmicks itself.
+    if (housing_share_wanted() && housing_share_blocks_request(v->opcode)) {
+        g_n.inject_blocked.fetch_add(1);
+        return inj::Outcome::Blocked;
+    }
     // Two save slots user 2 never loads (opcion-d-p9.md): 3 is CrossSave (saving
     // it uploads the files to Pearl Abyss with the host's account) and 206 is
     // deleted after loading. LoginCharacterToFieldServerReq: u8 | u64 | u32 slot @9.
@@ -1540,7 +1698,7 @@ inj::Outcome inject(std::span<const uint8_t> in, InjectKind kind) {
         return inj::Outcome::Refused;
     }
     uintptr_t server_net = 0;
-    if (!peek(g_base + off::kServerNetSlot, server_net) || !server_net) {
+    if (!peek(g_base + addr(off::kServerNetSlot), server_net) || !server_net) {
         g_held_not_ready.fetch_add(1);
         return inj::Outcome::NotReady;
     }
@@ -1862,7 +2020,7 @@ bool server_logout_handed() { return g_logout_handed.load() != 0; }
 bool server_capture_user2(DepartedSnap& snap) {
     uintptr_t user = 0;
     // p8-tunel-rendimiento.md: the C4 readings use probe_read (no VirtualQuery by default).
-    const auto sam = probe_ptr(g_base + off::kSamSlot);
+    const auto sam = profile::sam_ptr(g_base, [](uintptr_t a) { return probe_ptr(a); });
     if (!session_user(live_session2(), user) || !sam) return false;
     capture_departed(*sam, user, snap);
     // The character key of its MainPlayerDataStartAck (E4/E3b) too, if it resolves.
@@ -1879,12 +2037,12 @@ bool server_host_field(FieldSnap& out) {
     uintptr_t host = 0;
     if (!server_host_user(host)) return false;
     // The probe's path (server_probe_log `where`): [user+0xD0] main character,
-    // TS = [[pj+0x68]+0x1A0], field = [TS+0x4F0+0x10].
+    // TS = [[pj+0x68]+0x1A0], field = [TS+build FieldMover+0x10].
     const auto key = probe<uint32_t>(host + off::kUser_Key);
     const auto pj = probe_ptr(host + c4::kUserMainCharacter);
     const auto c68 = pj ? probe_ptr(*pj + 0x68) : std::nullopt;
     const auto ts = c68 ? probe_ptr(*c68 + 0x1A0) : std::nullopt;
-    const auto field = ts ? probe_ptr(*ts + fld::kTsFieldMover + fld::kFmField) : std::nullopt;
+    const auto field = ts ? probe_ptr(*ts + runtime_field_layout().ts_field_mover + fld::kFmField) : std::nullopt;
     if (!key || !field || !read_field(*field, out)) return false;
     out.host_key = *key;
     out.ok = true;
@@ -1908,7 +2066,7 @@ void server_barrier_read(uint32_t epoch, const DepartedSnap& snap, BarrierReadin
         // (and still a ServerUserActor), what its logout waits for. Read only.
         if (r.session_user) {
             const auto vt = probe_ptr(r.session_user);
-            r.move_diag = vt && *vt == g_base + off::kServerUserActorVtable
+            r.move_diag = vt && *vt == g_base + addr(off::kServerUserActorVtable)
                               ? read_move_diag(r.session_user).describe()
                               : std::string("attached user is no ServerUserActor any more");
         }
@@ -1916,7 +2074,7 @@ void server_barrier_read(uint32_t epoch, const DepartedSnap& snap, BarrierReadin
     r.nak_after_logout = g_nak_after_logout.load();
     lap(r.us_session);
     // b. By key only: the old pointers are never followed.
-    if (const auto sam = probe_ptr(g_base + off::kSamSlot)) {
+    if (const auto sam = profile::sam_ptr(g_base, [](uintptr_t a) { return probe_ptr(a); })) {
         r.sam_read = true;
         for (uint32_t k : snap.keys) {
             const auto res = sam_key_resolves(*sam, k);
@@ -1976,7 +2134,7 @@ namespace {
 std::string server_threads_park() {
     uintptr_t net = 0, arr = 0;
     uint32_t n = 0;
-    if (!peek(g_base + off::kServerNetSlot, net) || !net || !peek(net + off::kServerNet_Threads, arr) || !arr ||
+    if (!peek(g_base + addr(off::kServerNetSlot), net) || !net || !peek(net + off::kServerNet_Threads, arr) || !arr ||
         !peek(net + off::kServerNet_ThreadCount, n)) {
         return "server threads unreadable";
     }
@@ -2101,7 +2259,9 @@ std::string server_inject_describe() {
     if (g_pump_not_ready.load()) {
         s += std::format(" | turns without session 2's server (nothing handed) {}", g_pump_not_ready.load());
     }
-    if (g_global_heap_flag.load()) s += std::format(" | TLS+0x1FD set (global heap used) {}", g_global_heap_flag.load());
+    if (g_global_heap_flag.load())
+        s += std::format(" | TLS+0x{:X} set (global heap used) {}", profile::tls_heap_selector_offset(),
+                         g_global_heap_flag.load());
     if (const uint32_t x = g_exc_count.load()) s += std::format(" | EXCEPTIONS {} (HALTED)", x);
     else if (g_halted_epoch.load()) s += " | HALTED";
     return s;
@@ -2116,6 +2276,11 @@ std::string server_epoch_describe() {
         s += std::format(" | old-epoch buffers routed to their own session {} untagged {} | old sessions' output "
                          "dropped {}",
                          g_stale_routed.load(), g_untagged_routed.load(), g_late_out.load());
+    }
+    if (g_friendly_fire_dropped.load()) s += std::format(" | hits between the players' sides dropped {}", g_friendly_fire_dropped.load());
+    if (g_after_host_goodbye.load() || g_seq_event_no_manager.load()) {
+        s += std::format(" | after the host's goodbye: Reqs not handled {}, events without an owner {}",
+                         g_after_host_goodbye.load(), g_seq_event_no_manager.load());
     }
     return s;
 }

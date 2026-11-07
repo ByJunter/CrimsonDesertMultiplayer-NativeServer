@@ -1,0 +1,77 @@
+
+=== 2BB0BC0: 0x2BB0BC0 range={'begin': 45812656, 'end': 45812781, 'unwind': 105912720, 'offset': 16} section=.rsrc ===
+02BB0BC0 0833                     or       byte ptr [rbx], dh
+02BB0BC2 c9                       leave    
+02BB0BC3 4885c0                   test     rax, rax
+02BB0BC6 480f44d1                 cmove    rdx, rcx
+02BB0BCA 41b001                   mov      r8b, 1
+02BB0BCD 488b12                   mov      rdx, qword ptr [rdx]
+02BB0BD0 488d4c2420               lea      rcx, [rsp + 0x20]
+02BB0BD5 e8562d83fd               call     0x3e3930
+02BB0BDA 90                       nop      
+02BB0BDB c6836004000001           mov      byte ptr [rbx + 0x460], 1
+02BB0BE2 488b5c2420               mov      rbx, qword ptr [rsp + 0x20]
+02BB0BE7 488b03                   mov      rax, qword ptr [rbx]
+02BB0BEA 33d2                     xor      edx, edx
+02BB0BEC 488bcb                   mov      rcx, rbx
+02BB0BEF ff5020                   call     qword ptr [rax + 0x20]
+02BB0BF2 807c242801               cmp      byte ptr [rsp + 0x28], 1
+02BB0BF7 752e                     jne      0x2bb0c27
+02BB0BF9 b8ffffffff               mov      eax, 0xffffffff
+02BB0BFE f00fc14308               lock xadd dword ptr [rbx + 8], eax
+02BB0C03 83f801                   cmp      eax, 1
+02BB0C06 7512                     jne      0x2bb0c1a
+02BB0C08 f7430c00000040           test     dword ptr [rbx + 0xc], 0x40000000
+02BB0C0F 7416                     je       0x2bb0c27
+02BB0C11 488b03                   mov      rax, qword ptr [rbx]
+02BB0C14 488bcb                   mov      rcx, rbx
+02BB0C17 ff5040                   call     qword ptr [rax + 0x40]
+02BB0C1A f7430c00000040           test     dword ptr [rbx + 0xc], 0x40000000
+02BB0C21 7404                     je       0x2bb0c27
+02BB0C23 f0ff4b0c                 lock dec dword ptr [rbx + 0xc]
+02BB0C27 4883c430                 add      rsp, 0x30
+02BB0C2B 5b                       pop      rbx
+02BB0C2C c3                       ret      
+
+=== 2BB0B00: 0x2BB0B00 range={'begin': 45811808, 'end': 45812635, 'unwind': 110431124, 'offset': 672} section=.rsrc ===
+02BB0B00 2460                     and      al, 0x60
+02BB0B02 897c2448                 mov      dword ptr [rsp + 0x48], edi
+02BB0B06 e8457c0100               call     0x2bc8750
+02BB0B0B eb61                     jmp      0x2bb0b6e
+02BB0B0D 488b4208                 mov      rax, qword ptr [rdx + 8]
+02BB0B11 4889457f                 mov      qword ptr [rbp + 0x7f], rax
+02BB0B15 8b02                     mov      eax, dword ptr [rdx]
+02BB0B17 894577                   mov      dword ptr [rbp + 0x77], eax
+02BB0B1A 498b4068                 mov      rax, qword ptr [r8 + 0x68]
+02BB0B1E 488b4020                 mov      rax, qword ptr [rax + 0x20]
+02BB0B22 4885c0                   test     rax, rax
+02BB0B25 7509                     jne      0x2bb0b30
+02BB0B27 488d0572342f04           lea      rax, [rip + 0x42f3472]
+02BB0B2E eb07                     jmp      0x2bb0b37
+02BB0B30 488b8090000000           mov      rax, qword ptr [rax + 0x90]
+02BB0B37 488b00                   mov      rax, qword ptr [rax]
+02BB0B3A 488945e7                 mov      qword ptr [rbp - 0x19], rax
+02BB0B3E 488d4567                 lea      rax, [rbp + 0x67]
+02BB0B42 4889842480000000         mov      qword ptr [rsp + 0x80], rax
+02BB0B4A 488d457f                 lea      rax, [rbp + 0x7f]
+02BB0B4E 4889442478               mov      qword ptr [rsp + 0x78], rax
+02BB0B53 488d4577                 lea      rax, [rbp + 0x77]
+02BB0B57 4889442470               mov      qword ptr [rsp + 0x70], rax
+02BB0B5C 488d45e7                 lea      rax, [rbp - 0x19]
+02BB0B60 4889442468               mov      qword ptr [rsp + 0x68], rax
+02BB0B65 897c2448                 mov      dword ptr [rsp + 0x48], edi
+02BB0B69 e8627e0100               call     0x2bc89d0
+02BB0B6E 41893e                   mov      dword ptr [r14], edi
+02BB0B71 eb03                     jmp      0x2bb0b76
+02BB0B73 41893e                   mov      dword ptr [r14], edi
+02BB0B76 488d0553a93103           lea      rax, [rip + 0x331a953]
+02BB0B7D 488945ef                 mov      qword ptr [rbp - 0x11], rax
+02BB0B81 498bc6                   mov      rax, r14
+02BB0B84 488b9c2428010000         mov      rbx, qword ptr [rsp + 0x128]
+02BB0B8C 4881c4f0000000           add      rsp, 0xf0
+02BB0B93 415f                     pop      r15
+02BB0B95 415e                     pop      r14
+02BB0B97 5f                       pop      rdi
+02BB0B98 5e                       pop      rsi
+02BB0B99 5d                       pop      rbp
+02BB0B9A c3                       ret      

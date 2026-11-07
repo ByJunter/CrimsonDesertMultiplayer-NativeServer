@@ -64,6 +64,9 @@ public:
 
     enum class Seen : uint8_t { Other, Prepared, Replaced, Closed, ClosedUnknown, Trip };
 
+    // Build 1.0.0.3527: the prefix is one byte longer (captured lengths 92 + 11 * n).
+    void set_prepare_prefix(size_t prefix) { prefix_ = prefix; }
+
     void on_epoch(uint32_t epoch) {
         v_.clear();
         epoch_ = epoch;
@@ -82,7 +85,7 @@ public:
             return Seen::Trip;
         }
         if (opcode == kOpPrepare) {
-            if (payload.size() < kPreparePrefix || (payload.size() - kPreparePrefix) % kBindingWire) return Seen::Other;
+            if (payload.size() < prefix_ || (payload.size() - prefix_) % kBindingWire) return Seen::Other;
             Delivered d;
             d.actor = le32(&payload[1]);
             d.owner = le32(&payload[5]);
@@ -136,6 +139,7 @@ public:
     uint64_t evicted() const { return evicted_; }
 
 private:
+    size_t prefix_ = kPreparePrefix;
     size_t cap_;
     std::vector<Delivered> v_;
     uint32_t epoch_ = 0, trip_ = 0;

@@ -96,6 +96,9 @@ inline constexpr uint16_t kOpDelayEndReq = 2105;    // StageBranchStateDelayEndR
 
 inline constexpr size_t kHeader = 5;           // u16 opcode | i8 slot | u16 payload length
 inline constexpr size_t kPreparePrefix = 91;   // u8 kind | u32 actor | 86-byte play data (owner +0, seq +8)
+// Build 1.0.0.3527 [V capture host_20261105-074344: 2661 lengths 92 + 11 n; the 2005, 2174, 2981, 2810, 2516 and the C>S
+// Reqs this file reads keep their fields]: one byte more of play data, before the bindings.
+inline constexpr size_t kPreparePrefix3527 = 92;
 inline constexpr size_t kBindingWire = 11;     // u32 node | u32 actor | u8 type | 2 x u8
 inline constexpr size_t kBranchMin = 17;       // u8 kind | u32 actor | u64 seq | u32 ...
 inline constexpr size_t kDeletePayload = 17;   // u32 actor | u64 seq | u32 | u8
@@ -215,17 +218,17 @@ struct Prepare {
     uint64_t seq = 0;    // play data +8
     std::vector<Binding> bindings;
 };
-inline std::optional<Prepare> parse_prepare(std::span<const uint8_t> p) {
-    if (p.size() < kPreparePrefix || (p.size() - kPreparePrefix) % kBindingWire != 0) return std::nullopt;
+inline std::optional<Prepare> parse_prepare(std::span<const uint8_t> p, size_t prefix = kPreparePrefix) {
+    if (p.size() < prefix || (p.size() - prefix) % kBindingWire != 0) return std::nullopt;
     Prepare r;
     r.kind = p[0];
     r.actor = le32(&p[1]);
     r.owner = le32(&p[5]);
     r.seq = le64(&p[9]);
-    const size_t n = (p.size() - kPreparePrefix) / kBindingWire;
+    const size_t n = (p.size() - prefix) / kBindingWire;
     r.bindings.reserve(n);
     for (size_t i = 0; i < n; ++i) {
-        const uint8_t* b = &p[kPreparePrefix + i * kBindingWire];
+        const uint8_t* b = &p[prefix + i * kBindingWire];
         r.bindings.push_back({le32(b), le32(b + 4), b[8]});
     }
     return r;
@@ -328,6 +331,9 @@ class Ledger {
 public:
     explicit Ledger(LedgerLimits l = {}) : l_(l) {}
 
+    // Build 1.0.0.3527: kPreparePrefix3527. Set before the first packet.
+    void set_prepare_prefix(size_t prefix) { prefix_ = prefix; }
+
     // One S>C packet of the host's own client (whole). seq: the sequencer it is about.
     HostSeen on_host_packet(std::span<const uint8_t> raw, uint64_t t_us, uint64_t* seq_out = nullptr) {
         const auto v = split(raw);
@@ -344,7 +350,7 @@ public:
                 ++fields_;
                 return HostSeen::NewField;
             case kOpPrepare: {
-                const auto p = parse_prepare(v->payload);
+                const auto p = parse_prepare(v->payload, prefix_);
                 if (!p || p->kind != 4) return HostSeen::Bad;
                 if (seq_out) *seq_out = p->seq;
                 if (p->owner != p->actor) {
@@ -480,6 +486,7 @@ private:
     uint64_t known_full_ = 0;
 
     LedgerLimits l_;
+    size_t prefix_ = kPreparePrefix;
     std::unordered_map<uint64_t, SeqRec> live_;
     std::unordered_map<uint64_t, Early> early_;
     std::unordered_set<uint64_t> known_;

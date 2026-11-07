@@ -12,7 +12,12 @@
 //
 // Resends wait for the resend timeout: kResendMs, or twice the measured RTT
 // when that is longer, doubled for every resend of the same fragment, up to
-// kMaxResendMs. Over a transport with its own send queue (Steam) the owner
+// kMaxResendMs. Fast resend: a fragment still unacknowledged when kFastAfter
+// fragments sent after it have been acknowledged, and at least one RTT (kFastMinMs
+// at least) after it went out, is resent at once, at most kMaxFast times: with an
+// ordered stream every message behind a lost fragment waits for it, and over Steam
+// (RTT ~110 ms) the timeout alone held the other player still for 250 ms or more
+// (2026-11-05: 166 resends in 13 minutes). Over a transport with its own send queue (Steam) the owner
 // also gives a "can send" probe: while it says no, nothing new goes out and
 // nothing is resent (a full queue only delays the acks; resending into it
 // would multiply the traffic, which is what saturated the first P8 session).
@@ -38,6 +43,9 @@ public:
     static constexpr uint32_t kResendMs = 250;     // shortest resend timeout
     static constexpr uint32_t kMaxResendMs = 2000; // longest, after backoff
     static constexpr size_t kMaxResendPerTick = 64;
+    static constexpr uint32_t kFastAfter = 3;      // later fragments acknowledged before a fast resend
+    static constexpr uint32_t kFastMinMs = 30;     // never sooner than this after the fragment went out
+    static constexpr uint32_t kMaxFast = 2;        // fast resends per fragment; then only the timeout
     static constexpr size_t kWindow = 128;        // fragments in flight (unacknowledged), by default
     static constexpr size_t kMaxWindow = 1024;
     static constexpr size_t kMaxQueued = 2048;    // fragments waiting for the window (~2.2 MB)
@@ -83,6 +91,7 @@ public:
 
     size_t unacked_fragments() const { return outgoing_.size() + queued_.size(); }
     uint64_t resent() const { return resent_; }
+    uint64_t fast_resent() const { return fast_resent_; }  // of resent(): those sent before their timeout
     uint64_t refused() const { return refused_; }  // fragments not kept (no room, too far ahead, old stream)
     uint64_t held_back() const { return held_back_; }  // ticks/sends that stopped because the link could not take more
 
@@ -91,7 +100,10 @@ private:
         proto::RelData data;
         uint32_t last_sent_ms;
         uint32_t resends = 0;
+        uint64_t seq = 0;   // order of its last transmission among all of this channel's
+        uint32_t fast = 0;  // fast resends so far
     };
+    bool fast_due(const Outgoing& out, uint32_t now_ms) const;
     bool can_send();
     struct Partial {
         proto::RelKind kind;
@@ -117,7 +129,9 @@ private:
     std::set<uint32_t> old_streams_;        // streams we moved away from: their stragglers are ignored
     std::map<uint32_t, Partial> incoming_;  // msg id -> fragments so far
     std::map<uint32_t, Message> ready_;     // complete, waiting for earlier ones
-    uint64_t resent_ = 0, refused_ = 0, held_back_ = 0;
+    uint64_t resent_ = 0, refused_ = 0, held_back_ = 0, fast_resent_ = 0;
+    uint64_t send_seq_ = 0;   // transmissions so far (new and resent)
+    uint64_t acked_seq_ = 0;  // the latest transmission whose fragment was acknowledged
 };
 
 }  // namespace cdmp

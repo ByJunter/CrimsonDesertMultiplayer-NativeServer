@@ -15,6 +15,7 @@
 #include "mod/game/camera_reader.h"
 #include "mod/log.h"
 #include "mod/render/dx12_hook.h"
+#include "mod/render/hud_status.h"
 #include "mod/role.h"
 
 namespace cdmp::render {
@@ -33,9 +34,9 @@ std::atomic<uint64_t> g_notice_until{0};  // GetTickCount64 deadline
 const char* notice_text(Notice n) {
     switch (n) {
         case Notice::FastTravelVetoed:
-            return "Viaje rapido no disponible en cooperativo (invitado): ve andando o a caballo";
+            return "Fast travel is not available to the guest in co-op: walk or ride";
         case Notice::ReentrySlotKept:
-            return "Reentrada: se juega tu partida del anfitrión (la de tu última salida), no la ranura elegida";
+            return "Rejoining: you keep playing your save on the host (from your last exit), not the slot you picked";
         default:
             return nullptr;
     }
@@ -58,7 +59,7 @@ void draw_remote_marker(ImDrawList* dl, const game::ScreenPoint& p, const HudDat
     const ImVec2 c(p.x, p.y);
     dl->AddCircleFilled(c, 7.0f, kShadow);
     dl->AddCircleFilled(c, 5.0f, kAccent);
-    const std::string name = d.peer_name.empty() ? "Jugador 2" : d.peer_name;
+    const std::string name = d.peer_name.empty() ? "Player 2" : d.peer_name;
     const ImVec2 size = ImGui::CalcTextSize(name.c_str());
     text_shadowed(dl, ImVec2(c.x - size.x / 2, c.y - 28), IM_COL32_WHITE, name.c_str());
     if (d.remote->health_max > 0) {
@@ -146,6 +147,8 @@ void hud_draw(float width, float height) {
     }
 
     // ---- status panel
+    // The default font is 13 px: readable at 1080p, tiny at 4K. The marker over the other player scales with it.
+    ImGui::GetStyle().FontScaleMain = std::clamp(height / 1080.0f, 1.0f, 3.0f);
     ImGui::SetNextWindowPos(ImVec2(20, 20));
     ImGui::SetNextWindowBgAlpha(0.55f);
     ImGui::Begin("cdmp", nullptr,
@@ -155,44 +158,66 @@ void hud_draw(float width, float height) {
     ImGui::TextColored(ImVec4(0.9f, 0.3f, 0.25f, 1), "Crimson Desert Multiplayer %s", CDMP_VERSION);
     ImGui::SameLine();
     ImGui::TextDisabled("[F8]");
+    // Who you are in the session and what it is waiting for, always on top.
+    HudStatusIn status_in;
+    status_in.host = d.host;
+    status_in.connected = d.connected;
+    status_in.peer_name = d.peer_name;
+    status_in.same_world = d.same_world;
+    status_in.host_ready = d.host_ready;
+    status_in.alone_after_remote = d.alone_after_remote;
+    const HudStatus status = hud_status(status_in);
+    const ImVec4 role_color = d.host ? ImVec4(1, 0.78f, 0.25f, 1) : ImVec4(0.45f, 0.75f, 1, 1);
+    const ImVec4 line_color = status.level == HudLevel::Ok        ? ImVec4(0.45f, 0.9f, 0.45f, 1)
+                              : status.level == HudLevel::Waiting ? ImVec4(1, 0.8f, 0.3f, 1)
+                                                                  : ImVec4(1, 0.35f, 0.3f, 1);
+    ImGui::TextColored(role_color, "%s", status.role);
+    ImGui::SameLine();
+    ImGui::TextColored(line_color, "%s", status.line.c_str());
     if (d.connected) {
-        ImGui::Text("Red: conectado a '%s' (%.1f ms)", d.peer_name.c_str(), d.rtt_ms);
-    } else {
-        ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "Red: buscando al otro jugador...");
+        ImGui::TextDisabled("Ping %.0f ms", d.rtt_ms);
+    } else if (d.host_search_hint) {
+        ImGui::TextDisabled("Taking long? Put the host's SteamID64 in cdmp.ini: peer_steamid");
     }
     if (!d.peer_problem.empty()) {
-        // In English from the session; the essential part is the instruction.
-        ImGui::TextColored(ImVec4(1, 0.35f, 0.3f, 1), "Versiones distintas del mod: actualizad los dos");
+        ImGui::TextColored(ImVec4(1, 0.35f, 0.3f, 1), "Different mod versions: both players need the same zip");
         ImGui::TextColored(ImVec4(1, 0.35f, 0.3f, 1), "%s", d.peer_problem.c_str());
     }
-    if (d.local) {
-        ImGui::Text("Tú: HP %.0f/%.0f  Stamina %.0f/%.0f", d.local->health, d.local->health_max,
+    // The reading follows a character switch; if it is ever off from the game's own position, no numbers of the wrong one.
+    const bool tracked = !d.local || hud_tracks_local(d.local->static_pos_error);
+    if (d.local && tracked) {
+        ImGui::Text("You: HP %.0f/%.0f  Stamina %.0f/%.0f", d.local->health, d.local->health_max,
                     d.local->stamina, d.local->stamina_max);
+    } else if (d.local) {
+        ImGui::TextDisabled("You: position not read right now");
     } else {
-        ImGui::TextDisabled("Tú: %s", d.local_status.c_str());
+        ImGui::TextDisabled("You: not in the world yet");
     }
     float remote_distance = 0;
     const bool apart = d.same_world && !*d.same_world;
     if (d.remote && d.local && apart) {
-        ImGui::TextDisabled(d.s2_guest ? "Otro jugador: no está en tu mundo (no juegas en el del anfitrión)"
-                                       : "Otro jugador: no está en tu mundo ahora (entrando, cargando o fuera)");
-    } else if (d.remote && d.local) {
+        ImGui::TextDisabled(d.s2_guest ? "Other player: not in your world (you are not in the host's world)"
+                                       : "Other player: not in your world right now (joining, loading or away)");
+    } else if (d.remote && d.local && tracked) {
         remote_distance = math::length(math::sub(d.remote->pos, d.local->position));
-        ImGui::Text("Otro jugador: HP %.0f/%.0f  a %.0f m", d.remote->health, d.remote->health_max,
+        ImGui::Text("Other player: HP %.0f/%.0f  %.0f m away", d.remote->health, d.remote->health_max,
                     remote_distance);
+    } else if (d.remote && d.local) {
+        ImGui::Text("Other player: HP %.0f/%.0f", d.remote->health, d.remote->health_max);
     }
     if (!d.mount_problem.empty()) {
         ImGui::TextColored(ImVec4(1, 0.35f, 0.3f, 1), "%s", d.mount_problem.c_str());
     }
     if (d.alone_after_remote) {
-        ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "Juegas EN SOLITARIO en tu PC (saliste al título).");
+        ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "You are playing ALONE on your PC (you went back to the title).");
         // P8 re-entry: with [session2] rejoin the HUD says what the re-entry does instead of "restart the game".
         if (d.rejoin_text.empty()) {
-            ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "Para volver al mundo del anfitrión: cierra el juego y ábrelo.");
+            ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "To return to the host's world: close the game and open it again.");
         }
     }
     if (!d.rejoin_text.empty()) ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "%s", d.rejoin_text.c_str());
-    if (!cam) ImGui::TextDisabled("Cámara: %s", camera.last_failure().c_str());
+    // Only where it matters: at the title there is no camera yet, and nothing for a player to do about it.
+    if (!cam && d.local) ImGui::TextDisabled("Camera: %s", camera.last_failure().c_str());
     if (GetTickCount64() < g_notice_until.load(std::memory_order_relaxed)) {
         if (const char* t = notice_text(static_cast<Notice>(g_notice.load(std::memory_order_relaxed)))) {
             ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "%s", t);
@@ -204,7 +229,7 @@ void hud_draw(float width, float height) {
     if (!cam || !cam_world) return;
     ImDrawList* dl = ImGui::GetBackgroundDrawList();
 
-    if (d.remote && !apart) {
+    if (d.remote && !apart && tracked) {
         const proto::Vec3 head{d.remote->pos.x, d.remote->pos.y + kHeadHeight, d.remote->pos.z};
         if (auto p = game::project(*cam, *cam_world, head, width, height)) {
             draw_remote_marker(dl, *p, d, remote_distance);

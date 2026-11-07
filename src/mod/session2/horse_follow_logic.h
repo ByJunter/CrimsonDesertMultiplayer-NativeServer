@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "mod/session2/user2_funnels_logic.h"
+#include "common/movement_layout.h"
 
 namespace cdmp::session2::hfl {
 
@@ -82,12 +83,14 @@ struct Move {
     bool world_zero = false;  // Ridden: the Path's world position is (0,0,0): no horse transform
 };
 
-inline Move read_move(std::span<const uint8_t> payload, size_t expected) {
+inline Move read_move(std::span<const uint8_t> payload, size_t expected, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
     Move m;
-    if (payload.size() != expected) return m;
+    if (!l || (expected != kAckSize && expected != kReqSize) ||
+        payload.size() != (expected == kAckSize ? l->move_ack : l->move_req)) return m;
     m.key = rd32(payload, kKey);
-    m.ts = rd64(payload, kTs);
-    const uint64_t parent = rd64(payload, kParent);
+    m.ts = rd64(payload, l->timestamp);
+    const uint64_t parent = rd64(payload, l->parent);
     if (parent == ~0ull) {
         m.shape = Shape::OnFoot;
         return m;
@@ -98,42 +101,46 @@ inline Move read_move(std::span<const uint8_t> payload, size_t expected) {
     m.shape = character && npc_parent ? Shape::Ridden : Shape::OtherParent;
     if (m.shape == Shape::Ridden) {
         static constexpr uint8_t kZero[12] = {};
-        m.world_zero = std::memcmp(payload.data() + kWorldPos, kZero, 12) == 0;
+        m.world_zero = std::memcmp(payload.data() + l->world_pos, kZero, 12) == 0;
     }
     return m;
 }
 
 // The horse's 2697 from its rider's (whole packet: header + 235 bytes), written into `out` (at least
-// kHeader + kAckSize bytes; no allocation: the host client's OnRecvPacket hook uses it, P8 mount ride).
+// header + the selected build's Ack size; no allocation in the native hook).
 // False: not a rider's Ack (nothing written).
-inline bool make_horse_ack_into(std::span<const uint8_t> rider_packet, uint8_t* out, size_t cap) {
-    if (!out || cap < kHeader + kAckSize || rider_packet.size() != kHeader + kAckSize) return false;
+inline bool make_horse_ack_into(std::span<const uint8_t> rider_packet, uint8_t* out, size_t cap, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l) return false;
+    if (!out || cap < kHeader + l->move_ack || rider_packet.size() != kHeader + l->move_ack) return false;
     const uint16_t op = static_cast<uint16_t>(rider_packet[0] | (rider_packet[1] << 8));
     const uint16_t len = static_cast<uint16_t>(rider_packet[3] | (rider_packet[4] << 8));
-    if (op != kOpMoveActorAck || len != kAckSize) return false;
+    if (op != kOpMoveActorAck || len != l->move_ack) return false;
     const std::span<const uint8_t> r = rider_packet.subspan(kHeader);
-    const Move m = read_move(r, kAckSize);
+    const Move m = read_move(r, kAckSize, build);
     if (m.shape != Shape::Ridden || m.world_zero) return false;
-    std::memcpy(out, rider_packet.data(), kHeader + kAckSize);
+    std::memcpy(out, rider_packet.data(), kHeader + l->move_ack);
     uint8_t* h = out + kHeader;
     std::memcpy(h + kKey, &m.parent, 4);
-    std::memcpy(h + kPos, r.data() + kWorldPos, 12);
-    std::memcpy(h + kQuat, r.data() + kWorldQuat, 16);
-    std::memset(h + kAux, 0, 4);
-    std::memcpy(h + kLocalPos, r.data() + kWorldPos, 12);
-    std::memcpy(h + kLocalQuat, r.data() + kWorldQuat, 16);
+    std::memcpy(h + l->pos, r.data() + l->world_pos, 12);
+    std::memcpy(h + l->quat, r.data() + l->world_quat, 16);
+    std::memset(h + l->aux, 0, 4);
+    std::memcpy(h + l->local_pos, r.data() + l->world_pos, 12);
+    std::memcpy(h + l->local_quat, r.data() + l->world_quat, 16);
     const float one[3] = {1.0f, 1.0f, 1.0f};
-    std::memcpy(h + kLocalScale, one, 12);
-    std::memset(h + kParent, 0xFF, 8);
-    std::memset(h + kWorldPos, 0, kWorldEnd - kWorldPos);
+    std::memcpy(h + l->local_scale, one, 12);
+    std::memset(h + l->parent, 0xFF, 8);
+    std::memset(h + l->world_pos, 0, l->world_end - l->world_pos);
     return true;
 }
 
 // The horse's 2697 from its rider's (whole packet: header + 235 bytes). False: not a rider's Ack.
-inline bool make_horse_ack(std::span<const uint8_t> rider_packet, std::vector<uint8_t>& out) {
-    uint8_t buf[kHeader + kAckSize];
-    if (!make_horse_ack_into(rider_packet, buf, sizeof buf)) return false;
-    out.assign(buf, buf + sizeof buf);
+inline bool make_horse_ack(std::span<const uint8_t> rider_packet, std::vector<uint8_t>& out, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l) return false;
+    uint8_t buf[kHeader + movement::k3527.move_ack];
+    if (!make_horse_ack_into(rider_packet, buf, sizeof buf, build)) return false;
+    out.assign(buf, buf + kHeader + l->move_ack);
     return true;
 }
 
@@ -141,22 +148,24 @@ inline bool make_horse_ack(std::span<const uint8_t> rider_packet, std::vector<ui
 // MoveActorReq payload (514 B), the same recipe as make_horse_ack plus the Req's 10-entry history (+0xEA..)
 // zeroed; the tail (+0xDE..+0xEA: f32, f32, speed) is the rider's. BUILT AND CHECKED ONLY: never sent.
 inline constexpr size_t kReqHistory = 0xEA;
-inline bool make_horse_req(std::span<const uint8_t> rider_payload, std::vector<uint8_t>& out) {
-    const Move m = read_move(rider_payload, kReqSize);
+inline bool make_horse_req(std::span<const uint8_t> rider_payload, std::vector<uint8_t>& out, movement::Build build = movement::Build::v2976) {
+    const auto* l = movement::layout(build);
+    if (!l) return false;
+    const Move m = read_move(rider_payload, kReqSize, build);
     if (m.shape != Shape::Ridden || m.world_zero) return false;
     out.assign(rider_payload.begin(), rider_payload.end());
     uint8_t* h = out.data();
     std::memcpy(h + kKey, &m.parent, 4);
-    std::memcpy(h + kPos, rider_payload.data() + kWorldPos, 12);
-    std::memcpy(h + kQuat, rider_payload.data() + kWorldQuat, 16);
-    std::memset(h + kAux, 0, 4);
-    std::memcpy(h + kLocalPos, rider_payload.data() + kWorldPos, 12);
-    std::memcpy(h + kLocalQuat, rider_payload.data() + kWorldQuat, 16);
+    std::memcpy(h + l->pos, rider_payload.data() + l->world_pos, 12);
+    std::memcpy(h + l->quat, rider_payload.data() + l->world_quat, 16);
+    std::memset(h + l->aux, 0, 4);
+    std::memcpy(h + l->local_pos, rider_payload.data() + l->world_pos, 12);
+    std::memcpy(h + l->local_quat, rider_payload.data() + l->world_quat, 16);
     const float one[3] = {1.0f, 1.0f, 1.0f};
-    std::memcpy(h + kLocalScale, one, 12);
-    std::memset(h + kParent, 0xFF, 8);
-    std::memset(h + kWorldPos, 0, kWorldEnd - kWorldPos);
-    std::memset(h + kReqHistory, 0, kReqSize - kReqHistory);
+    std::memcpy(h + l->local_scale, one, 12);
+    std::memset(h + l->parent, 0xFF, 8);
+    std::memset(h + l->world_pos, 0, l->world_end - l->world_pos);
+    std::memset(h + l->request_history, 0, l->move_req - l->request_history);
     return true;
 }
 

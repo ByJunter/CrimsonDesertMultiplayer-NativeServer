@@ -574,6 +574,45 @@ void test_reliable_backoff_and_backpressure() {
     c.set_window(1u << 20);
     CHECK(c.window() == ReliableChannel::kMaxWindow);
 
+    // Fast resend: fragment 0 is lost, the three after it are acknowledged.
+    {
+        std::vector<proto::Body> w;
+        ReliableChannel f([&](proto::Body b) { w.push_back(std::move(b)); });
+        f.set_rtt(110);
+        CHECK(f.send(proto::RelKind::Spawn, std::vector<uint8_t>(proto::kRelChunk * 5), 0));
+        CHECK(w.size() == 5);
+        auto ack = [&](size_t i) {
+            const auto& d = std::get<proto::RelData>(w[i]);
+            f.on_ack(proto::RelAck{d.msg_id, d.index});
+        };
+        ack(1);
+        ack(2);
+        f.tick(120);
+        CHECK(w.size() == 5);  // only two later ones acknowledged
+        ack(3);
+        f.tick(100);
+        CHECK(w.size() == 5);  // three, but not one RTT yet
+        f.tick(120);
+        CHECK(w.size() == 6 && f.fast_resent() == 1 && f.resent() == 1);  // long before the 250 ms timeout
+        CHECK(std::get<proto::RelData>(w[5]).index == 0);
+        f.tick(130);
+        CHECK(w.size() == 6);  // once: its new transmission is newer than every ack so far
+        ack(4);
+        f.tick(400);  // fragment 4 was sent before the fast resend: no second fast one; the timeout (2 x 110) runs from 120
+        CHECK(w.size() == 7 && f.fast_resent() == 1 && f.resent() == 2);
+        // A whole stream acknowledged in order never resends.
+        std::vector<proto::Body> w2;
+        ReliableChannel g([&](proto::Body b) { w2.push_back(std::move(b)); });
+        g.set_rtt(110);
+        CHECK(g.send(proto::RelKind::Spawn, std::vector<uint8_t>(proto::kRelChunk * 8), 0));
+        for (auto& b : w2) {
+            const auto& d = std::get<proto::RelData>(b);
+            g.on_ack(proto::RelAck{d.msg_id, d.index});
+        }
+        g.tick(1000);
+        CHECK(w2.size() == 8 && g.resent() == 0 && g.unacked_fragments() == 0);
+    }
+
     // Through a session: pings and other datagrams never wait; reliable ones do.
     std::vector<std::vector<uint8_t>> out;
     ClientSession s("Me", 1, [&](const std::vector<uint8_t>& b) { out.push_back(b); });
