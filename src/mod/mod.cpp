@@ -62,6 +62,8 @@
 #include "mod/session2/p8_probes.h"
 #include "mod/session2/npc_probe_client.h"
 #include "mod/session2/door_trace.h"
+#include "mod/session2/housing_redraw.h"
+#include "mod/session2/housing_trace.h"
 
 #include "mod/session2/server.h"
 #include "mod/session2/session2.h"
@@ -1147,6 +1149,8 @@ DWORD WINAPI worker(LPVOID) {
         // own server seconds after start), and never with the host-side stages.
         if (session2) {
             session2::door_trace_start(cfg.s2_door_trace, cfg.s2_guest);
+            session2::housing_trace_start(cfg.s2_housing_trace);
+            session2::housing_redraw_start(cfg.s2_housing_redraw && cfg.s2_guest, cfg.s2_housing_gimmick_guard && cfg.s2_guest);
             session2::npc_probe_client_start(cfg.s2_npc_activation, cfg.s2_npc_family_control,
                                             cfg.s2_user2_road_control, cfg.s2_guest, g_stop);
         }

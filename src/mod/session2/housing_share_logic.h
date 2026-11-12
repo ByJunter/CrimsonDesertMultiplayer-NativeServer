@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <map>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -318,6 +319,59 @@ inline void replace_stage(Slot& s, uint32_t stage, const std::vector<std::vector
     if (!placed) out.insert(out.end(), parts.begin(), parts.end());
     if (out.size() > 64) out.resize(64);
     s.packets = std::move(out);
+}
+
+// The house plot's scene phase (3576, 2026-11-12): the host's client loads House_Del_0002_Phase04_00 (the developed
+// plot: level ground, grass), the guest's loaded House_Del_0002_Phase00_00 (the plot before the house: a pond). The
+// phase levels of House_Del_0002 are bound to the level key 0xF439B (in the level data, host memory), and the client
+// gets each level's state in ChangeGameLevelStateAck (logical 2344, native 3081): [flags u8 = 4][owner u32][u32 = 1]
+// [u8 = 1][(level key u32, state hash u32, u8)...]; 0xF439B is 0xAD24F618 for both copies. The host's client gets it at
+// login, before it travels to its house; user 2's got it only at the end of a load, 60 ms after it had picked
+// Phase00 (two copies, 13:33 run). Trigger states (2238, all 85 of them) did not change the phase.
+// housing_share_level_states=1 gives user 2 the host's level states with its house list, at login.
+inline constexpr uint16_t kLevelStateAck = 2344;
+inline constexpr size_t kLevelHead = 10;   // flags, owner, u32, u8
+inline constexpr size_t kLevelEntry = 9;   // level key, state hash, u8
+inline constexpr size_t kLevelMaxEntries = 3500;  // a packet's payload stays under 32710 bytes
+// Every level the host's client was told of, its latest state; the header bytes after the owner from its latest packet.
+struct LevelStates {
+    std::array<uint8_t, 5> head{};
+    std::map<uint32_t, std::array<uint8_t, 5>> levels;
+};
+// false (nothing kept) if `p` is not a whole 2344.
+inline bool merge_level_states(LevelStates& s, std::span<const uint8_t> p) {
+    if (op_of(p) != kLevelStateAck || p.size() < kHeader + kLevelHead ||
+        (p.size() - kHeader - kLevelHead) % kLevelEntry != 0) {
+        return false;
+    }
+    std::memcpy(s.head.data(), p.data() + kHeader + 5, 5);
+    for (size_t o = kHeader + kLevelHead; o + kLevelEntry <= p.size(); o += kLevelEntry) {
+        uint32_t k = 0;
+        std::memcpy(&k, p.data() + o, 4);
+        auto& v = s.levels[k];
+        std::memcpy(v.data(), p.data() + o + 4, 5);
+    }
+    return true;
+}
+// The merged states as 2344 packets for `owner` (more than one only past kLevelMaxEntries levels).
+inline std::vector<std::vector<uint8_t>> level_states_for(const LevelStates& s, uint32_t owner) {
+    std::vector<std::vector<uint8_t>> out;
+    auto it = s.levels.begin();
+    while (it != s.levels.end()) {
+        std::vector<uint8_t> v = {static_cast<uint8_t>(kLevelStateAck), static_cast<uint8_t>(kLevelStateAck >> 8), 0xFF,
+                                  0, 0, 0x04};
+        for (int i = 0; i < 4; ++i) v.push_back(static_cast<uint8_t>(owner >> (8 * i)));
+        v.insert(v.end(), s.head.begin(), s.head.end());
+        for (size_t n = 0; it != s.levels.end() && n < kLevelMaxEntries; ++it, ++n) {
+            for (int i = 0; i < 4; ++i) v.push_back(static_cast<uint8_t>(it->first >> (8 * i)));
+            v.insert(v.end(), it->second.begin(), it->second.end());
+        }
+        const size_t pay = v.size() - kHeader;
+        v[3] = static_cast<uint8_t>(pay & 0xFF);
+        v[4] = static_cast<uint8_t>(pay >> 8);
+        out.push_back(std::move(v));
+    }
+    return out;
 }
 
 }  // namespace cdmp::session2::hsh

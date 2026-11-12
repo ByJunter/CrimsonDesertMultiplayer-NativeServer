@@ -238,6 +238,8 @@ add_library(cdmp_mod SHARED
     src/mod/session2/npc_probe_client.cpp
     src/mod/session2/enemy_damage_probe.cpp
     src/mod/session2/door_trace.cpp
+    src/mod/session2/housing_redraw.cpp
+    src/mod/session2/housing_trace.cpp
     src/mod/session2/scene_level_share.cpp
     src/mod/session2/user2_stages.cpp
     src/mod/session2/user2_shops.cpp

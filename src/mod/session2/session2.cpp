@@ -1332,6 +1332,7 @@ bool install(const Options& opt) {
         if (!opt.create_session || !loaded_config().sniffer_enabled) {
             log::warn("Session2: housing_share needs create_session=1 and [sniffer] enabled=1; off");
         } else {
+            housing_share_set_level_states(lc.s2_housing_share_level_states != 0);
             housing_share_configure(lc.s2_housing_share, lc.s2_housing_share_live_ops, lc.s2_housing_share_edits,
                                     lc.s2_housing_share_guest_spawn, lc.s2_housing_share_rekey,
                                     lc.s2_housing_share_drop_gimmicks);

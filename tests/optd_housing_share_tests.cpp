@@ -191,6 +191,37 @@ void test_guest_spawn_set() {
     CHECK(!hsh::is_guest_spawn_req(2408) && !hsh::is_guest_spawn_req(2539) && !hsh::is_guest_spawn_req(2500));
 }
 
+void test_level_states() {
+    // ChangeGameLevelStateAck: 04 | owner | 01 00 00 00 | 01 | (level, state hash, u8)...
+    std::vector<uint8_t> pay = {0x04, 0x01, 0x00, 0x10, 0xA0, 0x01, 0x00, 0x00, 0x00, 0x01};
+    const auto entry = [&](uint32_t k, uint32_t h) {
+        for (int i = 0; i < 4; ++i) pay.push_back(static_cast<uint8_t>(k >> (8 * i)));
+        for (int i = 0; i < 4; ++i) pay.push_back(static_cast<uint8_t>(h >> (8 * i)));
+        pay.push_back(0);
+    };
+    entry(0xF439B, 0xAD24F618);
+    entry(0xF439A, 0x1F51E0E2);
+    hsh::LevelStates s;
+    CHECK(hsh::merge_level_states(s, with_header(hsh::kLevelStateAck, pay)));
+    CHECK(s.levels.size() == 2 && s.head[0] == 0x01 && s.head[4] == 0x01);
+    // A later packet: one level changed, one new.
+    pay.resize(10);
+    entry(0xF439A, 0x66BE15A8);
+    entry(0xF42CF, 0x1F51E0E2);
+    CHECK(hsh::merge_level_states(s, with_header(hsh::kLevelStateAck, pay)));
+    CHECK(s.levels.size() == 3 && s.levels[0xF439A][0] == 0xA8);
+    const auto out = hsh::level_states_for(s, 0xA0100066);
+    CHECK(out.size() == 1 && out[0].size() == 5 + 10 + 3 * 9);
+    CHECK(hsh::op_of(out[0]) == hsh::kLevelStateAck && out[0][5] == 0x04 && out[0][6] == 0x66 && out[0][9] == 0xA0);
+    CHECK(out[0][3] == 10 + 27 && out[0][4] == 0 && out[0][10] == 0x01 && out[0][14] == 0x01);
+    CHECK(out[0][15] == 0xCF && out[0][16] == 0x42);  // sorted by level key
+    hsh::LevelStates again;  // what user 2 gets reads back the same
+    CHECK(hsh::merge_level_states(again, out[0]) && again.levels == s.levels);
+    CHECK(!hsh::merge_level_states(s, with_header(hsh::kLevelStateAck, {0x04, 0x01})));
+    CHECK(!hsh::merge_level_states(s, with_header(2733, pay)));
+    CHECK(hsh::level_states_for(hsh::LevelStates{}, 0xA0100066).empty());
+}
+
 int main() {
     test_sets();
     test_guest_spawn_set();
@@ -201,6 +232,7 @@ int main() {
     test_live_gate();
     test_owner_and_rekey();
     test_bursts();
+    test_level_states();
     if (g_failures) {
         std::printf("%d failure(s)\n", g_failures);
         return 1;

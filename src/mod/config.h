@@ -571,6 +571,15 @@ struct Config {
     std::string s2_enemy_damage_probe = "0";
     // S42: 2928/2145/2953 y resultado nativo; probe/1 sólo observan, no fuerzan puertas.
     std::string s2_door_trace = "0";
+    // [session2] housing_trace = 0 (default) | 1, any role, build 3576: logs calls into the client's housing code
+    // (diagnostic, observation only; housing_trace.h).
+    bool s2_housing_trace = false;
+    // [session2] housing_redraw = 0 (default) | 1, guest, build 3576, EXPERIMENTAL: after the last part of a live house
+    // list (2733) the active house stage is rebuilt, so the host's construction edits show without joining again.
+    bool s2_housing_redraw = false;
+    // [session2] housing_gimmick_guard = 0 (default) | 1, guest, build 3576: the guest skips the owner's update of the
+    // house's gimmicks (pa::VHousingManager slot 35), which crashed it with the host's gimmick records kept.
+    bool s2_housing_gimmick_guard = false;
     // S43 (docs/research/s25/s43-puertas-y-r42.md), HOST: scene_level_share = 0 | probe | 1. A: user 2's own 2598 / 2104
     // marks the SceneLevel ready (owner gate 0x283044D); B: a 2834 delete of a level the other user still has loaded is
     // skipped (0x2829E60). 0: nothing installed; probe: measures only.
@@ -734,8 +743,12 @@ struct Config {
     // opens the construction mode); a list re-keys only those housing opcodes (hsh::parse_rekey; 35245,2733 crashed too).
     std::string s2_housing_share_rekey = "0";
     // [session2] housing_share_drop_gimmicks = 0 (default) | all | waiting, host: the host's 2733 reaches user 2 without
-    // its gimmick records (category 4: doors, furniture), all of them or those of the host's latest 2500 waiting list.
+    // its gimmick records (category 4: doors, furniture), all of them or those of the host's latest 2500 waiting list
+    // (3576, 7-nov: `waiting` keeps 4 records that draw the roof; with no 2500 known yet it drops them all, as `all`).
     std::string s2_housing_share_drop_gimmicks = "0";
+    // [session2] housing_share_level_states = 0 (default) | 1, host: the host's ChangeGameLevelStateAck (2344) for user 2
+    // with its house list at login (the house plot's phase level follows it: without it the guest saw a pond).
+    uint32_t s2_housing_share_level_states = 0;
     // gimmick_event_dedup, BOTH PCs (session2/gimmick_event_dedup_logic.h; research/s25/gimmicks-dueno.md section 7):
     // "0" (default) | "probe" | "1". CreateProjectileFromGimmickEventReq 2779 has no controller check on the server, so
     // both clients' 2779 make two projectiles. GUEST: each outgoing 2779 decided against the controller the last 2005

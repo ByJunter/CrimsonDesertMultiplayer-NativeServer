@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cstring>
 #include <format>
 #include <span>
 #include <string>
@@ -1454,6 +1455,53 @@ bool guest_seq_present_stage_ready(uint64_t seq) noexcept {
     const uintptr_t proc = rdp(r.stage + g_sl->proc);
     const uintptr_t charts = proc ? rdp(proc + 0x38) : 0;
     return charts && rdp(charts + 8);
+}
+
+uint32_t guest_seq_present_stage_nodes_at(uintptr_t stage) noexcept {
+    if (!g_sl || stage < 0x10000) return 0;
+    const uintptr_t proc = rdp(stage + g_sl->proc);
+    const uintptr_t charts = proc ? rdp(proc + 0x38) : 0;
+    if (!charts || !rdp(charts + 8)) return 0;
+    const uint32_t n = rdv<uint32_t>(charts + 0x10);
+    return n <= 4096 ? n : 0;
+}
+
+bool guest_seq_present_funcnpc_nodes(uint64_t seq, uint32_t* nodes) noexcept {
+    if (nodes) *nodes = 0;
+    if (!g_sl || !seq) return false;
+    gpr::StageRec r;
+    if (!g_stages.find_seq(seq, r) || !r.stage || rdv<uint64_t>(r.stage + gpr::kStage_Seq) != seq) return false;
+    const uintptr_t info = rdp(r.stage + g_sl->info);
+    const uintptr_t name = info ? rdp(info + g_sl->name) : 0;
+    static constexpr char kPrefix[] = "cd_seq_funcnpc_";  // 15 characters
+    uint64_t head[2] = {};
+    if (!name || !rd(name, head[0]) || !rd(name + 8, head[1]) || std::memcmp(head, kPrefix, sizeof kPrefix - 1) != 0) {
+        return false;
+    }
+    if (nodes) *nodes = guest_seq_present_stage_nodes_at(r.stage);
+    return true;
+}
+
+uint32_t guest_seq_present_stage_nodes(uint64_t seq) noexcept {
+    if (!g_sl || !seq) return 0;
+    gpr::StageRec r;
+    if (!g_stages.find_seq(seq, r) || !r.stage || rdv<uint64_t>(r.stage + gpr::kStage_Seq) != seq) return 0;
+    return guest_seq_present_stage_nodes_at(r.stage);
+}
+
+bool guest_seq_present_stage_node_ready(uint64_t seq, uint32_t node) noexcept {
+    if (!guest_seq_present_stage_ready(seq) || node > 64) return false;
+    gpr::StageRec r;
+    if (!g_stages.find_seq(seq, r) || !r.stage) return false;
+    const uintptr_t proc = rdp(r.stage + g_sl->proc);
+    const uintptr_t charts = proc ? rdp(proc + 0x38) : 0;
+    const uintptr_t table = charts ? rdp(charts + 8) : 0;
+    // The table is a vector: +0x10 its count, +0x14 its capacity (7 / 7 for the shops, 3 / 3 for Vellua's Farm Owner
+    // selling from his table, 2026-11-12). Past the count is another object's memory: the 7-nov crash read it.
+    if (!table || node >= rdv<uint32_t>(charts + 0x10)) return false;
+    const uintptr_t entry = rdp(table + 8ull * node);
+    uint64_t head[2] = {};
+    return entry && rd(entry, head[0]) && rd(entry + 8, head[1]);
 }
 
 void guest_seq_present_tick() noexcept {

@@ -28,8 +28,14 @@ inline constexpr uint8_t kMarkerReady = 2;
 inline constexpr uint64_t kSettleMs = 250;
 inline constexpr uint64_t kRetryMs = 1000;
 // No 2322 on this trip at all: a trip the host's server does not answer for an
-// observer (a revive, a reload). Far past the 1.36 s of the owner's own timer.
-inline constexpr uint64_t kSynthesizeAfterMs = 15000;
+// observer (a revive, a reload). A little over the 1.36 s of the owner's own timer
+// (the handler only stores the marker: a real 2322 coming later is harmless).
+// 3576, 2026-11-07: a fast travel of the guest into the host's field waited the
+// whole 15 s it was before (no 2322 came; the host's 2322 copy waits for this
+// load's own 2762), and the town's merchants appeared that much later for it.
+// 12-nov: 4 s, then 1.5 s (Vellua, 15:55: 8.5 s of the game's own loading, then
+// 4.07 s in 0x11 for nothing: every guest trip paid it).
+inline constexpr uint64_t kSynthesizeAfterMs = 1500;
 inline constexpr uint32_t kMaxPerWait = 16;
 
 enum class Action : uint8_t { None, Repeat, Synthesize };

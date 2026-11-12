@@ -2,10 +2,13 @@
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
+#include <cstring>
 #include <format>
 #include <map>
 #include <mutex>
+#include <string>
 #include <vector>
 
 #include "mod/log.h"
@@ -50,6 +53,15 @@ std::atomic<uint64_t> g_recorded{0}, g_dropped{0}, g_queued{0}, g_queue_failed{0
 std::atomic<int> g_lines{0};
 constexpr uint64_t kGiveOnceMs = 3000;
 
+// housing_share_drop_gimmicks=waiting: the sorted waiting ids the last 2733 given to user 2 was filtered with (g_mx).
+std::vector<uint32_t> g_waiting_given;
+std::atomic<bool> g_records_logged{false};
+std::atomic<uint64_t> g_waiting_resends{0};
+// housing_share_level_states=1: the host's level states (ChangeGameLevelStateAck, hsh::kLevelStateAck) for user 2.
+std::atomic<bool> g_level_states{false};
+hsh::LevelStates g_levels;  // g_mx
+std::atomic<uint64_t> g_level_packets{0}, g_level_given{0};
+
 bool may_log() { return g_lines.fetch_add(1, std::memory_order_relaxed) < 120; }
 bool on() { return g_mode.load(std::memory_order_relaxed) == Mode::On; }
 
@@ -70,12 +82,62 @@ std::vector<uint8_t> for_user2(uint16_t op, std::span<const uint8_t> p, uint32_t
             auto ids = hsh::waiting_ids(it->second.packets.back(), &s);
             if (s == *stage) waiting = std::move(ids);
         }
-        if (waiting.empty()) waiting.push_back(0xFFFFFFFEu);  // none known: drop nothing rather than everything
+        // None known yet (the host's client sends its 2500 only near the house): every gimmick record is dropped, as
+        // with `all`. Dropping none gave the guest the host's gimmicks as its own, which crashed it (7-nov, session 4).
+        if (waiting.empty() && may_log()) {
+            log::info("HousingShare: no waiting list (2500) of the host for this stage yet: all of its gimmick records "
+                      "left out for user 2 (no roof for now; when the host's client sends its list, near the house, user 2 "
+                      "gets the 2733 again)");
+        }
+    }
+    if (g_drop_gimmicks == hsh::DropGimmicks::Waiting) {
+        g_waiting_given = waiting;
+        std::sort(g_waiting_given.begin(), g_waiting_given.end());
+    }
+    // The category-4 records, logged once so what tells the host-spawned ones from the others (roof...) can be found.
+    if (!g_records_logged.load(std::memory_order_relaxed) && p.size() >= hsh::kSceneRecordsAt &&
+        (p.size() - hsh::kSceneRecordsAt) % hsh::kSceneRecord == 0) {
+        if (hsh::is_last_part(p[hsh::kHeader])) g_records_logged.store(true, std::memory_order_relaxed);
+        for (size_t o = hsh::kSceneRecordsAt; o + hsh::kSceneRecord <= p.size(); o += hsh::kSceneRecord) {
+            uint32_t id = 0;
+            std::memcpy(&id, p.data() + o, 4);
+            if (id == 0xFFFFFFFFu || p[o + hsh::kRecordCategory] != hsh::kCategoryGimmick || !may_log()) continue;
+            bool listed = false;
+            for (const uint32_t w : waiting) listed = listed || w == id;
+            std::string hex;
+            for (size_t i = 4; i < hsh::kSceneRecord; ++i) hex += std::format("{:02X}{}", p[o + i], i % 4 == 3 ? " " : "");
+            log::info("HousingShare: gimmick record 0x{:X} ({}): {}", id,
+                      g_drop_gimmicks == hsh::DropGimmicks::All || waiting.empty() ? "left out"
+                      : listed                                                 ? "left out (host-spawned)"
+                                                                               : "kept",
+                      hex);
+        }
     }
     size_t n = 0;
     v = hsh::drop_gimmick_records(v, waiting, &n);
     g_gimmick_records_dropped.fetch_add(n, std::memory_order_relaxed);
     return v;
+}
+
+// housing_share_level_states: every level state the host's client was told of, as user 2's, right after the 2733 of
+// user 2's login, so its client picks the house plot's phase the host's did (hsh::kLevelStateAck). g_mx held.
+void give_level_states(uint32_t user2) {
+    if (!g_level_states.load(std::memory_order_relaxed) || !user2) return;
+    if (g_levels.levels.empty()) {
+        if (may_log()) log::info("HousingShare: the host has no level states (2344) recorded: none given to user 2");
+        return;
+    }
+    const auto packets = hsh::level_states_for(g_levels, user2);
+    size_t queued = 0;
+    for (const auto& v : packets) {
+        if (on() && server_push_extra(v)) ++queued;
+    }
+    g_level_given.fetch_add(queued, std::memory_order_relaxed);
+    if (may_log()) {
+        log::info("HousingShare: the host's level states (2344, {} levels): {} of {} packet(s) {} to user 2 (0x{:08X}) "
+                  "(housing_share_level_states=1: its client picks the house plot's phase the host's did)",
+                  g_levels.levels.size(), queued, packets.size(), on() ? "QUEUED" : "would be queued", user2);
+    }
 }
 
 // The host's packets of `op`, re-keyed for user 2, queued (or, in probe, only counted). g_mx held.
@@ -170,6 +232,14 @@ void on_scene_list_req(std::span<const uint8_t> p) {
 
 }  // namespace
 
+void housing_share_set_level_states(bool on) {
+    g_level_states.store(on);
+    if (on) {
+        log::info("HousingShare: housing_share_level_states=1: user 2 gets the host's level states (2344) with its house "
+                  "list at login (the house plot's phase)");
+    }
+}
+
 void housing_share_configure(const std::string& mode, const std::string& live_ops, bool edits, bool guest_spawn,
                              const std::string& rekey, const std::string& drop_gimmicks) {
     g_drop_gimmicks = hsh::parse_drop_gimmicks(drop_gimmicks);
@@ -225,12 +295,30 @@ void housing_share_sniffed(const uint8_t* packet, size_t size, bool server_to_cl
             if (op == hsh::kSceneListReq && g_edits.load(std::memory_order_relaxed)) on_scene_list_req(p);
             return;
         }
+        if (op == hsh::kLevelStateAck) {
+            if (!g_level_states.load(std::memory_order_relaxed)) return;
+            std::lock_guard lk(g_mx);
+            if (hsh::merge_level_states(g_levels, p)) g_level_packets.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
         if (!hsh::is_housing(op)) return;
         if (const auto k = hsh::owner_of(p)) g_host_key.store(*k);
         const uint64_t now = GetTickCount64();
         std::lock_guard lk(g_mx);
         hsh::record(g_host[op], p, now);
         g_recorded.fetch_add(1, std::memory_order_relaxed);
+        // drop_gimmicks=waiting: a new or changed waiting list of the host (its client sends it only near the house)
+        // changes which records user 2 must not own. User 2 gets the host's 2733 again, filtered with it (with
+        // housing_redraw on the guest its house is rebuilt: the roof shows without joining again).
+        if (op == hsh::kWaitingSyncList && g_drop_gimmicks == hsh::DropGimmicks::Waiting && on()) {
+            auto ids = hsh::waiting_ids(p);
+            std::sort(ids.begin(), ids.end());
+            const uint32_t user2 = g_user2_key.load();
+            if (ids != g_waiting_given && user2 && server_user2_in_world() && g_host.count(hsh::kSceneListAck)) {
+                g_waiting_resends.fetch_add(1, std::memory_order_relaxed);
+                give(hsh::kSceneListAck, user2, "the host's waiting list (2500) changed: its 2733 again with that filter");
+            }
+        }
         // A live change of the host's housing: user 2 gets it too, if it already has the host's set.
         if (hsh::is_update(op) && !hsh::forward_live(g_live.load(std::memory_order_relaxed), op, g_live_ops)) {
             if (may_log()) {
@@ -278,6 +366,7 @@ bool housing_share_on_out(uint16_t opcode, std::span<const uint8_t> packet) noex
         if (!at || now - at > kGiveOnceMs) {
             at = now;
             give(opcode, user2, "its own set from the server, dropped");
+            if (opcode == hsh::kSceneListAck) give_level_states(user2);
         }
         g_dropped.fetch_add(1, std::memory_order_relaxed);
         return on();  // probe: user 2's own packet still goes
@@ -289,13 +378,16 @@ bool housing_share_on_out(uint16_t opcode, std::span<const uint8_t> packet) noex
 std::string housing_share_describe() {
     return std::format("HousingShare (housing_share={}): host packets recorded {} | user 2's own dropped {} | the host's "
                        "queued {} (failed {}) | live changes forwarded {} | edits {} (parts queued {}, bad {}){}{} | none "
-                       "from the host {} | keys rewritten {} | host 0x{:08X} user 2 0x{:08X}",
+                       "from the host {} | keys rewritten {}{} | host 0x{:08X} user 2 0x{:08X}",
                        on() ? (g_live.load() ? "live" : "1") : "probe", g_recorded.load(), g_dropped.load(), g_queued.load(), g_queue_failed.load(),
                        g_forwarded.load(), g_edits_seen.load(), g_edits_queued.load(), g_edit_parts_bad.load(),
                        g_edits.load() ? "" : " [housing_share_edits=0]",
                        g_block_guest_spawn.load() ? std::format(" | user 2's spawn requests dropped {}", g_guest_spawn_blocked.load())
                                                   : std::string(),
                        g_no_host.load(), g_keys_rewritten.load(),
+                       g_level_states.load() ? std::format(" | level states: host packets {}, given to user 2 {}",
+                                                           g_level_packets.load(), g_level_given.load())
+                                             : std::string(),
                        g_host_key.load(), g_user2_key.load());
 }
 

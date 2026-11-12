@@ -53,6 +53,12 @@ store_gate=1
 ; host (menu, Buy, Sell, Leave). Needs interact_gate types 3,4 (the press) and guest_x_interaction_stage=1 ("R Shop").
 guest_shop_branch=5
 interact_gate_types=3,4,7
+; Houses (3576, 2026-11-07): when the host changes its house in the construction mode, this game rebuilds the house
+; right away (the host's housing_share_edits=1 sends the changes). 0 = the changes show when the guest joins again.
+housing_redraw=1
+; Houses (3576, 2026-11-12): with the host's house as this game's own, it leaves the house's door, shutters and
+; furniture to the host's game (the owner's handling of them crashed it when the host opened the construction mode).
+housing_gimmick_guard=1
 enabled=1
 guest=1
 guest_mode=remote

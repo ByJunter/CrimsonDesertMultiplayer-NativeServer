@@ -48,19 +48,27 @@ interact_gate=0
 interact_gate_errors=
 ; Shops (build 3549): the guest's buy/sell passes the shop-scene test (host: at its server; guest: in its UI).
 store_gate=1
-; Houses (3576, 2026-11-07, two copies): the guest gets the host's houses instead of its own and sees the host's
-; walls, floors, roof and balcony, and the host's furniture, decorations, doors and pets, including what the host
-; places during the session. The host may use the construction mode with the guest there. Changes to the walls and
-; floors show for the guest when it joins again. 0 = the guest sees its own houses.
+; Houses (3576, 2026-11-12, two copies): the guest gets the host's houses instead of its own and sees the host's
+; whole house: walls, floors, roof, balcony, the door and the window shutters, and the host's changes in the
+; construction mode right away (with the guest's housing_redraw=1 and housing_gimmick_guard=1). The host may use the
+; construction mode with the guest there. 0 = the guest sees its own houses.
 housing_share=1
-; Which of the host's housing messages the guest's copy takes as its own. 35245,2733 = the house's structure (walls
-; and floors): with drop_gimmicks=all below it did not crash (two sessions). 0 = furniture only (no walls). 1 = all
-; of them: the guest's game CRASHED near the house or when the host opened the construction mode.
+; Which of the host's housing messages the guest's copy takes as its own. 35245,2733 = the house's structure (walls,
+; floors, roof). 0 = no walls (only the host's furniture and doors, floating). 1 = all of them: the guest's game
+; CRASHED near the house or when the host opened the construction mode.
 housing_share_rekey=35245,2733
-; all = the guest's copy of the structure leaves out the furniture and doors (the host's game spawns those for it).
-housing_share_drop_gimmicks=all
+; 0 = the guest's copy of the house keeps everything (the door and window openings, the roof, the door, the shutters).
+; It needs the guest's housing_gimmick_guard=1 (without it the guest crashed when the host opened the construction
+; mode). waiting = leaves out the objects the host's game spawns (no door, the doorway walled up); all = also the roof.
+housing_share_drop_gimmicks=0
+; 1 = the host's changes in the construction mode reach the guest (live with the guest's housing_redraw=1, and on its
+; next join). 0 = the guest keeps the house as it was when the host joined.
+housing_share_edits=1
 ; 0 (default): only the host's game spawns the house's furniture (the guest's own spawn crashed it).
 housing_share_guest_spawn=0
+; 1 = the guest's game gets the host's level states when it joins, so the house plot looks developed (level
+; grass) as on the host. 0 = the guest saw the plot before the house: a pond beside the porch.
+housing_share_level_states=1
 enabled=1
 guest=0
 guest_mode=observe

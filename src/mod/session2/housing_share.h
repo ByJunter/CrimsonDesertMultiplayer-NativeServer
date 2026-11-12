@@ -16,6 +16,9 @@ namespace cdmp::session2 {
 // guest_spawn: housing_share_guest_spawn (0: user 2's own spawn requests of the housing gimmicks are dropped).
 // rekey: housing_share_rekey ("1": the host's housing gets user 2's key, the guest owns it; "0": the host's key is
 // kept; or a list of housing opcodes to re-key, hsh::parse_rekey).
+// housing_share_level_states = 0 (default) | 1, host: user 2 gets the host's level states (ChangeGameLevelStateAck
+// 2344) with its house list at login, so its client loads the house plot's phase the host's did (no pond).
+void housing_share_set_level_states(bool on);
 void housing_share_configure(const std::string& mode, const std::string& live_ops = {}, bool edits = false,
                              bool guest_spawn = false, const std::string& rekey = "0",
                              const std::string& drop_gimmicks = "0");

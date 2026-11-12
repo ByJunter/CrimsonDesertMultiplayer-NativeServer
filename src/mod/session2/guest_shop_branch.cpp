@@ -88,6 +88,7 @@ struct Delayed {
     uint64_t scene = 0;
     uint64_t since = 0;
     std::vector<std::vector<uint8_t>> acks;
+    bool held_logged = false;  // the 12-nov node check held a branch the table check alone would have handed
 };
 std::vector<Delayed> g_delayed;
 constexpr uint64_t kReadyTimeoutMs = 15000;
@@ -359,7 +360,7 @@ void guest_shop_after_deliver(std::span<const uint8_t> p, std::vector<std::vecto
             g_ctl = NpcControl{press.actor, press.npc, press.own_user, press.npc_controller, copy};
         }
         Delayed dl{copy, GetTickCount64(), gsb::answer(own, copy, gsb::kShopBranch, true)};
-        if (!created && guest_seq_present_stage_ready(copy)) {
+        if (!created && guest_seq_present_stage_node_ready(copy, gsb::kShopBranch)) {
             for (auto& a : dl.acks) out.push_back(std::move(a));
             g_opened_at[copy] = GetTickCount64();
             g_menu_done.erase(copy);
@@ -432,13 +433,21 @@ void guest_shop_drain(std::vector<std::vector<uint8_t>>& out) noexcept {
         }
         if (g_delayed.empty()) return;
         for (auto it = g_delayed.begin(); it != g_delayed.end();) {
-            if (guest_seq_present_stage_ready(it->scene)) {
+            if (guest_seq_present_stage_node_ready(it->scene, gsb::kShopBranch)) {
                 for (auto& a : it->acks) out.push_back(std::move(a));
                 g_opened_at[it->scene] = now;
                 g_menu_done.erase(it->scene);
                 if (g_ctl.copy == it->scene) npc_control_swap_in(now);
                 if (may_log()) log::info("GuestShopBranch: copy 0x{:X} is ready: branch {} handed", it->scene, gsb::kShopBranch);
                 it = g_delayed.erase(it);
+            } else if (guest_seq_present_stage_ready(it->scene) && !it->held_logged) {
+                // Before 2026-11-12 the branch table alone counted as ready and the branch went now: exe+0xBAA1D6 read
+                // the unreadable entry and the guest crashed (Vellua, 2026-11-07 18:25). Logged once per copy.
+                it->held_logged = true;
+                log::warn("GuestShopBranch: copy 0x{:X}: its branch table is there but has no readable node {} ({} node(s)): "
+                          "branch held (the guest crashed here before the 12-nov fix)",
+                          it->scene, gsb::kShopBranch, guest_seq_present_stage_nodes(it->scene));
+                ++it;
             } else if (now - it->since > kReadyTimeoutMs) {
                 if (may_log()) {
                     log::warn("GuestShopBranch: copy 0x{:X} never became ready in {} s: its branch is NOT handed (no shop "

@@ -613,8 +613,248 @@ eports` (pendiente a las 21:00; crashpad lo sube si se vuelve a
   (compara al jugador con otro personaje; el otro argumento sí se comprueba). Las otras cuatro caídas del invitado de
   esa noche (`0x462BDA`, `0x4632EA`, `0x46313D`, `0x3D7FB6`) eran del código de vivienda con la casa entera como
   propia (`rekey=1` o sesión 4 sin `drop_gimmicks`). Vender a Delkin: sigue sin probar (el lanzamiento de las 06:00 se
-  quedó esperando una tubería que heredaron los juegos; el de las 08:33 perdió al anfitrión, «종료 이벤트 발생» del
-  propio juego 2 s después de arrancar el invitado, sin volcado).
+  quedó esperando una tubería que heredaron los juegos; el de las 08:33 perdió al anfitrión: corrían **dos
+  lanzadores a la vez** (el bash de las 06:00 seguía vivo, se despertó al cerrarse los juegos viejos y siguió leyendo
+  el guion ya editado), con dos copias de anfitrión (PID 1392 y 55076; `cdmp.host.extra_*.log`); la 55076 no pudo
+  poner ningún gancho de MountSync (14 «REFUSED», en todas las demás sesiones 0) y el juego la cerró, «종료 이벤트
+  발생», sin volcado. No fue Steam ni el mod: los guiones de prueba llevan ahora un mutex `Local\cdmp_two_copy_launcher`).
+- **Por qué el 2733 en vivo no reconstruye la casa del invitado (estático, 3576, 7-nov):** clase
+  `pa::TrocTrSyncHousingPlacedSceneObjectListAck`, vtable `0x599A790`, entrada 2 = `0xCBF0B0`. Lee `[flags u8]` y
+  `[clave u32]`; rechaza la clave si `(clave & 0x30000000) != 0x10000000` y `0x99F940(gestor)` (por eso hace falta la
+  re-clave). Busca el dueño con `0x98FC20(gestor, &h, clave)` y, si `[dueño+0x88]+1 == 1` y `[dueño+0x96] != 0`, llama a
+  `0x4578F0(gestor de vivienda, flags, etapa, registros)`. `0x4578F0` solo **guarda los datos**: busca la etapa en una
+  tabla global (si no está, sale), vacía su lista con flags 1 o 4, copia los registros de `0xAC` B y, con flags 3 o 4
+  (última parte), llama a `0x17BFA90(entrada+8)`, que rehace un índice. Ninguno vuelve a generar los objetos de la
+  escena: los muros se construyen desde esa tabla al cargar la etapa (entrada o vuelta al título). Siguiente paso
+  (necesita juego): ganchos de diagnóstico al inicio de `0x4578F0` y `0x17BFA90` en el invitado para confirmar que el 2733
+  en vivo llega hasta ahí, y buscar la función que genera los objetos de la etapa a partir de la tabla para llamarla
+  (o forzar la descarga y recarga de la etapa) tras la última parte.
+  La tabla global de etapas de vivienda es `[exe+0x71C1050]` (57 lecturas en el código). Junto a `0x4578F0` hay una
+  familia de funciones que recorren las entradas de 0xC8 B del gestor (`0x457EF0`, `0x458210`, `0x458690`, `0x458DA0`,
+  `0x458F50`, `0x459130`, `0x4593D0`) y otra en `0x543940`–`0x544E20`; la más grande, `0x458690` (llama a `0x17BD350`,
+  `0x17BD4B0`, `0x460AA0`), es la primera candidata a mirar en vivo como lectora que genera la escena.
+- **Vivienda del cliente, más estático (3576, 7-nov tarde):** las candidatas anteriores **no** construyen la escena: son
+  los manejadores de datos de otros Acks (nombres por la vtable de cada `TrocTr…`, entrada 2): `0x457EF0`
+  SyncAndConsumeCustomHouseSyncDataAck (2187), `0x458210` su Nak, `0x458690` **PlaceHousingItemAck** (2623, los muebles
+  uno a uno), `0x458DA0` ClearHousingSyncDataAck, `0x458F50` UpdateWaitingCustomHousingGimmickSyncDataListAck (2500),
+  `0x459130` ChangeCustomHouseOwnerGamePlayTriggerInfoAck, `0x4593D0` PushHousingObjectToInventoryAck. El gestor de
+  vivienda (`[[[[exe+0x71C00F8]+0x30]+0x1230]+0x90]+0x210`) es un `pa::VHousingManager`, vtable `0x5905500` (36
+  ranuras): 31 `0x459800` (lista de etapas de las casas del jugador), 32 `0x45F430`, 33 `0x461610`, 34 `0x462730`
+  (registro → gimmick: lo llama `pa::ClientGimmickActorComponent` ranura 24, `0x9C2660`; las cuatro caídas de vivienda
+  del invitado eran en ella), 35 `0x462DD0`. Otras: `0x45EFA0(gestor, etapa)` saca la etapa de la lista de edición
+  (`+0xA8`, entradas de 0x2C, cuenta `+0xB0`; `+0xA0` = etapa en edición o -1) y entonces `0x461610` vacía la lista de
+  objetos de la entrada (`+0x68`/`+0x70`) y llama a `0x461740`, que sube la versión `+0xA4` y envía la petición de
+  sincronización (`0xC9ABA0`); `0xA57E90` → `0x464170` (comprobar) → `0x45A6C0` es el «confirmar» del modo de
+  construcción del que edita. `[gestor+0x98]+0x90` (= `[usuario+0x90]`) guarda en `+0x1D8` pares (etapa, estado) que
+  pone `0xA6A9C0`; `0xA65080` (por fotograma, por cajas de distancia) los cambia. En memoria (las dos copias): una
+  entrada, etapa índice 9 (la casa del anfitrión): `+0x08` lista de 88, `+0x18` lista de 194 registros en el anfitrión y
+  179 en el invitado (los 15 de `drop_gimmicks`), `+0x2C` total 282 / 267; todas las etapas 0x0–0x12 en estado 3. La
+  función que crea los muros al cargar sigue sin encontrar: nuevo diagnóstico `housing_trace=1` (cualquier papel, solo
+  3576, solo observa): ganchos `create_mid` al inicio de 33 funciones de vivienda, cuenta las llamadas y registra las
+  primeras con rcx/rdx/r8/r9 y la dirección de vuelta («HousingTrace …» en el log).
+- **El tejado (7-nov tarde, dos copias, 3576):** con el kit v13 (`drop_gimmicks=all`) el invitado ve muros, suelos y balcón
+  pero **no el tejado** (capturas lado a lado desde el mismo sitio: el anfitrión lo ve, el invitado ve el muro alto sin
+  tejado). Con `housing_share_drop_gimmicks=waiting` (el anfitrión en la casa antes de la entrada del invitado, para que
+  su 2500 esté grabado; 11 ids) el invitado recibe 183 registros en `+0x18` (194 − 11) y **ve el tejado** igual que el
+  anfitrión; sin caídas con el anfitrión entrando y saliendo cuatro veces del modo de construcción al lado del invitado.
+  Así que de los 15 registros de categoría 4, los 11 de la lista de espera son los gimmicks del cliente del anfitrión y
+  los otros 4 dibujan el tejado. Sigue faltando, en los dos modos: la **puerta** (el arco sale tapiado) y las
+  **contraventanas** (marcos con piedra): el invitado no puede entrar por la puerta. Con la clave cambiada los gimmicks
+  de la casa que genera el cliente del anfitrión no se ven en el invitado (las mascotas sí); la diana vista en vivo era
+  con `rekey=0`. El README del kit v13 decía «roof» y «doors»: las dos cosas eran falsas con ese perfil.
+  Además, el kit v13 no lleva `housing_share_edits=1`: sin él, el invitado que vuelve a entrar recibe la casa grabada
+  al entrar el anfitrión, no la editada (las pruebas de «se ve al volver a entrar» lo tenían puesto).
+  `waiting` sin 2500 conocido ya no deja pasar todos los registros (era la combinación de la sesión 4, que se caía):
+  ahora los quita todos, como `all`, y lo dice en el log. Cada registro de categoría 4 se escribe en el log del
+  anfitrión al dárselo al invitado («HousingShare: gimmick record …»), para ver qué distingue los 4 del tejado.
+  El invitado también manda `UpdateHousingModeEnableReq` (22 en la sesión) al acercarse: con la clave cambiada su
+  cliente se cree dueño de la casa; sin efectos vistos.
+- **Quién construye los muros (7-nov tarde, `housing_trace=1`, sesiones 9 y 10, dos copias):** al llegar un jugador a la
+  casa, el tic de proximidad `0xA65080` llama a `0x45EB60(gestor, etapa 9)` (entrar en la etapa: la añade a la lista
+  activa `+0xA8`, `+0xA0` = 9) → `0x45F430` (Mgr32, ranura 32) → `0x460AA0(gestor, 0, registro)` **una vez por
+  registro** (282 en el anfitrión; los registros en memoria van de 0xA8 en 0xA8). Eso es lo que dibuja muros, suelos y
+  tejado. En el modo de construcción el cliente del anfitrión edita sus objetos sin reconstruir: al confirmar,
+  `0x45A6C0` (desde la UI `0xEC8C21` o `0xA58006`) y el índice de registros; al salir, sus 11 gimmicks otra vez (Mgr34)
+  y `0x461740`; ni Mgr32 ni `0x460AA0`. El invitado recibe el 2733 en vivo (`0x4578F0` con flags 1 y luego 3) y no
+  reconstruye (comprobado en pantalla: el anfitrión quita el muro entre las dos ventanas del ala izquierda; el
+  invitado lo sigue viendo). La etapa no se suelta andando: a 645 m de la casa el invitado seguía con `+0xA0` = 9.
+  `0x461A60(gestor, etapa)` reconstruye la etapa activa (pone a 0 `+0x70` de la entrada, `0x465E20`, Mgr32 con los
+  límites de la lista activa); el cliente la llama desde `0xA600C0`. Nuevo `housing_redraw=1` (invitado,
+  experimental): gancho al inicio de `0x4578F0`; tras la última parte (flags 3 o 4), si hay etapa activa, llama a
+  `0x461A60(gestor, [gestor+0xA0])` en el mismo hilo del juego.
+  Otros datos de la traza: los 11 gimmicks del anfitrión (puerta, contraventanas, muebles) **sí llegan** al invitado:
+  `pa::ClientGimmickActorComponent` (`0x9C4EEF`) llama a Mgr34 (`0x462730`) para buscar su registro, que con
+  `drop_gimmicks` no está; por eso no se ven. El suelo alrededor de la casa sale como agua en el invitado (el anfitrión
+  ve hierba): los caminos/terreno de la casa (35274, `SyncHousingPlacedPathDataListAck`) siguen con la clave del
+  anfitrión.
+- **LOS CAMBIOS DE LA CASA SE VEN EN VIVO EN EL INVITADO (7-nov, 17:20–17:50, dos copias, 3576).** Sesión 11
+  (`housing_redraw=1` en el invitado): el anfitrión quita en el modo de construcción el muro entre las dos ventanas del
+  ala izquierda; el invitado recibe el 2733 (tres veces por confirmación), `HousingRedraw: house stage 9 rebuilt`, la
+  traza muestra `0x461A60` → `0x465E20` → Mgr32 → 271 `0x460AA0` (~30 ms) y **el hueco aparece en la pantalla del
+  invitado** igual que en la del anfitrión, sin muros repetidos (el muro quitado desaparece: la reconstrucción sustituye
+  los objetos). Segundo cambio (ala derecha): igual. Seis reconstrucciones, sin caídas. La etapa no se suelta andando
+  (645 m), así que esto es lo único que la redibuja sin volver a entrar.
+  Reenvío del 2733 al cambiar la lista de espera: con `waiting`, si el invitado entra antes de que el anfitrión haya
+  pasado por su casa (lo normal), recibe la casa sin tejado (sin 2500 se quitan todos los de categoría 4); cuando llega
+  el 2500 del anfitrión (distinto del filtro con el que se dio), el anfitrión le vuelve a dar su 2733 filtrado con él
+  y, con `housing_redraw`, **el tejado aparece solo** (sesión 13, orden del kit: comprobado en pantalla).
+  Sesión 12 fallida: con `housing_trace=1` en el anfitrión (39 ganchos `create_mid` puestos al aparecer el WorldSystem,
+  antes que los del late init) 28 ganchos de otros módulos no se pudieron poner (`IP_RELATIVE_INSTRUCTION_OUT_OF_RANGE`,
+  sin memoria libre a ±2 GB para sus trampolines) y el invitado no entró en la sesión del anfitrión. `housing_trace`
+  es solo para diagnóstico y queda apagado; no lo uses en el anfitrión junto con la sesión.
+  Perfiles nuevos (repositorio y kit v14): anfitrión `housing_share_drop_gimmicks=waiting` + `housing_share_edits=1`;
+  invitado `housing_redraw=1`.
+- **Prueba del usuario (7-nov noche, perfiles nuevos):** si el invitado llega primero a la casa, solo ve los muros
+  (sin tejado ni puertas). Cuando llega el anfitrión, al invitado le aparecen de pronto las puertas, etc. (los gimmicks
+  que genera el cliente del anfitrión, que solo existen con el anfitrión cerca), pero **tapados por los muros**: el
+  registro de la puerta (categoría 4) es también el que abre el hueco en el muro; sin él, el invitado construye un
+  muro macizo. Conclusión: quitar registros no sirve; el invitado necesita todos los registros (huecos de puertas y
+  ventanas, tejado) sin caerse. Siguiente: probar `housing_share_rekey=2733` solo (sin 35245, para que el cliente del
+  invitado no se crea dueño de la casa) con `drop_gimmicks=0`; si no, evitar en el invitado la parte de dueño que se
+  caía (`0x462730`/`0x462DD0` sobre los gimmicks del anfitrión).
+- **Caída del invitado en una tienda (usuario, 7-nov 18:25, Vellua Village):** el invitado pulsó «Shop» en un tendero
+  (`0xB01033AA`) cuya escena aún no había terminado de cargar; GuestShopBranch hizo la copia `0x1F000666` de la escena
+  `0x666` del anfitrión, la dio por lista (`guest_seq_present_stage_ready`: solo mira que exista la tabla de nodos) y
+  le dio la rama 6; 10 ms después, `exe+0xBAA1D6` (manejador de `pa::TrocTrStageOnBranchEventAck`, `0xD36330` →
+  `0xBAA010`) leyó la entrada 6 de esa tabla, `0x20100000002`, sin comprobar límites. Volcado
+  `cdmp_crash.guest_20261107-182526_61108_1.dmp` (crashpad apagado: solo local). Arreglo en el código (sin compilar ni
+  probar todavía): `guest_seq_present_stage_node_ready(seq, nodo)` exige además que la entrada del nodo sea legible;
+  GuestShopBranch la usa en sus dos puntos; si no llega a estar lista, no da la rama (sin tienda en vez de caída).
+  En el mismo viaje: la carga del invitado esperó 15 s un `PlayAllPreLoadSequencerAck` (2322) que el anfitrión no
+  mandó (el mod lo sintetiza a los 15 s), y la escena del encargado del barco (`cd_seq_funcnpc_ship_vell`) empezó en el
+  invitado 9 s después que en el anfitrión (copia en segundo plano a ~8 fps).
+- **12-nov (usuario en el trabajo, PC libre):**
+  - Prueba A, `housing_share_rekey=2733` solo + `drop_gimmicks=0`: el invitado **no construye nada** (ni muros ni
+    tejado; solo marcos de puertas y ventanas flotando). Sin el 35245 re-clave (la lista de casas del jugador) su
+    cliente no levanta la etapa: hace falta que se crea dueño.
+  - Las caídas de la casa entera eran todas en la ranura 35 de `pa::VHousingManager` (`0x462DD0`, llamada desde
+    `0x9F1181` para todo gimmick con id de vivienda `[+0x41C] != -1`): busca en la lista de la entrada (`+0x68`/`+0x70`,
+    elementos de 16 B: clave, puntero) el elemento del gimmick y lee `[elem+0x28]` (`0x46313D`) o `[elem+0x68]` con
+    cuenta `[+0x70]` != 0 (`0x4632EA`): nulos en el invitado, que es «dueño» de gimmicks que no generó (sus 2492/2446
+    se tiran). Nuevo `housing_gimmick_guard=1` (invitado): gancho al inicio de `0x462DD0` (firma de 14 bytes; detrás hay
+    una tabla de saltos, no int3) que no hace nada en el invitado.
+  - Tiendas: `prl::kSynthesizeAfterMs` de 15 s a 4 s (la carga del invitado esperaba un 2322 que no llega en esos viajes:
+    la copia del 2322 del anfitrión espera al 2762 de esa misma carga).
+  - **Prueba B (11:00–11:30): LA CASA ENTERA EN EL INVITADO.** Anfitrión `housing_share_rekey=35245,2733` +
+    `drop_gimmicks=0` (todos los registros) + `guest_spawn=0` + `edits=1`; invitado `housing_redraw=1` +
+    `housing_gimmick_guard=1`. En pantalla del invitado: muros, tejado, balcón, **la puerta de madera y las
+    contraventanas** (iguales que en el anfitrión); «Window: E Open» sobre una contraventana (la pulsación pasa al
+    anfitrión por InteractGate). El anfitrión entra en el modo de construcción (la guarda salta la ranura 35), quita un
+    muro (el invitado lo reconstruye: el hueco se ve junto a la ventana, con la puerta y las contraventanas en su
+    sitio), y entra y sale cuatro veces más: **sin caídas**. El anfitrión se va a Hernand (5,9 km) y el invitado sigue
+    bien. Las dos copias guardan 11 gimmicks en `+0x68`/`+0x70` de la entrada. Muebles dentro: sin mirar (el invitado no
+    entró en la casa). Perfiles del repositorio cambiados a esto.
+  - **Orden del kit (11:40–11:50, perfiles del repositorio):** el invitado entra con el anfitrión lejos (831 m) y ya ve
+    la casa entera con puerta y contraventanas (salen de sus propios registros); llega el anfitrión: sin caída, salen
+    sus mascotas; el anfitrión quita un muro del ala derecha: el invitado reconstruye tres veces y ve el hueco. Kit
+    `dist\cdmp-coop-20261112-3576-v15.zip` (`cdmp.asi` `2e4dd1f8…`, el mismo que `bin64`).
+  - **Tiempos de los tenderos (11:51–12:00):** viaje del invitado a Vellua: carga de 17 s (el 2322 sintetizado a los 4 s;
+    antes ~35 s). Escenas de NPC de función (barco, carruaje, charlatán, animales): el anfitrión las prepara y el
+    invitado las empieza 7,5–9 s después con su ventana DETRÁS (~8 fps) y ~4 s con su ventana DELANTE (Hernand: el
+    anfitrión prepara carnicero, verdulero, herrero, tienda general y taberna a las 12:00:15,7; el invitado los empieza a
+    las 12:00:19,6–19,9). Lo largo es la carga del propio anfitrión con dos copias en un PC (viaje 11:59:38, su 2322 a
+    los 22 s, LoadingComplete a los 30 s, escenas 7 s después): nativo. La caída de la tienda sin escena lista no se
+    reprodujo; el arreglo (`guest_seq_present_stage_node_ready`) va en el kit.
+  - **VENTA COMPROBADA (12:23–12:30, Vellua Village, otro tendero: «Vellua Farm Owner», escena `cd_seq_funcnpc_charlatan`):**
+    el invitado pulsa «Shop» (copia `0x1F000467` lista por nodo, rama 6, menú), Comprar abre sus existencias (nabo,
+    remolacha), Vender abre su inventario (233/240), vende un diario por 10 cobres: `SellItemToItemStoreReq` (3109
+    nativo) → `RemoveItemToInventoryAck` 44 ms después; el dinero pasa de 2115,36 a 2115,46 y el inventario a 232.
+    Tras vender, el menú añade «Repurchase» (rama 2, contestada como el servidor; sin probar); Salir (rama 3 → `7|3`)
+    devuelve el control. La caída por pulsar antes de que la escena empiece no salió: el tendero solo aparece cuando el
+    anfitrión está cerca y su escena ya había empezado en el invitado 12 s antes.
+  - **Muebles y suelo (12:33–12:50):** el anfitrión coloca en «Place Furniture» (F en el modo de construcción) una diana
+    en la hierba junto al porche: `PlaceHousingItemAck` 2623 en el anfitrión, su lista (2408 → 2733, 46 268 B) llega al
+    invitado, que reconstruye; **la diana aparece en el mismo sitio en la pantalla del invitado**; las dos copias pasan a
+    12 gimmicks en `+0x70` (el 2500 del anfitrión, de 58 a 62 B). Con `housing_share_rekey=35245,2733,35274` (35274 =
+    caminos/terreno de la casa, 2 claves cambiadas) el charco junto al porche sigue en el invitado (el anfitrión ve
+    hierba): 35274 no es la causa; queda fuera de los perfiles. La puerta abierta en el anfitrión salió cerrada en el
+    invitado (estado de la puerta sin sincronizar). Los 11 gimmicks de la casa eran 1 puerta (clave `0x4262`) y 10
+    contraventanas (`0x45D9` ×6, `0x460A` ×4): la casa no tenía muebles colocados.
+  - **El charco (12:51–13:00):** con `housing_share_rekey=35245,2733,2343` (2343 = gimmicks del campo que tapa la casa,
+    3 claves cambiadas) sigue. No es lluvia: `puddleRate` 0 en las dos copias (WeatherSync). Queda sin explicar (ni
+    35274 ni 2343); fuera de los perfiles.
+  - **Prueba de la caída de la tienda:** no se puede forzar (el tendero solo existe cerca del anfitrión y su escena ya ha
+    empezado en el invitado cuando se le puede pulsar). Nuevo aviso en GuestShopBranch: «branch table is there but entry
+    6 is not readable yet: branch held (the guest crashed here before the 12-nov fix)», una vez por copia: si sale en
+    una prueba, es justo el caso de la caída del 7-nov y el arreglo lo evitó. Compilado (102/102), unión probada (0 ERR),
+    kit v15 actualizado (`cdmp.asi` `d8d1b3e5…`, el mismo que `bin64`).
+  - **Puerta (13:12–13:25):** al salir del modo de construcción el anfitrión aparece siempre en (-4694.45, 385.30,
+    -3976.90), la entrada de la casa, de espaldas a ella. La puerta no da aviso «Open» de cerca y no se abre al
+    empujarla (el personaje trepa por el muro): no pude abrirla a propósito, así que la diferencia vista a las 12:42
+    (abierta en el anfitrión, cerrada en el invitado) queda sin reproducir ni explicar.
+  - **Retraso de los tenderos, lo que queda:** ~1,9 s es `observer_hold` (S3: los NPC que controla el anfitrión llegan
+    al invitado tras su primera acción; sin eso el invitado se caía por la capa de acciones vacía; `child_hold` no
+    retuvo ninguno, su cuenta siguió en 3) y ~2 s la carga de la escena en el cliente del invitado. Bajarlo exige
+    arriesgar esa caída: pregunta abierta al usuario.
+  - **CAUSA DEL CHARCO (13:40, registros de SceneLevelShare):** la parcela de la casa es una escena por fases. El
+    anfitrión carga `House_Del_0002` + `House_Del_0002_Phase04_00` (la casa desarrollada: suelo nivelado, hierba); el
+    cliente del invitado pide con su propio 2598 (`SceneLevelLoadCompleteSyncSceneObjectListReq`, actor 0xA0100066)
+    `House_Del_0002_Phase00_00` (hash 0x0E7ED2F3): la parcela sin desarrollar, con el charco. La fase la elige el cliente
+    del invitado por su propio progreso (`quest_per_user=1`; su personaje nunca desarrolló esa parcela). Arreglo
+    pendiente: que el invitado elija la fase del anfitrión (buscar dónde lee el cliente la fase de la parcela: nodo de
+    gestión / estado de misión de la casa) o cambiar su petición de nivel por la de la fase del anfitrión.
+  - **ARREGLO DEL CHARCO (14:20, dos copias, `housing_share_level_states=1` en el anfitrión):** el invitado carga
+    `House_Del_0002_Phase04_00` (pide sus gimmicks bajo demanda con el hash 0x511BD595 y ningún `Phase00`); en su pantalla
+    la casa entera y delante hierba a nivel, sin charco. 0 ERR en los dos registros, sin volcados.
+    - Cómo se encontró: las fases de `House_Del_0002` están ligadas en los datos del nivel (memoria del anfitrión, junto a
+      `housing_pivot.prefab`) a la clave 0xF439B, que solo sale en paquetes de `ChangeGameLevelStateAck` (lógico 2344,
+      nativo 3081): `[04][dueño u32][u32 1][u8 1][(nivel u32, hash de estado u32, u8)…]`, 364 niveles; 0xF439B =
+      0xAD24F618. El servidor manda al usuario 2 los mismos estados que al anfitrión, pero tarde: al final de una carga,
+      60 ms después de que su cliente hubiera elegido `Phase00` (al anfitrión le llegan en su entrada, t=85, antes de ir a
+      su casa).
+    - Arreglo: el anfitrión junta los estados de nivel que recibe su cliente y se los da al usuario 2, con su clave, justo
+      tras el 2733 de su entrada (`housing_share.cpp`, `hsh::merge_level_states`/`level_states_for`). En el perfil del
+      anfitrión y en el kit.
+    - Descartado antes: los estados de disparadores (`ChangeGamePlayTriggerStateAck`, lógico 2238, nativo 2638): ni el de
+      la casa 0xF4416 ni los 85 cambiaron la fase. Ese código se quitó. Tampoco son `UpdateStageStateAck` (el invitado
+      no recibe ninguno, pero la casa no está entre sus ~33 000 claves).
+    - Visto de paso, sin relación: hacia el este, en el invitado, columnas rosas como de carne en el cielo: es el nivel
+      `AbyssRuins_Del_0011`, que el invitado ya cargaba en las pruebas anteriores. Las ~1 300–3 200 peticiones
+      `SceneLevelOnDemandGimmickSpawnReq` del invitado (con `SpawnOnDemandGimmickNak`) también son de antes.
+    - Kit `dist/cdmp-coop-20261112-3576-v16.zip`: `cdmp.asi` `cd947dcd…` (el mismo que `bin64`), perfil del anfitrión con
+      `housing_share_level_states=1`, README sin el charco. Compilado y probado: 102/102.
+  - **CAÍDA DE LA TIENDA: CAUSA Y ARREGLO (14:28–16:05, dos copias, Vellua):**
+    - Reproducida: el invitado espera en el sitio del Farm Owner (-10409, -6056) con el anfitrión lejos; el anfitrión
+      viaja a Vellua y anda hasta (-10450, -6064); el invitado pulsa R una vez por segundo. Primera pulsación: «Shop»
+      aceptado por el servidor, copia creada, y el aviso de la caída del 7-nov («entry 6 is not readable»). Sin caída,
+      pero con el arreglo de la mañana el personaje se quedaba **atascado**: cámara de interacción (3,5 m, fov 46),
+      no anda (W/goto sin efecto), los menús sí abren; a los 15 s la rama se descartaba y seguía igual.
+    - Causa: la escena del Farm Owner (`cd_seq_funcnpc_charlatanstore_demeniss_west`, recurso 0x3BB54CDB) tiene en su
+      tabla de ramas (`[[[stage+0x60]+0x38]+8]`, cuenta en `+0x10`) **3** entradas; las tiendas (general, carnicero,
+      barco) tienen 7, y sus entradas 0–2 son iguales que las 3 del Farm Owner (la 6, la de la tienda, igual que su 2).
+      El manejador de `StageOnBranchEventAck` (`0xBAA010`, lectura en `0xBAA1D6`) indexa esa tabla con la rama del
+      mensaje sin comprobar límites. La rama 6 leía fuera del vector: basura legible (la venta de las 12:23, por
+      suerte), ilegible (la caída del 7-nov, `0x20100000002`; hoy `0x699900000003`) o nula (la entrada 3, la de «Leave»,
+      era 0: Salir también habría caído). A esas horas el anfitrión no tiene «Shop» con él (R no hace nada; solo los
+      objetos de la mesa, «E Buy»): el invitado lo tenía porque C1 + InteractGate le dejan pulsar.
+    - Arreglo (dos partes): `guest_seq_present_stage_node_ready` exige `nodo < cuenta` (nunca lee fuera); InteractGate,
+      en la pulsación de un NPC tipo 3/4 cuya escena (`[entry+0x20]`) es de NPC de función (`cd_seq_funcnpc_…`) con 6
+      ramas o menos, **no llama al manejador**: escribe el error de su propia salida «entrada sin índice» (`exe+0x714AEE8`
+      = 0x15DBC102, leído de la instrucción `+0x46` del manejador con sus bytes comprobados) y devuelve como él. No dejar
+      el controlador sin cambiar no bastaba: el cliente mandó «Shop» igual y el servidor aceptó (atascado otra vez).
+      Intento descartado: negar el aviso en C1 por la clave 0xF4321 de la entrada (en 3576 no está en sus primeros 0x40
+      bytes; nunca saltó).
+    - Comprobado (16:03): tres pulsaciones en el Farm Owner «REFUSED … ended as an entry without an index»: ningún
+      2671/2720 enviado, cámara normal (6,5 m), el personaje anda. Sin caídas en ninguna de las cuatro pruebas. La tienda
+      de 7 ramas no se pudo volver a probar (el tendero general estaba sentado, sin atender); ese camino no cambia (solo
+      se rechazan escenas de 6 ramas o menos). Kit `dist/cdmp-coop-20261112-3576-v17.zip` (`cdmp.asi` `7a88d62b…`, el mismo
+      que `bin64`; README: tienda cerrada = «Shop» no hace nada; 102/102).
+  - **RETRASO DE LOS TENDEROS, MEDIDO (16:00–16:32):**
+    - Tabla de la prueba de Vellua (anfitrión: 2661 «prepared»; invitado: 2661 recibido y arranque P1): el mod entrega
+      la escena y sus actores al invitado **0,3–0,7 s** después que el anfitrión (barco: +0,29 enviado, +0,44 recibido).
+      El cliente del invitado la arranca 0,5–1,5 s después cuando su ventana está delante (`train_safez`, tiempo), igual
+      que el anfitrión la suya (barco: primer `SequencerTriggerVolumeInOutReq` a +0,74 s); con su ventana DETRÁS (las dos
+      copias en un PC, ~8 fps) 8–10 s. En dos PC eso no pasa.
+    - Lo que también vio el usuario «en los dos»: los tenderos nacen cuando el ANFITRIÓN se acerca (el servidor evalúa
+      las stages alrededor de él): el del barco está a ~158 m del nexo de Vellua; el anfitrión acabó de cargar a t=617,7
+      y su 2661 llegó a t=642,7, al acercarse andando. Nativo.
+    - Lo que sí era del mod: la espera del invitado en el estado 0x11 de cada viaje al campo del anfitrión (ningún 2322
+      le llega; el mod lo sintetiza). A las 15:55: 8,5 s de carga del juego + **4,07 s** de espera. `prl::kSynthesizeAfterMs`
+      de 4000 a **1500** (el manejador solo guarda la marca: un 2322 real que llegue luego no hace nada). Medido: Vellua
+      0x11 → sintetizado en 1,55 s, carga entera 9,8 s (antes 12,8); Hernand 1,54 s, carga 8,7 s; 0 ERR, el mundo carga
+      bien. Antes del 12-nov la espera era de 15 s (carga de ~23 s).
+    - Kit `dist/cdmp-coop-20261112-3576-v18.zip` (`cdmp.asi` `19c64926…`, el mismo que `bin64`): v17 + la espera de 1,5 s y el
+      README con lo medido. 102/102.
 
 ## Problemas conocidos
 

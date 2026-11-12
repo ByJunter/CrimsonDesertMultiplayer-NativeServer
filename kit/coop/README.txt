@@ -6,8 +6,8 @@ This is an unofficial mod. Use it at your own risk.
 
 THIS ZIP IS FOR 1.0.0.3576 (Steam's update of 6 November 2026, evening). On 3576, with two copies of the game on one
 PC, these were checked: joining, the guest going back to the title and joining again, SHOPKEEPERS (Delkin: the menu
-and buying Water), MARKET STALLS (buying a box) and HOUSES (the host's house, walls and furniture, on the guest's
-screen). Everything else in the list below was checked on the version before (1.0.0.3549) and not yet again
+and buying Water), MARKET STALLS (buying a box) and HOUSES (the host's whole house on the guest's screen, door and
+window shutters included, and the host's building changes live). Everything else in the list below was checked on the version before (1.0.0.3549) and not yet again
 on 3576: please tell us if something that worked before no longer does.
 
 Checked on 1.0.0.3549, with two copies of the game on one PC:
@@ -24,19 +24,37 @@ Checked on 1.0.0.3549, with two copies of the game on one PC:
 - SHOPKEEPERS (NEW): the guest can use the merchants' shops. Press R ("Shop") on the merchant: the shop menu opens
   (Buy / Sell / Leave), "Buy" opens the merchant's goods and buying works (the item goes to the guest's inventory and
   the price comes out of the guest's own money), "Sell" opens the guest's inventory for selling, Esc goes back to the
-  menu and "Leave" ends it. Checked with Delkin, the grocer in Hernand, several times (buying Water, 3 copper). Not
-  tried yet: another merchant, and actually selling an item.
+  menu and "Leave" ends it. Checked with Delkin, the grocer in Hernand, several times (buying Water, 3 copper), and on
+  12 November with the Vellua Farm Owner in Vellua Village: the menu, the shop's goods, and a real SALE (an item sold
+  for 10 copper: it left the guest's inventory and the money went up). After a sale the menu also shows "Repurchase"
+  (the game's own option; not tried).
   The merchant must be serving (not busy at his shelves) and the HOST must be nearby: merchants exist only around the
-  host.
-- HOUSES (checked on 3576, two copies on one PC, 7 November): at the HOST's house the guest sees the host's
-  walls, floors, roof and balcony, and the host's furniture, decorations, doors and pets. Furniture the host places
-  DURING the session appears for the guest too (seen live: an archery target). The host can open the construction
-  and furniture modes with the guest there (checked four times, no crash). Known gaps: walls or floors the host
-  changes show for the guest only after it goes back to the title and joins again, and the window shutters may be
-  missing for the guest. The guest should not try to build in the host's house.
-  If the guest's game crashes near the house, set the HOST's cdmp.ini, [session2]: housing_share_rekey=0 (the guest
-  then sees the furniture but not the walls). housing_share_rekey=1 (the whole house as the guest's own, kits up to
-  6 November) crashed the guest when the host opened the construction mode.
+  host. FIXED on 12 November (checked: reproduced three times, no crash): the guest's game crashed (7 November) when
+  it pressed "Shop" on a merchant whose shop was closed at that moment. The Vellua Farm Owner, for one, only sells
+  from his table at some hours, and the host gets no "Shop" from him then. The guest's "Shop" there now does nothing,
+  as for the host; come back when he is serving. Since 12 November the guest's loading after a fast travel into the
+  host's area no longer waits 15 seconds for nothing (1.5 at most): a trip now loads in about 9-10 seconds instead of
+  about 23, so towns and their merchants appear that much sooner for the guest (checked: Vellua and Hernand).
+  Merchants appear when the HOST gets near them (as in the normal game: the Vellua ship manager stands about 150 m
+  from the nexus, so he appears only once the host walks over); the guest gets each one about half a second after
+  the host's game does. With two copies on ONE PC the copy in the background runs slowly and its merchants can
+  appear several seconds later; on two PCs that does not happen.
+- HOUSES (checked on 3576, two copies on one PC, 12 November): at the HOST's house the guest sees the host's whole
+  house: walls, floors, roof, balcony, the door and the window shutters, also before the host gets there. When the
+  host changes walls or floors in the construction mode, the guest sees the change right away. Checked: the host
+  arriving while the guest waits at the house, the host opening and closing the construction mode six times and
+  removing walls with the guest next to it, the host travelling far away and back: no crash. The guest can open the
+  window shutters (E). Pets show for the guest. Furniture the host places shows for the guest too (checked: an
+  archery target placed by the host next to the porch appeared at the same spot on the guest's screen). Since 12
+  November the ground around the house looks the same for both (level grass): the guest used to see a pond beside
+  the porch, the plot as it was before the house was built (HOST's cdmp.ini, [session2]: housing_share_level_states=1).
+  Known gap: a door the host opens may still look closed for the guest. The guest should not try to build in the
+  host's house.
+  If the guest's game crashes near the house, set the HOST's cdmp.ini, [session2]: housing_share_drop_gimmicks=waiting
+  (the guest then loses the door, the shutters and the furniture: the doorway looks like a wall), or
+  housing_share_rekey=0 (no walls at all). If it crashes when the host changes the house, set the GUEST's cdmp.ini,
+  [session2]: housing_redraw=0 (the changes then show when the guest joins again). Keep the GUEST's
+  housing_gimmick_guard=1: without it the guest crashed when the host opened the construction mode.
 
 Checked on 1.0.0.3549 between two real PCs over Steam (one short session):
 - Connecting, the guest playing their own save, moving, and the guest fast travelling.
@@ -62,7 +80,8 @@ KNOWN PROBLEMS
 - When the guest left, the HOST's town NPCs used to disappear. Fixed and seen working once in a real session (the guest
   left through the menu). Not yet seen after a guest CRASH: if the NPCs go, restart the host's game to get them back.
 - Rope on the other player's copy does not work.
-- SHOPKEEPERS: if the guest gets stuck in a shop (camera on the merchant, no menu), walk away or reload. To turn the
+- SHOPKEEPERS: if the guest gets stuck in a shop (camera on the merchant, no menu, cannot walk; the menus still
+  open), go back to the title and join again. To turn the
   shop windows off: GUEST's cdmp.ini, [session2]: guest_shop_branch=0. If the guest's game misbehaves in a town
   (crash, camera taken over by a scene, stuck in a dialog), turn the merchants' scenes off as before: GUEST's
   guest_seq_route=0, HOST's observer_seq_copy=0.

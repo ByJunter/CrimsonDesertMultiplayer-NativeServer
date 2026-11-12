@@ -72,5 +72,18 @@ bool guest_seq_present_set_muted(uint64_t seq, bool muted) noexcept;
 // guest_shop_branch: the scene `seq` has started on this client (P1 seen) and its processor's branch table is there
 // ([[[stage+proc]+0x38]+8]: what the branch handler reads, exe+0xBA9DA6, live crash 2026-11-06 when a branch came first).
 bool guest_seq_present_stage_ready(uint64_t seq) noexcept;
+// As guest_seq_present_stage_ready, and the table's entry `node` is a readable node: the branch handler reads
+// [[table]+node*8]+0xE/+0xF without a bound check (3576 exe+0xBAA1D6, live crash 2026-11-07 18:25: the guest pressed
+// 'Shop' on a shopkeeper whose scene had not finished loading, entry 6 was 0x20100000002).
+// 2026-11-12: also `node` < the table's count. Vellua's Farm Owner selling from his table runs a 3-node chart (the shops
+// have 7): the server still accepted 'Shop' from the guest, and there is no node 6 to branch to.
+bool guest_seq_present_stage_node_ready(uint64_t seq, uint32_t node) noexcept;
+// The node count of a stage's chart table ([[[stage+proc]+0x38]+0x10]); 0 if unknown or unreadable. By scene id (a
+// stage P1 saw), or by the stage object itself (SEH reads only: safe in a hook).
+uint32_t guest_seq_present_stage_nodes(uint64_t seq) noexcept;
+uint32_t guest_seq_present_stage_nodes_at(uintptr_t stage) noexcept;
+// interact_gate: the scene `seq` (a stage P1 saw) is a function NPC's ('cd_seq_funcnpc_...': shops, ships, carriages);
+// its node count in *nodes (0 if unreadable). SEH reads only: safe in the press hook.
+bool guest_seq_present_funcnpc_nodes(uint64_t seq, uint32_t* nodes) noexcept;
 
 }  // namespace cdmp::session2

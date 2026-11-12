@@ -18,7 +18,9 @@
 #include "mod/game/safe_memory.h"
 #include "mod/log.h"
 #include "mod/session2/gimmick_interact_logic.h"
+#include "mod/session2/guest_seq_present.h"
 #include "mod/session2/guest_shop_branch.h"
+#include "mod/session2/guest_shop_branch_logic.h"
 #include "mod/session2/guest_shop_window.h"
 #include "mod/session2/p8_probe_logic.h"
 #include "mod/session2/p8_probes.h"
@@ -67,14 +69,20 @@ uint8_t g_pass = 3;
 uint32_t g_types = 1u << 7;
 SafetyHookInline g_hook, g_press_hook;
 std::atomic<uint64_t> g_calls{0}, g_passed{0}, g_failed{0}, g_middle{0}, g_let{0}, g_lost{0};
-std::atomic<uint64_t> g_press_calls{0}, g_swapped{0}, g_restored_late{0};
+std::atomic<uint64_t> g_press_calls{0}, g_swapped{0}, g_restored_late{0}, g_refused_short{0};
 std::atomic<bool> g_press_hooked{false};
 uintptr_t g_world_slot = 0;
+// The press handler's own way out for an entry without an index (+0x3F: cmp word [r9+0x10],0xFFFF / jne / +0x46: mov
+// eax,[rip+d] / +0x4C: mov [rdx],eax / jmp to its end, which returns rdx): the absolute address of that error code
+// (3576: exe+0x714AEE8 = 0x15DBC102). A refused press ends the same way: the code in *err, err returned, nothing sent.
+// 0 = not found: refused presses are then only left unswapped.
+uintptr_t g_no_entry_err = 0;
+constexpr uint32_t kPressNoEntryMov = 0x46;
 
 struct Rec {
     uint32_t key = 0, ctl = 0, err = 0, entry0 = 0;
     uint16_t index = 0;
-    uint8_t type = 0, code = 0, let = 0, caller = 0;  // caller: 0 press, 1 pre-check, 2 other
+    uint8_t type = 0, code = 0, let = 0, caller = 0;  // caller: 0 press, 1 pre-check, 2 other, 3 swap, 4 refused
 };
 p8p::EventRing<512> g_ring;
 
@@ -121,19 +129,48 @@ uint32_t own_user() noexcept {
 // on the stack, and one press crashed the guest at 0xABB018 reading 0x30000000).
 Arg press_detour(Arg ctx, Arg err, Arg target, Arg entry, Arg a5, Arg a6) {
     g_press_calls.fetch_add(1, std::memory_order_relaxed);
-    uint32_t saved = 0, mine = 0;
-    bool swapped = false;
+    uint32_t saved = 0, mine = 0, short_nodes = 0;
+    bool swapped = false, refused = false;
     uint8_t type = 0;
     if (g_guest.load(std::memory_order_relaxed) &&
         static_cast<gil::Mode>(g_mode.load(std::memory_order_relaxed)) == gil::Mode::On && target) {
         if (const uintptr_t ti = rd<uintptr_t>(target + kActor_TypeInfo)) type = rd<uint8_t>(ti + 1);
         const uint32_t ctl = rd<uint32_t>(target + kActor_Controller);
         mine = own_user();
-        if (mine && ctl && ctl != mine && (ctl & kUserMask) == kUserTag && (mine & kUserMask) == kUserTag &&
+        // 2026-11-12: a function NPC whose scene has no node gsb::kShopBranch (Vellua's Farm Owner selling from his
+        // table: a 3-node chart, the shops have 7; the host gets no 'Shop' there). With the swap the server accepted
+        // the guest's 'Shop', and the branch the guest got read past the scene's table: the 7-nov crash, or with the
+        // node check a character stuck in the interaction. Without it the press fails as for anyone else's NPC.
+        const uint64_t scene = type == 3 || type == 4 ? rd<uint64_t>(entry + 0x20) : 0;
+        refused = scene && guest_seq_present_funcnpc_nodes(scene, &short_nodes) && short_nodes &&
+                  short_nodes <= gsb::kShopBranch;
+        if (!refused && mine && ctl && ctl != mine && (ctl & kUserMask) == kUserTag && (mine & kUserMask) == kUserTag &&
             type < 32 && ((g_types >> type) & 1u) != 0 && write_u32(target + kActor_Controller, mine)) {
             saved = ctl;
             swapped = true;
         }
+    }
+    if (refused) {
+        g_refused_short.fetch_add(1, std::memory_order_relaxed);
+        uint32_t no_entry = 0;
+        const bool ended = g_no_entry_err && game::safe_read(g_no_entry_err, &no_entry, sizeof no_entry) && no_entry &&
+                           write_u32(err, no_entry);
+        Rec rec;
+        rec.key = rd<uint32_t>(target + kActor_Key);
+        rec.type = type;
+        rec.index = rd<uint16_t>(entry + kEntry_Index);
+        rec.entry0 = short_nodes;
+        rec.err = ended ? no_entry : 0;
+        rec.let = ended ? 1 : 0;
+        rec.caller = 4;
+        p8p::Event e;
+        e.qpc_us = p8_now_us();
+        e.tid = GetCurrentThreadId();
+        std::memcpy(e.v, &rec, sizeof rec);
+        if (!g_ring.push(e)) g_lost.fetch_add(1, std::memory_order_relaxed);
+        // Live 2026-11-12: unswapped, the game still sent 'Shop' and the server accepted it (stuck again). So the
+        // handler is not run at all: it ends as for an entry without an index.
+        if (ended) return err;
     }
     const Arg r = g_press_hook.unsafe_call<Arg>(ctx, err, target, entry, a5, a6);
     if (swapped) {
@@ -264,6 +301,22 @@ bool install() {
             log::error("InteractGate: the press handler's hook could not be prepared as a 5-byte patch; the swap is off");
             return true;
         }
+        // The no-entry exit's error constant, read from the handler's own instruction (bytes checked).
+        const uint8_t mov_eax[2] = {0x8B, 0x05}, mov_out[2] = {0x89, 0x02};
+        if (bytes_at(g_a->press + kPressNoEntryMov, mov_eax) && bytes_at(g_a->press + kPressNoEntryMov + 6, mov_out)) {
+            int32_t d = 0;
+            if (game::safe_read(g_base + g_a->press + kPressNoEntryMov + 2, &d, sizeof d)) {
+                g_no_entry_err = g_base + g_a->press + kPressNoEntryMov + 6 + static_cast<intptr_t>(d);
+            }
+        }
+        if (g_no_entry_err) {
+            log::info("InteractGate: the press handler's no-entry exit: error code at exe+0x{:X}; a 'Shop' press on a "
+                      "function NPC whose scene has no shop node ends there",
+                      g_no_entry_err - g_base);
+        } else {
+            log::warn("InteractGate: the press handler's no-entry exit was not found: a 'Shop' press on a function NPC "
+                      "without a shop node is only left unswapped");
+        }
         g_press_hook = std::move(*ph);
         if (!g_press_hook.enable()) {
             log::error("InteractGate: the press handler's hook could not be enabled; the swap is off");
@@ -322,6 +375,16 @@ DWORD WINAPI worker(LPVOID) {
                     ++not_logged;
                     continue;
                 }
+                if (rec.caller == 4) {
+                    log::info("InteractGate {}: press on 0x{:08X} type {} REFUSED: its scene is a function NPC's with {} "
+                              "node(s), no node {} (no shop there now; the host gets none either) | entry index {} | {} | "
+                              "thread {}",
+                              p8_when(e.qpc_us), rec.key, rec.type, rec.entry0, gsb::kShopBranch, rec.index,
+                              rec.let ? std::format("ended as an entry without an index (error 0x{:08X}): nothing sent", rec.err)
+                                      : std::string("only left unswapped (the handler's no-entry exit was not found)"),
+                              e.tid);
+                    continue;
+                }
                 if (rec.caller == 3) {
                     log::info("InteractGate {}: PRESS SWAP target 0x{:08X} type {} | controller 0x{:08X} -> this "
                               "client's 0x{:08X} for the press, put back after | entry index {} | the press's error "
@@ -340,12 +403,12 @@ DWORD WINAPI worker(LPVOID) {
             }
             if (++tick % 120 == 0) {
                 log::info("InteractGate summary ({}, interact_gate={}, hook {}): calls {} | passes {} | code 2 {} | fails {} "
-                          "| let through {} | presses {} swapped {} (left as the game wrote them {}) | lines {} (not "
-                          "logged {}), ring lost {}",
+                          "| let through {} | presses {} swapped {} (left as the game wrote them {}) | not swapped (no "
+                          "shop node) {} | lines {} (not logged {}), ring lost {}",
                           g_guest.load() ? "guest" : "host", gil::mode_name(static_cast<gil::Mode>(g_mode.load())),
                           g_hooked.load() ? "in" : "NOT in", g_calls.load(), g_passed.load(), g_middle.load(),
                           g_failed.load(), g_let.load(), g_press_calls.load(), g_swapped.load(),
-                          g_restored_late.load(), lines, not_logged, g_lost.load());
+                          g_restored_late.load(), g_refused_short.load(), lines, not_logged, g_lost.load());
             }
         }
     } catch (...) {
